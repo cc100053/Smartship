@@ -376,49 +376,49 @@ cd backend
 
 ---
 
-### Milestone 3: Backend - Service & Controller
+### ✅ Milestone 3: Backend - Service & Controller — DONE
 
-| Step | 任務 | 預估時間 |
-|------|------|----------|
-| 3.1 | 建立 `Dimensions.java` DTO | 5 min |
-| 3.2 | 遷移 `DimensionCalculator.java` Service | 10 min |
-| 3.3 | 遷移 `ShippingMatcher.java` Service | 15 min |
-| 3.4 | 建立 Request/Response DTO 類別 | 10 min |
-| 3.5 | 建立 `CorsConfig.java` | 5 min |
-| 3.6 | 建立 `ProductController.java` | 10 min |
-| 3.7 | 建立 `ShippingController.java` | 15 min |
-| 3.8 | 使用 curl 測試 API 端點 | 5 min |
+| Step | 任務 | 狀態 |
+|------|------|------|
+| 3.1 | 建立 `Dimensions.java` DTO | ✅ |
+| 3.2 | 遷移 `DimensionCalculator.java` Service | ✅ |
+| 3.3 | 遷移 `ShippingMatcher.java` Service | ✅ |
+| 3.4 | 建立 Request/Response DTO 類別 | ✅ |
+| 3.5 | 建立 `CorsConfig.java` | ✅ |
+| 3.6 | 建立 `ProductController.java` | ✅ |
+| 3.7 | 建立 `ShippingController.java` | ✅ |
+| 3.8 | 使用 curl 測試 API 端點 | ✅ |
 
-**驗收點**: `curl http://localhost:8080/api/products` 返回 JSON 資料
-
----
-
-### Milestone 4: Frontend - 基礎 UI
-
-| Step | 任務 | 預估時間 |
-|------|------|----------|
-| 4.1 | 建立 `shippingApi.js` (fetch 封裝) | 5 min |
-| 4.2 | 建立 `ProductCard.jsx` 組件 | 15 min |
-| 4.3 | 建立 `CategoryTabs.jsx` 組件 | 10 min |
-| 4.4 | 建立產品列表頁面 (載入 API 資料) | 15 min |
-| 4.5 | 瀏覽器測試：確認產品卡片顯示 | 5 min |
-
-**驗收點**: 頁面顯示所有產品卡片，可按分類過濾
+**驗收點**: `curl http://localhost:8080/api/products` 返回 JSON 資料 ✅
 
 ---
 
-### Milestone 5: Frontend - 購物車 & 計算
+### ✅ Milestone 4: Frontend - 基礎 UI — DONE
 
-| Step | 任務 | 預估時間 |
-|------|------|----------|
-| 5.1 | 建立 `CartPanel.jsx` 組件 | 15 min |
-| 5.2 | 實作購物車狀態管理 (useState) | 10 min |
-| 5.3 | 建立 `ManualInputForm.jsx` 組件 | 10 min |
-| 5.4 | 建立 `ShippingResult.jsx` 組件 | 15 min |
-| 5.5 | 整合計算功能 (呼叫後端 API) | 10 min |
-| 5.6 | 測試完整流程 | 10 min |
+| Step | 任務 | 狀態 |
+|------|------|------|
+| 4.1 | 建立 `shippingApi.js` (fetch 封裝) | ✅ |
+| 4.2 | 建立 `ProductCard.jsx` 組件 | ✅ |
+| 4.3 | 建立 `CategoryTabs.jsx` 組件 | ✅ |
+| 4.4 | 建立產品列表頁面 (載入 API 資料) | ✅ |
+| 4.5 | 瀏覽器測試：確認產品卡片顯示 | ✅ |
 
-**驗收點**: 選擇商品 → 計算 → 顯示推薦運送方式
+**驗收點**: 頁面顯示所有產品卡片，可按分類過濾 ✅
+
+---
+
+### ✅ Milestone 5: Frontend - 購物車 & 計算 — DONE
+
+| Step | 任務 | 狀態 |
+|------|------|------|
+| 5.1 | 建立 `CartPanel.jsx` 組件 | ✅ |
+| 5.2 | 實作購物車狀態管理 (useState) | ✅ |
+| 5.3 | 建立 `ManualInputForm.jsx` 組件 | ✅ |
+| 5.4 | 建立 `ShippingResult.jsx` 組件 | ✅ |
+| 5.5 | 整合計算功能 (呼叫後端 API) | ✅ |
+| 5.6 | 測試完整流程 | ✅ |
+
+**驗收點**: 選擇商品 → 計算 → 顯示推薦運送方式 ✅
 
 ---
 

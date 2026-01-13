@@ -1,0 +1,79 @@
+package jv16_Kadai03_B19.dao;
+
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+
+/**
+ * Database connection utility for Supabase PostgreSQL.
+ * 
+ * SETUP INSTRUCTIONS:
+ * 1. Go to https://supabase.com and create a free project
+ * 2. Go to Project Settings > Database > Connection string
+ * 3. Choose "JDBC" and copy the connection string
+ * 4. Replace the placeholders below with your actual values
+ */
+public class DatabaseConnection {
+    
+    // ========== SUPABASE CONNECTION SETTINGS ==========
+    // Using Session Pooler (IPv4 compatible) - port 6543
+    // The username format is: postgres.[project-ref]
+    
+    private static final String DB_URL = "jdbc:postgresql://[YOUR_HOST]:6543/postgres";
+    
+    // For Session Pooler, username = postgres.[project-ref]
+    private static final String DB_USER = "postgres.[YOUR_PROJECT_REF]";
+    private static final String DB_PASSWORD = "[YOUR_PASSWORD]";
+    
+    // ===================================================
+    
+    private static Connection connection = null;
+    
+    static {
+        try {
+            // Load PostgreSQL JDBC driver
+            Class.forName("org.postgresql.Driver");
+        } catch (ClassNotFoundException e) {
+            System.err.println("PostgreSQL JDBC Driver not found!");
+            e.printStackTrace();
+        }
+    }
+    
+    /**
+     * Get database connection (singleton pattern)
+     */
+    public static Connection getConnection() throws SQLException {
+        if (connection == null || connection.isClosed()) {
+            connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+        }
+        return connection;
+    }
+    
+    /**
+     * Close the database connection
+     */
+    public static void closeConnection() {
+        if (connection != null) {
+            try {
+                connection.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    
+    /**
+     * Test the database connection
+     */
+    public static boolean testConnection() {
+        try {
+            Connection conn = getConnection();
+            boolean isValid = conn.isValid(5);
+            System.out.println("Database connection: " + (isValid ? "SUCCESS" : "FAILED"));
+            return isValid;
+        } catch (SQLException e) {
+            System.err.println("Database connection failed: " + e.getMessage());
+            return false;
+        }
+    }
+}
