@@ -8,11 +8,18 @@ import {
 import CartPanel from '../components/CartPanel';
 import CategoryTabs from '../components/CategoryTabs';
 import ManualInputForm from '../components/ManualInputForm';
+import ParcelVisualizer3D from '../components/ParcelVisualizer3D';
 import ProductCard from '../components/ProductCard';
 import ShippingResult from '../components/ShippingResult';
 import { getCategoryLabel } from '../utils/labels';
 
 const ALL_CATEGORY = 'ALL';
+const SOFT_ITEM_COMPRESSION = 0.8;
+
+const parsePositiveNumber = (value) => {
+  const numberValue = Number(value);
+  return Number.isFinite(numberValue) && numberValue > 0 ? numberValue : null;
+};
 
 export default function ShippingCalculator() {
   const [categories, setCategories] = useState([]);
@@ -31,6 +38,61 @@ export default function ShippingCalculator() {
   const [calculation, setCalculation] = useState(null);
   const [calcError, setCalcError] = useState('');
   const [calcLoading, setCalcLoading] = useState(false);
+
+  const cartDimensions = useMemo(() => {
+    if (!cartItems.length) return null;
+
+    let maxLength = 0;
+    let maxWidth = 0;
+    let totalHeight = 0;
+    let totalWeight = 0;
+    let totalItems = 0;
+
+    cartItems.forEach(({ product, quantity }) => {
+      if (!product || quantity <= 0) return;
+
+      maxLength = Math.max(maxLength, product.lengthCm);
+      maxWidth = Math.max(maxWidth, product.widthCm);
+
+      let itemHeight = product.heightCm * quantity;
+      if (product.category === 'Fashion') {
+        itemHeight *= SOFT_ITEM_COMPRESSION;
+      }
+
+      totalHeight += itemHeight;
+      totalWeight += product.weightG * quantity;
+      totalItems += quantity;
+    });
+
+    if (!totalItems) return null;
+
+    return {
+      lengthCm: maxLength,
+      widthCm: maxWidth,
+      heightCm: totalHeight,
+      weightG: totalWeight,
+      itemCount: totalItems,
+    };
+  }, [cartItems]);
+
+  const manualDimensions = useMemo(() => {
+    const lengthCm = parsePositiveNumber(manualInput.lengthCm);
+    const widthCm = parsePositiveNumber(manualInput.widthCm);
+    const heightCm = parsePositiveNumber(manualInput.heightCm);
+    if (!lengthCm || !widthCm || !heightCm) return null;
+
+    const weightValue = parsePositiveNumber(manualInput.weightG);
+
+    return {
+      lengthCm,
+      widthCm,
+      heightCm,
+      weightG: weightValue ? Math.round(weightValue) : null,
+      itemCount: 1,
+    };
+  }, [manualInput]);
+
+  const visualDimensions = mode === 'manual' ? manualDimensions : cartDimensions;
 
   const tabItems = useMemo(() => {
     const unique = new Set(categories.filter(Boolean));
@@ -267,10 +329,12 @@ export default function ShippingCalculator() {
                 loading={calcLoading}
               />
             )}
-
           </div>
 
-          <ShippingResult calculation={calculation} loading={calcLoading} error={calcError} />
+          <div className="space-y-6">
+            <ParcelVisualizer3D dimensions={visualDimensions} mode={mode} />
+            <ShippingResult calculation={calculation} loading={calcLoading} error={calcError} />
+          </div>
         </div>
       </section>
     </section>
