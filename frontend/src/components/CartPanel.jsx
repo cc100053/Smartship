@@ -15,6 +15,7 @@ export default function CartPanel({
   onClear,
   onCalculate,
   loading,
+  containerRef,
 }) {
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
   const totalWeight = items.reduce(
@@ -23,7 +24,10 @@ export default function CartPanel({
   );
 
   return (
-    <div className="rounded-2xl border border-slate-200/70 bg-white/80 p-5 shadow-[0_18px_45px_-40px_rgba(15,23,42,0.7)]">
+    <div
+      ref={containerRef}
+      className="rounded-2xl border border-slate-200/70 bg-white/80 p-4 shadow-[0_18px_45px_-40px_rgba(15,23,42,0.7)]"
+    >
       <div className="flex items-center justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.4em] text-slate-400">カート</p>
@@ -40,11 +44,11 @@ export default function CartPanel({
       </div>
 
       {items.length === 0 ? (
-        <div className="mt-6 rounded-2xl border border-dashed border-slate-200/80 bg-slate-50/70 px-4 py-6 text-center text-sm text-slate-500">
+        <div className="mt-4 rounded-2xl border border-dashed border-slate-200/80 bg-slate-50/70 px-4 py-5 text-center text-sm text-slate-500">
           商品をカートに追加してください。
         </div>
       ) : (
-        <div className="mt-6 space-y-3">
+        <div className="mt-4 space-y-3">
           {items.map((item) => (
             <div
               key={item.product.id}
@@ -83,7 +87,7 @@ export default function CartPanel({
         </div>
       )}
 
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-100 bg-white/70 px-4 py-4 text-sm">
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-100 bg-white/70 px-4 py-3 text-sm">
         <div>
           <p className="text-xs uppercase tracking-[0.3em] text-slate-400">合計</p>
           <p className="mt-2 text-base font-semibold text-slate-900">

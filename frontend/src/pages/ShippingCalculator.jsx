@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   calculateFromCart,
   calculateFromManual,
@@ -12,6 +13,7 @@ import ParcelVisualizer3D from '../components/ParcelVisualizer3D';
 import ProductCard from '../components/ProductCard';
 import ShippingResult from '../components/ShippingResult';
 import { getCategoryLabel } from '../utils/labels';
+import { cn } from '../utils/cn';
 
 const ALL_CATEGORY = 'ALL';
 const SOFT_ITEM_COMPRESSION = 0.8;
@@ -38,6 +40,7 @@ export default function ShippingCalculator() {
   const [calculation, setCalculation] = useState(null);
   const [calcError, setCalcError] = useState('');
   const [calcLoading, setCalcLoading] = useState(false);
+  const cartRef = useRef(null);
 
   const cartDimensions = useMemo(() => {
     if (!cartItems.length) return null;
@@ -136,7 +139,68 @@ export default function ShippingCalculator() {
     loadProducts();
   }, [activeCategory]);
 
-  const handleAddToCart = (product) => {
+  const animateAddToCart = (sourceEl) => {
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      return;
+    }
+
+    const targetEl = cartRef.current;
+    if (!sourceEl || !targetEl) return;
+
+    const sourceRect = sourceEl.getBoundingClientRect();
+    const targetRect = targetEl.getBoundingClientRect();
+    if (!sourceRect.width || !sourceRect.height) return;
+
+    const clone = sourceEl.cloneNode(true);
+    clone.setAttribute('aria-hidden', 'true');
+    clone.style.position = 'fixed';
+    clone.style.pointerEvents = 'none';
+    clone.style.margin = '0';
+    clone.style.top = `${sourceRect.top}px`;
+    clone.style.left = `${sourceRect.left}px`;
+    clone.style.width = `${sourceRect.width}px`;
+    clone.style.height = `${sourceRect.height}px`;
+    clone.style.transformOrigin = 'top left';
+    clone.style.zIndex = '50';
+
+    document.body.appendChild(clone);
+
+    const endX = targetRect.left + targetRect.width * 0.6 - sourceRect.left;
+    const endY = targetRect.top + 20 - sourceRect.top;
+
+    const flyAnimation = clone.animate(
+      [
+        { transform: 'translate(0, 0) scale(1)', opacity: 1 },
+        { transform: `translate(${endX}px, ${endY}px) scale(0.2)`, opacity: 0.2 },
+      ],
+      {
+        duration: 700,
+        easing: 'cubic-bezier(0.2, 0.7, 0.2, 1)',
+      },
+    );
+
+    flyAnimation.onfinish = () => clone.remove();
+    window.setTimeout(() => clone.remove(), 900);
+
+    if (typeof targetEl.animate === 'function') {
+      targetEl.animate(
+        [
+          { transform: 'scale(1)', boxShadow: '0 18px 45px -40px rgba(15,23,42,0.7)' },
+          { transform: 'scale(1.02)', boxShadow: '0 22px 50px -38px rgba(15,23,42,0.45)' },
+          { transform: 'scale(1)', boxShadow: '0 18px 45px -40px rgba(15,23,42,0.7)' },
+        ],
+        {
+          duration: 260,
+          easing: 'ease-out',
+        },
+      );
+    }
+  };
+
+  const handleAddToCart = (product, event) => {
+    const sourceEl = event?.currentTarget?.closest('article');
+    animateAddToCart(sourceEl);
+
     setCalculation(null);
     setCalcError('');
     setCartItems((prev) => {
@@ -233,110 +297,143 @@ export default function ShippingCalculator() {
   };
 
   return (
-    <section id="catalog" className="space-y-8">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="text-xs uppercase tracking-[0.4em] text-slate-500">商品ライブラリ</p>
-          <h2 className="mt-2 text-3xl font-semibold text-slate-900">商品を選択</h2>
-          <p className="mt-2 max-w-xl text-sm text-slate-600">
-            定番商品のサイズデータを一覧で確認できます。カテゴリで絞り込んで
-            カートに追加してください。
-          </p>
-        </div>
-        <div className="rounded-2xl border border-slate-200/70 bg-white/80 px-4 py-3 text-sm text-slate-600 shadow-sm">
-          <span className="font-semibold text-slate-900">{products.length}</span> 件読み込み
-        </div>
-      </div>
+    <section id="shipping-calculator" className="flex flex-col gap-4 lg:h-full">
+      <div className="grid gap-6 lg:grid-cols-12 lg:h-full lg:overflow-hidden">
 
-      <CategoryTabs categories={tabItems} value={activeCategory} onChange={setActiveCategory} />
-
-      {error ? (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          {error}
-        </div>
-      ) : null}
-
-      <div className="rounded-2xl border border-amber-200/80 bg-amber-50/80 px-4 py-3 text-sm text-amber-800">
-        注意: 表示される送料は目安です。実際の料金は実測サイズやサービス条件で変動します。
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-        {loading
-          ? Array.from({ length: 6 }).map((_, index) => (
-              <div
-                key={`skeleton-${index}`}
-                className="h-60 animate-pulse rounded-2xl border border-slate-200/70 bg-white/60"
-              />
-            ))
-          : products.map((product, index) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                index={index}
-                onAdd={() => handleAddToCart(product)}
-              />
-            ))}
-      </div>
-
-      <section id="quote" className="mt-14 space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="text-xs uppercase tracking-[0.4em] text-slate-500">見積り</p>
-            <h2 className="mt-2 text-3xl font-semibold text-slate-900">送料を見積もる</h2>
-            <p className="mt-2 max-w-xl text-sm text-slate-600">
-              カートの内容、または手動入力から配送方法を提案します。
-            </p>
-          </div>
-          <div className="rounded-full border border-slate-200/70 bg-white/80 p-1 text-sm">
-            {[
-              { value: 'cart', label: 'カート' },
-              { value: 'manual', label: '手動' },
-            ].map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => handleModeChange(option.value)}
-                className={[
-                  'rounded-full px-4 py-2 text-sm font-semibold capitalize transition',
-                  mode === option.value
-                    ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/20'
-                    : 'text-slate-500 hover:text-slate-800',
-                ].join(' ')}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="space-y-6">
-            {mode === 'cart' ? (
-              <CartPanel
-                items={cartItems}
-                onIncrement={handleIncrement}
-                onDecrement={handleDecrement}
-                onRemove={handleRemove}
-                onClear={handleClear}
-                onCalculate={handleCartCalculate}
-                loading={calcLoading}
-              />
-            ) : (
-              <ManualInputForm
-                value={manualInput}
-                onChange={handleManualChange}
-                onCalculate={handleManualCalculate}
-                loading={calcLoading}
-              />
+        {/* --- Product Library Section (Left Column on Desktop, First on Mobile) --- */}
+        <motion.div
+          className="order-2 lg:order-1 lg:col-span-5 flex flex-col gap-4 lg:h-full lg:overflow-hidden"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <div className="flex-none rounded-2xl border border-white/60 bg-white/40 p-3 sm:p-4 shadow-sm backdrop-blur-md">
+            <h2 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900">
+              商品を選択
+            </h2>
+            <div className="mt-3 sm:mt-4">
+              <CategoryTabs categories={tabItems} value={activeCategory} onChange={setActiveCategory} />
+            </div>
+            {error && (
+              <div className="mt-3 rounded-xl bg-rose-50 px-3 py-2 text-xs text-rose-600 border border-rose-100">
+                {error}
+              </div>
             )}
           </div>
 
-          <div className="space-y-6">
+          <div className="flex-1 overflow-y-auto rounded-2xl pb-2 pr-1 custom-scrollbar max-h-[50vh] lg:max-h-none">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+              <AnimatePresence mode='popLayout'>
+                {loading ? (
+                  Array.from({ length: 6 }).map((_, i) => (
+                    <motion.div
+                      key={`skeleton-${i}`}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="h-24 sm:h-40 rounded-2xl bg-slate-200/50 animate-pulse"
+                    />
+                  ))
+                ) : (
+                  products.map((product, index) => (
+                    <ProductCard
+                      key={product.id}
+                      product={product}
+                      index={index}
+                      onAdd={(event) => handleAddToCart(product, event)}
+                    />
+                  ))
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* --- Calculator & Visualizer Section (Right Column on Desktop, First on Mobile) --- */}
+        <motion.div
+          className="order-1 lg:order-2 lg:col-span-7 flex flex-col gap-4 lg:h-full lg:overflow-y-auto custom-scrollbar"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+        >
+          {/* Mode Switcher & Inputs */}
+          <div className="rounded-2xl border border-white/60 bg-white/40 p-4 shadow-sm backdrop-blur-md">
+            <div className="mb-4 flex gap-2">
+              {[
+                { value: 'cart', label: 'カート' },
+                { value: 'manual', label: '手動入力' },
+              ].map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => handleModeChange(option.value)}
+                  className={cn(
+                    "relative flex-1 flex items-center justify-center gap-2 rounded-xl py-2 text-xs font-bold transition-all duration-300",
+                    mode === option.value
+                      ? "text-white shadow-md shadow-slate-900/10"
+                      : "text-slate-500 hover:text-slate-800 hover:bg-white/50"
+                  )}
+                >
+                  {mode === option.value && (
+                    <motion.div
+                      layoutId="mode-highlight"
+                      className="absolute inset-0 rounded-xl bg-slate-900"
+                      transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                    />
+                  )}
+                  <span className="relative z-10">{option.label}</span>
+                </button>
+              ))}
+            </div>
+
+            <div className="relative">
+              <AnimatePresence mode="wait">
+                {mode === 'cart' ? (
+                  <motion.div
+                    key="cart"
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <CartPanel
+                      items={cartItems}
+                      onIncrement={handleIncrement}
+                      onDecrement={handleDecrement}
+                      onRemove={handleRemove}
+                      onClear={handleClear}
+                      onCalculate={handleCartCalculate}
+                      loading={calcLoading}
+                      containerRef={cartRef}
+                    />
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="manual"
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <ManualInputForm
+                      value={manualInput}
+                      onChange={handleManualChange}
+                      onCalculate={handleManualCalculate}
+                      loading={calcLoading}
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
             <ParcelVisualizer3D dimensions={visualDimensions} mode={mode} />
             <ShippingResult calculation={calculation} loading={calcLoading} error={calcError} />
           </div>
-        </div>
-      </section>
+        </motion.div>
+
+      </div>
     </section>
   );
 }

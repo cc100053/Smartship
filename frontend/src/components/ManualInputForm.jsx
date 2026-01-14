@@ -38,13 +38,13 @@ export default function ManualInputForm({ value, onChange, onCalculate, loading 
   };
 
   return (
-    <div className="rounded-2xl border border-slate-200/70 bg-white/80 p-5 shadow-[0_18px_45px_-40px_rgba(15,23,42,0.7)]">
+    <div className="rounded-2xl border border-slate-200/70 bg-white/80 p-4 shadow-[0_18px_45px_-40px_rgba(15,23,42,0.7)]">
       <div>
         <p className="text-xs uppercase tracking-[0.4em] text-slate-400">手動入力</p>
         <h3 className="mt-2 text-xl font-semibold text-slate-900">荷物サイズを入力</h3>
       </div>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2">
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
         {[
           { key: 'lengthCm', label: '長さ (cm)' },
           { key: 'widthCm', label: '幅 (cm)' },
@@ -75,7 +75,7 @@ export default function ManualInputForm({ value, onChange, onCalculate, loading 
         type="button"
         onClick={handleSubmit}
         disabled={loading}
-        className="mt-6 rounded-full bg-slate-900 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-slate-900/20 transition hover:-translate-y-0.5 disabled:opacity-40"
+        className="mt-4 rounded-full bg-slate-900 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-slate-900/20 transition hover:-translate-y-0.5 disabled:opacity-40"
       >
         {loading ? '計算中...' : '送料を計算'}
       </button>

@@ -1,3 +1,7 @@
+import { motion } from 'framer-motion';
+import { Box, Scale, Layers } from 'lucide-react';
+import { cn } from '../utils/cn';
+
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
 const formatDimension = (value) => Number(value).toFixed(1);
@@ -33,7 +37,7 @@ export default function ParcelVisualizer3D({ dimensions, mode }) {
   const weightLabel =
     dimensions && Number.isFinite(dimensions.weightG) && dimensions.weightG > 0
       ? formatWeight(dimensions.weightG)
-      : '重量を入力すると表示されます。';
+      : '重量を入力...';
   const countLabel =
     dimensions && Number.isFinite(dimensions.itemCount) && dimensions.itemCount > 0
       ? `${dimensions.itemCount} 点`
@@ -41,107 +45,157 @@ export default function ParcelVisualizer3D({ dimensions, mode }) {
 
   const emptyMessage =
     mode === 'manual'
-      ? 'サイズを入力すると3D表示が更新されます。'
-      : 'カートに商品を追加すると3D表示が更新されます。';
+      ? 'サイズを入力して3D表示を確認。'
+      : '商品をカートに追加して確認。';
 
   return (
-    <div className="rounded-2xl border border-slate-200/70 bg-white/80 p-5 shadow-[0_18px_45px_-40px_rgba(15,23,42,0.7)]">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="h-full rounded-3xl border border-white/60 bg-white/40 p-6 shadow-sm backdrop-blur-md">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div>
-          <p className="text-xs uppercase tracking-[0.4em] text-slate-400">3D ビュー</p>
-          <h3 className="mt-2 text-xl font-semibold text-slate-900">荷物サイズの可視化</h3>
+          <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">3D ビュー</p>
+          <h3 className="text-xl font-bold text-slate-900">荷物イメージ</h3>
         </div>
-        <span className="rounded-full border border-slate-200/70 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+        <span className="rounded-full border border-slate-200/50 bg-white/50 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-500 backdrop-blur-sm">
           {mode === 'manual' ? '手動' : 'カート'}
         </span>
       </div>
 
-      <div className="mt-5 grid gap-4 sm:grid-cols-[1.15fr_0.85fr]">
+      <div className="grid gap-6 sm:grid-cols-[1.5fr_1fr]">
         <div
-          className="relative flex h-60 items-center justify-center rounded-2xl border border-slate-100 bg-gradient-to-br from-amber-50 via-white to-sky-50"
+          className="relative flex h-64 items-center justify-center rounded-2xl border border-white/50 bg-gradient-to-br from-slate-50/50 to-slate-100/50 shadow-inner"
           style={{ perspective: '800px' }}
         >
           {hasDimensions ? (
-            <div
+            <motion.div
               className="relative"
+              initial={{ rotateX: -20, rotateY: 30 }}
+              animate={{
+                rotateX: -20,
+                rotateY: [30, 390] // Full rotation
+              }}
+              transition={{
+                rotateY: {
+                  duration: 20,
+                  repeat: Infinity,
+                  ease: "linear"
+                }
+              }}
               style={{
-                width: `${boxWidth}px`,
-                height: `${boxHeight}px`,
+                width: boxWidth,
+                height: boxHeight,
                 transformStyle: 'preserve-3d',
-                transform: 'rotateX(-18deg) rotateY(32deg)',
               }}
             >
+              {/* Front */}
               <div
-                className="absolute left-1/2 top-1/2 rounded-xl border border-amber-200/80 bg-gradient-to-br from-amber-100 via-amber-50 to-white/90 shadow-lg"
+                className="absolute inset-0 rounded-lg border border-amber-500/20 bg-amber-100/90"
                 style={{
-                  width: `${boxWidth}px`,
-                  height: `${boxHeight}px`,
-                  transform: `translate(-50%, -50%) translateZ(${boxDepth / 2}px)`,
+                  width: boxWidth,
+                  height: boxHeight,
+                  transform: `translateZ(${boxDepth / 2}px)`,
+                }}
+              >
+                <div className="flex h-full items-center justify-center">
+                  <Box className="h-8 w-8 text-amber-500/40" />
+                </div>
+              </div>
+
+              {/* Back */}
+              <div
+                className="absolute inset-0 rounded-lg border border-amber-500/20 bg-amber-100/90"
+                style={{
+                  width: boxWidth,
+                  height: boxHeight,
+                  transform: `rotateY(180deg) translateZ(${boxDepth / 2}px)`,
                 }}
               />
+
+              {/* Right */}
               <div
-                className="absolute left-1/2 top-1/2 rounded-xl border border-amber-200/80 bg-gradient-to-br from-amber-200 via-amber-100 to-white/90"
+                className="absolute top-0 left-0 rounded-lg border border-amber-600/20 bg-amber-200/90"
                 style={{
-                  width: `${boxWidth}px`,
-                  height: `${boxHeight}px`,
-                  transform: `translate(-50%, -50%) rotateY(180deg) translateZ(${boxDepth / 2}px)`,
+                  width: boxDepth,
+                  height: boxHeight,
+                  transform: `rotateY(90deg) translateZ(${boxWidth / 2}px)`,
+                  left: (boxWidth - boxDepth) / 2
                 }}
               />
+
+              {/* Left */}
               <div
-                className="absolute left-1/2 top-1/2 rounded-xl border border-amber-200/80 bg-gradient-to-br from-amber-200 via-amber-100 to-white/80"
+                className="absolute top-0 left-0 rounded-lg border border-amber-600/20 bg-amber-200/90"
                 style={{
-                  width: `${boxDepth}px`,
-                  height: `${boxHeight}px`,
-                  transform: `translate(-50%, -50%) rotateY(90deg) translateZ(${boxWidth / 2}px)`,
+                  width: boxDepth,
+                  height: boxHeight,
+                  transform: `rotateY(-90deg) translateZ(${boxWidth / 2}px)`,
+                  left: (boxWidth - boxDepth) / 2
                 }}
               />
+
+              {/* Top */}
               <div
-                className="absolute left-1/2 top-1/2 rounded-xl border border-amber-200/80 bg-gradient-to-br from-amber-100 via-amber-50 to-white/90"
+                className="absolute top-0 left-0 rounded-lg border border-amber-200/30 bg-amber-50/90"
                 style={{
-                  width: `${boxDepth}px`,
-                  height: `${boxHeight}px`,
-                  transform: `translate(-50%, -50%) rotateY(-90deg) translateZ(${boxWidth / 2}px)`,
+                  width: boxWidth,
+                  height: boxDepth,
+                  transform: `rotateX(90deg) translateZ(${boxHeight / 2}px)`,
+                  top: (boxHeight - boxDepth) / 2
                 }}
               />
+
+              {/* Bottom */}
               <div
-                className="absolute left-1/2 top-1/2 rounded-xl border border-amber-200/80 bg-gradient-to-br from-white via-amber-50 to-amber-100"
+                className="absolute top-0 left-0 rounded-lg border border-amber-600/30 bg-amber-300/90"
                 style={{
-                  width: `${boxWidth}px`,
-                  height: `${boxDepth}px`,
-                  transform: `translate(-50%, -50%) rotateX(90deg) translateZ(${boxHeight / 2}px)`,
+                  width: boxWidth,
+                  height: boxDepth,
+                  transform: `rotateX(-90deg) translateZ(${boxHeight / 2}px)`,
+                  top: (boxHeight - boxDepth) / 2
                 }}
               />
-              <div
-                className="absolute left-1/2 top-1/2 rounded-xl border border-amber-200/80 bg-gradient-to-br from-amber-200 via-amber-100 to-white/90"
-                style={{
-                  width: `${boxWidth}px`,
-                  height: `${boxDepth}px`,
-                  transform: `translate(-50%, -50%) rotateX(-90deg) translateZ(${boxHeight / 2}px)`,
-                }}
-              />
-            </div>
+            </motion.div>
           ) : (
-            <p className="rounded-xl border border-dashed border-slate-200 bg-white/70 px-4 py-3 text-sm text-slate-500">
-              {emptyMessage}
-            </p>
+            <div className="flex flex-col items-center justify-center p-6 text-center">
+              <div className="mb-3 rounded-full bg-slate-100 p-3 text-slate-400">
+                <Box className="h-6 w-6" />
+              </div>
+              <p className="text-sm font-medium text-slate-500">
+                {emptyMessage}
+              </p>
+            </div>
           )}
         </div>
 
-        <div className="space-y-3 text-sm">
-          <div className="rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-2">
-            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">サイズ</p>
-            <p className="mt-1 font-semibold text-slate-800">{dimensionLabel}</p>
-          </div>
-          <div className="rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-2">
-            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">重量</p>
-            <p className="mt-1 font-semibold text-slate-800">{weightLabel}</p>
-          </div>
-          <div className="rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-2">
-            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">点数</p>
-            <p className="mt-1 font-semibold text-slate-800">{countLabel}</p>
-          </div>
+        <div className="space-y-3">
+          <InfoCard
+            label="サイズ"
+            value={dimensionLabel}
+            icon={<Scale className="h-4 w-4 text-indigo-500" />}
+          />
+          <InfoCard
+            label="重量"
+            value={weightLabel}
+            icon={<Box className="h-4 w-4 text-emerald-500" />}
+          />
+          <InfoCard
+            label="点数"
+            value={countLabel}
+            icon={<Layers className="h-4 w-4 text-rose-500" />}
+          />
         </div>
       </div>
+    </div>
+  );
+}
+
+function InfoCard({ label, value, icon }) {
+  return (
+    <div className="group rounded-2xl border border-white/60 bg-white/40 p-3 transition-colors hover:bg-white/60">
+      <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-slate-500">
+        {icon}
+        <span>{label}</span>
+      </div>
+      <p className="mt-1 font-mono text-sm font-semibold text-slate-700">{value}</p>
     </div>
   );
 }

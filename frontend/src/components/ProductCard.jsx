@@ -1,3 +1,5 @@
+import { motion } from 'framer-motion';
+import { Plus } from 'lucide-react';
 import { getCategoryLabel } from '../utils/labels';
 
 const formatDimension = (value) => Number(value).toFixed(1);
@@ -9,47 +11,72 @@ const formatWeight = (weightG) => {
   return `${weightG} g`;
 };
 
-export default function ProductCard({ product, index = 0, onAdd }) {
+export default function ProductCard({ product, onAdd }) {
   const sizeLabel = `${formatDimension(product.lengthCm)} x ${formatDimension(product.widthCm)} x ${formatDimension(product.heightCm)} cm`;
   const weightLabel = formatWeight(product.weightG);
 
   return (
-    <article
-      className="group relative flex h-full flex-col justify-between rounded-2xl border border-slate-200/70 bg-white/80 p-5 shadow-[0_12px_40px_-30px_rgba(15,23,42,0.45)] backdrop-blur animate-fade-up"
-      style={{ animationDelay: `${index * 40}ms` }}
+    <motion.article
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.9 }}
+      transition={{ duration: 0.3 }}
+      whileHover={{ y: -2 }}
+      className="group relative flex items-center justify-between gap-3 rounded-xl border border-white/60 bg-white/40 p-3 shadow-sm backdrop-blur-md transition-shadow hover:shadow-md"
     >
-      <div>
-        <div className="flex items-center justify-between text-xs uppercase tracking-[0.2em] text-slate-500">
-          <span className="rounded-full border border-slate-200/70 bg-white/80 px-3 py-1 font-semibold">
-            {getCategoryLabel(product.category)}
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
+            <PackageIcon className="h-4 w-4" />
           </span>
-          <span className="font-semibold text-slate-400">商品ID {product.id}</span>
+          <div>
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              {getCategoryLabel(product.category)}
+            </div>
+            <h3 className="truncate text-sm font-bold text-slate-900">
+              {product.nameJp || product.name}
+            </h3>
+          </div>
         </div>
-        <h3 className="mt-4 text-xl font-semibold text-slate-900">
-          {product.nameJp || product.name}
-        </h3>
-      </div>
-
-      <div className="mt-6 grid gap-3 text-sm text-slate-600">
-        <div className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-2">
-          <span className="text-xs uppercase tracking-[0.2em] text-slate-500">サイズ</span>
-          <span className="font-semibold text-slate-800">{sizeLabel}</span>
-        </div>
-        <div className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-2">
-          <span className="text-xs uppercase tracking-[0.2em] text-slate-500">重量</span>
-          <span className="font-semibold text-slate-800">{weightLabel}</span>
+        <div className="mt-2 flex gap-2 text-[10px] text-slate-500">
+          <span className="truncate rounded-md bg-white/50 px-1.5 py-0.5">
+            {sizeLabel}
+          </span>
+          <span className="truncate rounded-md bg-white/50 px-1.5 py-0.5">
+            {weightLabel}
+          </span>
         </div>
       </div>
 
       {onAdd ? (
-        <button
+        <motion.button
           type="button"
           onClick={onAdd}
-          className="mt-6 w-full rounded-full border border-slate-200/70 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300"
+          whileTap={{ scale: 0.95 }}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white shadow-sm transition-colors hover:bg-slate-800"
         >
-          カートに追加
-        </button>
+          <Plus className="h-4 w-4" />
+        </motion.button>
       ) : null}
-    </article>
+    </motion.article>
+  );
+}
+
+function PackageIcon(props) {
+  return (
+    <svg
+      {...props}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M16.5 9.4 7.5 4.21" />
+      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+      <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+      <line x1="12" y1="22.08" x2="12" y2="12" />
+    </svg>
   );
 }
