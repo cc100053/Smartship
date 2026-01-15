@@ -1,11 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  calculateFromCart,
-  calculateFromManual,
-  fetchCategories,
-  fetchProducts,
-} from '../api/shippingApi';
+import { fetchCategories, fetchProducts } from '../api/shippingApi';
 import CartPanel from '../components/CartPanel';
 import CategoryTabs from '../components/CategoryTabs';
 import ManualInputForm from '../components/ManualInputForm';
@@ -14,9 +9,10 @@ import ProductCard from '../components/ProductCard';
 import ShippingResult from '../components/ShippingResult';
 import { getCategoryLabel } from '../utils/labels';
 import { cn } from '../utils/cn';
+import { useCart } from '../hooks/useCart';
+import { useShippingCalculator } from '../hooks/useShippingCalculator';
 
 const ALL_CATEGORY = 'ALL';
-const SOFT_ITEM_COMPRESSION = 0.8;
 
 const parsePositiveNumber = (value) => {
   const numberValue = Number(value);
@@ -29,7 +25,6 @@ export default function ShippingCalculator() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [cartItems, setCartItems] = useState([]);
   const [mode, setMode] = useState('cart');
   const [manualInput, setManualInput] = useState({
     lengthCm: '',
@@ -37,47 +32,29 @@ export default function ShippingCalculator() {
     heightCm: '',
     weightG: '',
   });
-  const [calculation, setCalculation] = useState(null);
-  const [calcError, setCalcError] = useState('');
-  const [calcLoading, setCalcLoading] = useState(false);
+
   const cartRef = useRef(null);
   const resultRef = useRef(null);
 
-  const cartDimensions = useMemo(() => {
-    if (!cartItems.length) return null;
+  // Custom Hooks
+  const {
+    cartItems,
+    cartDimensions,
+    addToCart,
+    incrementItem,
+    decrementItem,
+    removeItem,
+    clearCart,
+  } = useCart();
 
-    let maxLength = 0;
-    let maxWidth = 0;
-    let totalHeight = 0;
-    let totalWeight = 0;
-    let totalItems = 0;
-
-    cartItems.forEach(({ product, quantity }) => {
-      if (!product || quantity <= 0) return;
-
-      maxLength = Math.max(maxLength, product.lengthCm);
-      maxWidth = Math.max(maxWidth, product.widthCm);
-
-      let itemHeight = product.heightCm * quantity;
-      if (product.category === 'Fashion') {
-        itemHeight *= SOFT_ITEM_COMPRESSION;
-      }
-
-      totalHeight += itemHeight;
-      totalWeight += product.weightG * quantity;
-      totalItems += quantity;
-    });
-
-    if (!totalItems) return null;
-
-    return {
-      lengthCm: maxLength,
-      widthCm: maxWidth,
-      heightCm: totalHeight,
-      weightG: totalWeight,
-      itemCount: totalItems,
-    };
-  }, [cartItems]);
+  const {
+    calculation,
+    loading: calcLoading,
+    error: calcError,
+    calculateCart,
+    calculateManual,
+    resetCalculation,
+  } = useShippingCalculator();
 
   const manualDimensions = useMemo(() => {
     const lengthCm = parsePositiveNumber(manualInput.lengthCm);
@@ -207,103 +184,55 @@ export default function ShippingCalculator() {
     const sourceEl = event?.currentTarget?.closest('article');
     animateAddToCart(sourceEl);
 
-    setCalculation(null);
-    setCalcError('');
-    setCartItems((prev) => {
-      const existing = prev.find((item) => item.product.id === product.id);
-      if (existing) {
-        return prev.map((item) =>
-          item.product.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item,
-        );
-      }
-      return [...prev, { product, quantity: 1 }];
-    });
+    resetCalculation();
+    addToCart(product);
   };
 
   const handleIncrement = (id) => {
-    setCalculation(null);
-    setCalcError('');
-    setCartItems((prev) =>
-      prev.map((item) =>
-        item.product.id === id ? { ...item, quantity: item.quantity + 1 } : item,
-      ),
-    );
+    resetCalculation();
+    incrementItem(id);
   };
 
   const handleDecrement = (id) => {
-    setCalculation(null);
-    setCalcError('');
-    setCartItems((prev) =>
-      prev
-        .map((item) =>
-          item.product.id === id
-            ? { ...item, quantity: Math.max(0, item.quantity - 1) }
-            : item,
-        )
-        .filter((item) => item.quantity > 0),
-    );
+    resetCalculation();
+    decrementItem(id);
   };
 
   const handleRemove = (id) => {
-    setCalculation(null);
-    setCalcError('');
-    setCartItems((prev) => prev.filter((item) => item.product.id !== id));
+    resetCalculation();
+    removeItem(id);
   };
 
   const handleClear = () => {
-    setCalculation(null);
-    setCalcError('');
-    setCartItems([]);
+    resetCalculation();
+    clearCart();
   };
 
   const handleManualChange = (next) => {
-    setCalculation(null);
-    setCalcError('');
+    resetCalculation();
     setManualInput(next);
   };
 
-  const runCalculation = async (modeValue, payload) => {
-    setCalcLoading(true);
-    setCalcError('');
-    try {
-      const result =
-        modeValue === 'cart'
-          ? await calculateFromCart(payload)
-          : await calculateFromManual(payload);
-      setCalculation(result);
-      // Scroll to result on mobile
-      setTimeout(() => {
-        resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      }, 100);
-    } catch (err) {
-      setCalcError('送料計算に失敗しました。');
-    } finally {
-      setCalcLoading(false);
-    }
+  // Wrapped handlers to support scrolling to result
+  const handleCartCalculate = async () => {
+    await calculateCart(cartItems);
+    // Scroll to result on mobile
+    setTimeout(() => {
+      resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 100);
   };
 
-  const handleCartCalculate = () => {
-    const itemsPayload = cartItems.map((item) => ({
-      productId: item.product.id,
-      quantity: item.quantity,
-    }));
-    if (!itemsPayload.length) {
-      setCalcError('送料を計算するには商品を1点以上追加してください。');
-      return;
-    }
-    runCalculation('cart', itemsPayload);
-  };
-
-  const handleManualCalculate = (payload) => {
-    runCalculation('manual', payload);
+  const handleManualCalculate = async (payload) => {
+    await calculateManual(payload);
+    // Scroll to result on mobile
+    setTimeout(() => {
+      resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 100);
   };
 
   const handleModeChange = (nextMode) => {
     setMode(nextMode);
-    setCalculation(null);
-    setCalcError('');
+    resetCalculation();
   };
 
   return (
