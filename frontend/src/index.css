@@ -8,6 +8,7 @@
 
 html {
   scrollbar-gutter: stable;
+  overflow-y: scroll;
 }
 
 body {
@@ -17,6 +18,7 @@ body {
   color: #0f172a;
   background-color: #f8fafc;
   overflow-x: hidden;
+  scrollbar-gutter: stable;
 }
 
 *,
@@ -85,6 +87,28 @@ body {
 
 .custom-scrollbar {
   scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.4) transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.4);
+  border-radius: 3px;
+  transition: background 0.2s;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.6);
 }
 
 .scrollbar-hide {

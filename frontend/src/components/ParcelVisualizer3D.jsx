@@ -37,7 +37,7 @@ export default function ParcelVisualizer3D({ dimensions, mode }) {
   const weightLabel =
     dimensions && Number.isFinite(dimensions.weightG) && dimensions.weightG > 0
       ? formatWeight(dimensions.weightG)
-      : '重量を入力...';
+      : '-';
   const countLabel =
     dimensions && Number.isFinite(dimensions.itemCount) && dimensions.itemCount > 0
       ? `${dimensions.itemCount} 点`
@@ -49,20 +49,20 @@ export default function ParcelVisualizer3D({ dimensions, mode }) {
       : '商品をカートに追加して確認。';
 
   return (
-    <div className="h-full rounded-3xl border border-white/60 bg-white/40 p-6 shadow-sm backdrop-blur-md">
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+    <div className="rounded-2xl sm:rounded-3xl border border-white/60 bg-white/40 p-3 sm:p-5 shadow-sm backdrop-blur-md">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-3 sm:mb-4">
         <div>
-          <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">3D ビュー</p>
-          <h3 className="text-xl font-bold text-slate-900">荷物イメージ</h3>
+          <p className="text-[8px] sm:text-[10px] uppercase tracking-wider text-slate-500 font-bold">3D ビュー</p>
+          <h3 className="text-base sm:text-xl font-bold text-slate-900">荷物イメージ</h3>
         </div>
-        <span className="rounded-full border border-slate-200/50 bg-white/50 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-500 backdrop-blur-sm">
+        <span className="rounded-full border border-slate-200/50 bg-white/50 px-2 sm:px-3 py-0.5 sm:py-1 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-500 backdrop-blur-sm">
           {mode === 'manual' ? '手動' : 'カート'}
         </span>
       </div>
 
-      <div className="grid gap-6 sm:grid-cols-[1.5fr_1fr]">
+      <div className="grid gap-3 sm:gap-4 grid-cols-[1.2fr_1fr] sm:grid-cols-[1.5fr_1fr]">
         <div
-          className="relative flex h-64 items-center justify-center rounded-2xl border border-white/50 bg-gradient-to-br from-slate-50/50 to-slate-100/50 shadow-inner"
+          className="relative flex h-36 sm:h-48 items-center justify-center rounded-xl sm:rounded-2xl border border-white/50 bg-gradient-to-br from-slate-50/50 to-slate-100/50 shadow-inner"
           style={{ perspective: '800px' }}
         >
           {hasDimensions ? (
@@ -190,12 +190,12 @@ export default function ParcelVisualizer3D({ dimensions, mode }) {
 
 function InfoCard({ label, value, icon }) {
   return (
-    <div className="group rounded-2xl border border-white/60 bg-white/40 p-3 transition-colors hover:bg-white/60">
-      <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-slate-500">
+    <div className="group rounded-xl sm:rounded-2xl border border-white/60 bg-white/40 p-2 sm:p-3 transition-colors hover:bg-white/60">
+      <div className="flex items-center gap-1.5 sm:gap-2 text-[9px] sm:text-xs uppercase tracking-wider text-slate-500">
         {icon}
         <span>{label}</span>
       </div>
-      <p className="mt-1 font-mono text-sm font-semibold text-slate-700">{value}</p>
+      <p className="mt-0.5 sm:mt-1 font-mono text-xs sm:text-sm font-semibold text-slate-700">{value}</p>
     </div>
   );
 }

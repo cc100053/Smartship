@@ -41,6 +41,7 @@ export default function ShippingCalculator() {
   const [calcError, setCalcError] = useState('');
   const [calcLoading, setCalcLoading] = useState(false);
   const cartRef = useRef(null);
+  const resultRef = useRef(null);
 
   const cartDimensions = useMemo(() => {
     if (!cartItems.length) return null;
@@ -147,11 +148,15 @@ export default function ShippingCalculator() {
     const targetEl = cartRef.current;
     if (!sourceEl || !targetEl) return;
 
-    const sourceRect = sourceEl.getBoundingClientRect();
+    // Find the icon inside the card (the package icon span)
+    const iconEl = sourceEl.querySelector('span.rounded-lg');
+    if (!iconEl) return;
+
+    const sourceRect = iconEl.getBoundingClientRect();
     const targetRect = targetEl.getBoundingClientRect();
     if (!sourceRect.width || !sourceRect.height) return;
 
-    const clone = sourceEl.cloneNode(true);
+    const clone = iconEl.cloneNode(true);
     clone.setAttribute('aria-hidden', 'true');
     clone.style.position = 'fixed';
     clone.style.pointerEvents = 'none';
@@ -160,27 +165,28 @@ export default function ShippingCalculator() {
     clone.style.left = `${sourceRect.left}px`;
     clone.style.width = `${sourceRect.width}px`;
     clone.style.height = `${sourceRect.height}px`;
-    clone.style.transformOrigin = 'top left';
+    clone.style.transformOrigin = 'center';
     clone.style.zIndex = '50';
+    clone.style.borderRadius = '0.5rem';
 
     document.body.appendChild(clone);
 
-    const endX = targetRect.left + targetRect.width * 0.6 - sourceRect.left;
-    const endY = targetRect.top + 20 - sourceRect.top;
+    const endX = targetRect.left + targetRect.width * 0.5 - sourceRect.left - sourceRect.width / 2;
+    const endY = targetRect.top + targetRect.height * 0.5 - sourceRect.top - sourceRect.height / 2;
 
     const flyAnimation = clone.animate(
       [
         { transform: 'translate(0, 0) scale(1)', opacity: 1 },
-        { transform: `translate(${endX}px, ${endY}px) scale(0.2)`, opacity: 0.2 },
+        { transform: `translate(${endX}px, ${endY}px) scale(0.8)`, opacity: 0.4 },
       ],
       {
-        duration: 700,
+        duration: 500,
         easing: 'cubic-bezier(0.2, 0.7, 0.2, 1)',
       },
     );
 
     flyAnimation.onfinish = () => clone.remove();
-    window.setTimeout(() => clone.remove(), 900);
+    window.setTimeout(() => clone.remove(), 1000);
 
     if (typeof targetEl.animate === 'function') {
       targetEl.animate(
@@ -267,6 +273,10 @@ export default function ShippingCalculator() {
           ? await calculateFromCart(payload)
           : await calculateFromManual(payload);
       setCalculation(result);
+      // Scroll to result on mobile
+      setTimeout(() => {
+        resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 100);
     } catch (err) {
       setCalcError('送料計算に失敗しました。');
     } finally {
@@ -297,12 +307,12 @@ export default function ShippingCalculator() {
   };
 
   return (
-    <section id="shipping-calculator" className="flex flex-col gap-4 lg:h-full">
-      <div className="grid gap-6 lg:grid-cols-12 lg:h-full lg:overflow-hidden">
+    <section id="shipping-calculator" className="flex flex-col gap-4 lg:h-full overflow-x-hidden">
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-12 lg:h-full lg:overflow-hidden">
 
         {/* --- Product Library Section (Left Column on Desktop, First on Mobile) --- */}
         <motion.div
-          className="order-2 lg:order-1 lg:col-span-5 flex flex-col gap-4 lg:h-full lg:overflow-hidden"
+          className="order-1 lg:col-span-5 flex flex-col gap-3 sm:gap-4 lg:h-full lg:overflow-hidden min-w-0"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
@@ -321,16 +331,20 @@ export default function ShippingCalculator() {
             )}
           </div>
 
-          <div className="flex-1 overflow-y-auto rounded-2xl pb-2 pr-1 custom-scrollbar max-h-[50vh] lg:max-h-none">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-              <AnimatePresence mode='popLayout'>
+          <div className="flex-1 overflow-y-auto rounded-2xl pb-2 custom-scrollbar max-h-[50vh] lg:max-h-none min-w-0">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={loading ? 'loading' : activeCategory}
+                className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-1 xl:grid-cols-2 content-start"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+              >
                 {loading ? (
                   Array.from({ length: 6 }).map((_, i) => (
-                    <motion.div
+                    <div
                       key={`skeleton-${i}`}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
                       className="h-24 sm:h-40 rounded-2xl bg-slate-200/50 animate-pulse"
                     />
                   ))
@@ -344,14 +358,14 @@ export default function ShippingCalculator() {
                     />
                   ))
                 )}
-              </AnimatePresence>
-            </div>
+              </motion.div>
+            </AnimatePresence>
           </div>
         </motion.div>
 
-        {/* --- Calculator & Visualizer Section (Right Column on Desktop, First on Mobile) --- */}
+        {/* --- Calculator & Visualizer Section (Right Column on Desktop, Second on Mobile) --- */}
         <motion.div
-          className="order-1 lg:order-2 lg:col-span-7 flex flex-col gap-4 lg:h-full lg:overflow-y-auto custom-scrollbar"
+          className="order-2 lg:col-span-7 flex flex-col gap-3 sm:gap-4 lg:h-full lg:overflow-y-auto custom-scrollbar min-w-0"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.1 }}
@@ -427,9 +441,11 @@ export default function ShippingCalculator() {
             </div>
           </div>
 
-          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 items-start">
             <ParcelVisualizer3D dimensions={visualDimensions} mode={mode} />
-            <ShippingResult calculation={calculation} loading={calcLoading} error={calcError} />
+            <div ref={resultRef}>
+              <ShippingResult calculation={calculation} loading={calcLoading} error={calcError} />
+            </div>
           </div>
         </motion.div>
 

@@ -38,35 +38,45 @@ export default function ManualInputForm({ value, onChange, onCalculate, loading 
   };
 
   return (
-    <div className="rounded-2xl border border-slate-200/70 bg-white/80 p-4 shadow-[0_18px_45px_-40px_rgba(15,23,42,0.7)]">
-      <div>
-        <p className="text-xs uppercase tracking-[0.4em] text-slate-400">手動入力</p>
-        <h3 className="mt-2 text-xl font-semibold text-slate-900">荷物サイズを入力</h3>
+    <div className="rounded-xl sm:rounded-2xl border border-slate-200/70 bg-white/80 p-3 sm:p-4 shadow-[0_18px_45px_-40px_rgba(15,23,42,0.7)]">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-[8px] sm:text-xs uppercase tracking-[0.3em] sm:tracking-[0.4em] text-slate-400">手動入力</p>
+          <h3 className="mt-0.5 sm:mt-2 text-sm sm:text-xl font-semibold text-slate-900">荷物サイズ</h3>
+        </div>
       </div>
 
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+      <div className="mt-3 sm:mt-4 grid grid-cols-2 gap-2 sm:gap-4">
         {[
-          { key: 'lengthCm', label: '長さ (cm)' },
-          { key: 'widthCm', label: '幅 (cm)' },
-          { key: 'heightCm', label: '高さ (cm)' },
-          { key: 'weightG', label: '重量 (g)', step: '1' },
+          { key: 'lengthCm', label: '長さ', unit: 'cm' },
+          { key: 'widthCm', label: '幅', unit: 'cm' },
+          { key: 'heightCm', label: '高さ', unit: 'cm' },
+          { key: 'weightG', label: '重量', unit: 'g', step: '1' },
         ].map((field) => (
-          <label key={field.key} className="text-xs uppercase tracking-[0.2em] text-slate-400">
-            {field.label}
-            <input
-              type="number"
-              min="0"
-              step={field.step || '0.1'}
-              value={value[field.key]}
-              onChange={(event) => handleChange(field.key, event.target.value)}
-              className="mt-2 w-full rounded-xl border border-slate-200/70 bg-white/90 px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm outline-none transition focus:border-slate-400"
-            />
+          <label key={field.key} className="block">
+            <span className="text-[9px] sm:text-xs uppercase tracking-wider text-slate-400">
+              {field.label}
+            </span>
+            <div className="relative mt-1">
+              <input
+                type="number"
+                min="0"
+                step={field.step || '0.1'}
+                value={value[field.key]}
+                onChange={(event) => handleChange(field.key, event.target.value)}
+                placeholder="0"
+                className="w-full rounded-lg sm:rounded-xl border border-slate-200/70 bg-white/90 px-2 sm:px-3 py-1.5 sm:py-2 pr-8 sm:pr-10 text-xs sm:text-sm font-semibold text-slate-700 shadow-sm outline-none transition focus:border-slate-400"
+              />
+              <span className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 text-[10px] sm:text-xs text-slate-400">
+                {field.unit}
+              </span>
+            </div>
           </label>
         ))}
       </div>
 
       {error ? (
-        <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+        <div className="mt-2 sm:mt-4 rounded-lg sm:rounded-xl border border-rose-200 bg-rose-50 px-2 sm:px-3 py-1.5 sm:py-2 text-[10px] sm:text-xs text-rose-700">
           {error}
         </div>
       ) : null}
@@ -75,7 +85,7 @@ export default function ManualInputForm({ value, onChange, onCalculate, loading 
         type="button"
         onClick={handleSubmit}
         disabled={loading}
-        className="mt-4 rounded-full bg-slate-900 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-slate-900/20 transition hover:-translate-y-0.5 disabled:opacity-40"
+        className="mt-3 sm:mt-4 w-full rounded-lg sm:rounded-full bg-slate-900 px-4 py-2 text-xs sm:text-sm font-semibold text-white shadow-lg shadow-slate-900/20 transition hover:-translate-y-0.5 disabled:opacity-40"
       >
         {loading ? '計算中...' : '送料を計算'}
       </button>

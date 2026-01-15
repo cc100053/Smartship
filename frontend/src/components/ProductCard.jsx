@@ -11,38 +11,34 @@ const formatWeight = (weightG) => {
   return `${weightG} g`;
 };
 
-export default function ProductCard({ product, onAdd }) {
+export default function ProductCard({ product, onAdd, index = 0 }) {
   const sizeLabel = `${formatDimension(product.lengthCm)} x ${formatDimension(product.widthCm)} x ${formatDimension(product.heightCm)} cm`;
   const weightLabel = formatWeight(product.weightG);
 
   return (
     <motion.article
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.9 }}
-      transition={{ duration: 0.3 }}
       whileHover={{ y: -2 }}
-      className="group relative flex items-center justify-between gap-3 rounded-xl border border-white/60 bg-white/40 p-3 shadow-sm backdrop-blur-md transition-shadow hover:shadow-md"
+      className="group relative flex w-full items-center justify-between gap-2 sm:gap-3 rounded-xl border border-white/60 bg-white/40 p-2 sm:p-3 shadow-sm backdrop-blur-md transition-shadow hover:shadow-md overflow-hidden"
     >
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
-            <PackageIcon className="h-4 w-4" />
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <span className="flex h-6 w-6 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
+            <PackageIcon className="h-3 w-3 sm:h-4 sm:w-4" />
           </span>
-          <div>
-            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+          <div className="min-w-0">
+            <div className="text-[8px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-400">
               {getCategoryLabel(product.category)}
             </div>
-            <h3 className="truncate text-sm font-bold text-slate-900">
+            <h3 className="truncate text-xs sm:text-sm font-bold text-slate-900">
               {product.nameJp || product.name}
             </h3>
           </div>
         </div>
-        <div className="mt-2 flex gap-2 text-[10px] text-slate-500">
-          <span className="truncate rounded-md bg-white/50 px-1.5 py-0.5">
+        <div className="mt-1.5 sm:mt-2 flex flex-wrap gap-1 sm:gap-2 text-[9px] sm:text-[10px] text-slate-500">
+          <span className="truncate rounded-md bg-white/50 px-1 sm:px-1.5 py-0.5">
             {sizeLabel}
           </span>
-          <span className="truncate rounded-md bg-white/50 px-1.5 py-0.5">
+          <span className="truncate rounded-md bg-white/50 px-1 sm:px-1.5 py-0.5">
             {weightLabel}
           </span>
         </div>
@@ -53,7 +49,7 @@ export default function ProductCard({ product, onAdd }) {
           type="button"
           onClick={onAdd}
           whileTap={{ scale: 0.95 }}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white shadow-sm transition-colors hover:bg-slate-800"
+          className="flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white shadow-sm transition-colors hover:bg-slate-800"
         >
           <Plus className="h-4 w-4" />
         </motion.button>

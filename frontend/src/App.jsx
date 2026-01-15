@@ -5,8 +5,8 @@ import { cn } from './utils/cn';
 
 export default function App() {
   return (
-    <div className="min-h-screen bg-neutral-50 text-neutral-900 selection:bg-rose-500/30">
-      <div className="fixed inset-0 z-0 pointer-events-none opacity-40">
+    <div className="min-h-screen bg-neutral-50 text-neutral-900 selection:bg-rose-500/30 overflow-x-hidden">
+      <div className="fixed inset-0 z-0 pointer-events-none opacity-40 overflow-hidden">
         <div className="absolute top-[-20%] left-[-10%] h-[70vh] w-[70vw] rounded-full bg-blue-400 mix-blend-multiply blur-[128px] animate-blob" />
         <div className="absolute top-[-20%] right-[-10%] h-[70vh] w-[70vw] rounded-full bg-purple-400 mix-blend-multiply blur-[128px] animate-blob animation-delay-2000" />
         <div className="absolute bottom-[-20%] left-[20%] h-[70vh] w-[70vw] rounded-full bg-pink-400 mix-blend-multiply blur-[128px] animate-blob animation-delay-4000" />
