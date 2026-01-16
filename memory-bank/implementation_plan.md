@@ -451,6 +451,29 @@ cd backend
 
 ---
 
+## 📦 新機能: Dynamic Reference Object (3D)
+
+### 概要
+ユーザーが荷物のサイズ感を直感的に把握できるよう、比較対象となる「参照オブジェクト」を動的に表示する機能。
+
+### 実装詳細
+
+#### 1. Adaptive Model Selection
+- `MaxDim < 20cm`: スマートフォン (7.5 x 15.0 x 0.8 cm)
+- `MaxDim < 80cm`: 缶ジュース (6.6 x 12.0 x 6.6 cm)
+- `MaxDim < 160cm`: オフィスチェア (60 x 100 x 60 cm)
+- `MaxDim >= 160cm`: 人物 (模型) (45 x 170 x 25 cm)
+
+#### 2. Smart Positioning
+- **AABB (Axis-Aligned Bounding Box)** を計算し、荷物全体の右側に配置
+- 重なり防止 (No Overlapping): `Position X = Package_Max_X + (Ref_Width / 2) + Gap`
+
+#### 3. Visual Style
+- **Ghost Material**: 半透明、白色、グリッドライン付きホログラム風表示
+- **Pulse Animation**: ゆっくりと点滅するアニメーション効果
+
+---
+
 ## 🚀 下一步
 
 Milestone 6 完成。必要に応じてデプロイ準備・追加改善へ。

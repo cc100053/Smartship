@@ -86,6 +86,22 @@ export default function ShippingCalculator() {
     return packedDimensions || calculation?.dimensions || null;
   }, [calculation, mode, manualDimensions, packedDimensions]);
 
+  // Generate placements for manual mode 3D visualization
+  const manualPlacements = useMemo(() => {
+    if (mode !== 'manual' || !manualDimensions) return [];
+    // Convert cm to mm for placement visualization
+    return [{
+      x: 0,
+      y: 0,
+      z: 0,
+      width: manualDimensions.lengthCm * 10,  // mm
+      depth: manualDimensions.widthCm * 10,   // mm
+      height: manualDimensions.heightCm * 10, // mm
+      color: '#6366F1', // Indigo color for manual input
+      name: '手動入力',
+    }];
+  }, [mode, manualDimensions]);
+
   const tabItems = useMemo(() => {
     const unique = new Set(categories.filter(Boolean));
     return [
@@ -197,6 +213,10 @@ export default function ShippingCalculator() {
 
     resetCalculation();
     addToCart(product);
+    // Switch to cart mode if currently in manual mode
+    if (mode === 'manual') {
+      setMode('cart');
+    }
   };
 
   const handleIncrement = (id) => {
@@ -385,7 +405,7 @@ export default function ShippingCalculator() {
             <ParcelVisualizer3D
               dimensions={visualDimensions}
               mode={mode}
-              placements={packedDimensions?.placements || []}
+              placements={mode === 'manual' ? manualPlacements : (packedDimensions?.placements || [])}
             />
             <div ref={resultRef}>
               <ShippingResult calculation={calculation} loading={calcLoading} error={calcError} />
