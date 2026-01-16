@@ -24,14 +24,14 @@ public class ShippingCarrier implements Serializable {
     @Column(name = "service_name", nullable = false, length = 50)
     private String serviceName;
 
-    @Column(name = "max_length", nullable = false)
-    private double maxLength;
+    @Column(name = "max_length")
+    private Double maxLength;
 
-    @Column(name = "max_width", nullable = false)
-    private double maxWidth;
+    @Column(name = "max_width")
+    private Double maxWidth;
 
-    @Column(name = "max_height", nullable = false)
-    private double maxHeight;
+    @Column(name = "max_height")
+    private Double maxHeight;
 
     @Column(name = "max_weight_g")
     private Integer maxWeightG;
@@ -51,12 +51,13 @@ public class ShippingCarrier implements Serializable {
     @Column(name = "notes", length = 255)
     private String notes;
 
-    public ShippingCarrier() {}
+    public ShippingCarrier() {
+    }
 
     public ShippingCarrier(Integer id, String companyName, String serviceName,
-                           double maxLength, double maxWidth, double maxHeight,
-                           Integer maxWeightG, Integer sizeSumLimit, int priceYen,
-                           String notes, String sendLocation) {
+            Double maxLength, Double maxWidth, Double maxHeight,
+            Integer maxWeightG, Integer sizeSumLimit, int priceYen,
+            String notes, String sendLocation) {
         this.id = id;
         this.companyName = companyName;
         this.serviceName = serviceName;
@@ -70,41 +71,101 @@ public class ShippingCarrier implements Serializable {
         this.sendLocation = sendLocation;
     }
 
-    public Integer getId() { return id; }
-    public void setId(Integer id) { this.id = id; }
+    public Integer getId() {
+        return id;
+    }
 
-    public String getCompanyName() { return companyName; }
-    public void setCompanyName(String companyName) { this.companyName = companyName; }
+    public void setId(Integer id) {
+        this.id = id;
+    }
 
-    public String getServiceName() { return serviceName; }
-    public void setServiceName(String serviceName) { this.serviceName = serviceName; }
+    public String getCompanyName() {
+        return companyName;
+    }
 
-    public double getMaxLength() { return maxLength; }
-    public void setMaxLength(double maxLength) { this.maxLength = maxLength; }
+    public void setCompanyName(String companyName) {
+        this.companyName = companyName;
+    }
 
-    public double getMaxWidth() { return maxWidth; }
-    public void setMaxWidth(double maxWidth) { this.maxWidth = maxWidth; }
+    public String getServiceName() {
+        return serviceName;
+    }
 
-    public double getMaxHeight() { return maxHeight; }
-    public void setMaxHeight(double maxHeight) { this.maxHeight = maxHeight; }
+    public void setServiceName(String serviceName) {
+        this.serviceName = serviceName;
+    }
 
-    public Integer getMaxWeightG() { return maxWeightG; }
-    public void setMaxWeightG(Integer maxWeightG) { this.maxWeightG = maxWeightG; }
+    public Double getMaxLength() {
+        return maxLength;
+    }
 
-    public Integer getSizeSumLimit() { return sizeSumLimit; }
-    public void setSizeSumLimit(Integer sizeSumLimit) { this.sizeSumLimit = sizeSumLimit; }
+    public void setMaxLength(Double maxLength) {
+        this.maxLength = maxLength;
+    }
 
-    public int getPriceYen() { return priceYen; }
-    public void setPriceYen(int priceYen) { this.priceYen = priceYen; }
+    public Double getMaxWidth() {
+        return maxWidth;
+    }
 
-    public Boolean getHasTracking() { return hasTracking; }
-    public void setHasTracking(Boolean hasTracking) { this.hasTracking = hasTracking; }
+    public void setMaxWidth(Double maxWidth) {
+        this.maxWidth = maxWidth;
+    }
 
-    public String getNotes() { return notes; }
-    public void setNotes(String notes) { this.notes = notes; }
+    public Double getMaxHeight() {
+        return maxHeight;
+    }
 
-    public String getSendLocation() { return sendLocation; }
-    public void setSendLocation(String sendLocation) { this.sendLocation = sendLocation; }
+    public void setMaxHeight(Double maxHeight) {
+        this.maxHeight = maxHeight;
+    }
+
+    public Integer getMaxWeightG() {
+        return maxWeightG;
+    }
+
+    public void setMaxWeightG(Integer maxWeightG) {
+        this.maxWeightG = maxWeightG;
+    }
+
+    public Integer getSizeSumLimit() {
+        return sizeSumLimit;
+    }
+
+    public void setSizeSumLimit(Integer sizeSumLimit) {
+        this.sizeSumLimit = sizeSumLimit;
+    }
+
+    public int getPriceYen() {
+        return priceYen;
+    }
+
+    public void setPriceYen(int priceYen) {
+        this.priceYen = priceYen;
+    }
+
+    public Boolean getHasTracking() {
+        return hasTracking;
+    }
+
+    public void setHasTracking(Boolean hasTracking) {
+        this.hasTracking = hasTracking;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
+
+    public void setNotes(String notes) {
+        this.notes = notes;
+    }
+
+    public String getSendLocation() {
+        return sendLocation;
+    }
+
+    public void setSendLocation(String sendLocation) {
+        this.sendLocation = sendLocation;
+    }
 
     @Transient
     public String getFullName() {
@@ -112,7 +173,9 @@ public class ShippingCarrier implements Serializable {
     }
 
     public boolean canFit(double length, double width, double height, int weightG) {
-        if (length > maxLength || width > maxWidth || height > maxHeight) {
+        if ((maxLength != null && length > maxLength) ||
+                (maxWidth != null && width > maxWidth) ||
+                (maxHeight != null && height > maxHeight)) {
             return false;
         }
         if (maxWeightG != null && weightG > maxWeightG) {

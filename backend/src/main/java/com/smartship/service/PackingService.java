@@ -152,6 +152,18 @@ public class PackingService {
 
     private List<Container> getStandardContainers() {
         return List.of(
+                // Nekoposu (A4 size, 3cm thick) - Prioritize flat packing!
+                Container.newBuilder().withDescription("Nekoposu").withSize(312, 228, 30).withEmptyWeight(0)
+                        .withMaxLoadWeight(1000).build(),
+                // Yu-Packet Post (Stick style, 3cm thick)
+                Container.newBuilder().withDescription("Yu-Packet Post").withSize(327, 228, 30).withEmptyWeight(0)
+                        .withMaxLoadWeight(2000).build(),
+                // Compact Box (5cm thick)
+                Container.newBuilder().withDescription("Compact").withSize(250, 200, 50).withEmptyWeight(0)
+                        .withMaxLoadWeight(5000).build(),
+                // Letter Pack Plus (User specified ~7cm height target)
+                Container.newBuilder().withDescription("Letter Pack Plus").withSize(340, 248, 70).withEmptyWeight(0)
+                        .withMaxLoadWeight(4000).build(),
                 // Size 60
                 Container.newBuilder().withDescription("Size 60").withSize(250, 200, 150).withEmptyWeight(0)
                         .withMaxLoadWeight(2000).build(),
