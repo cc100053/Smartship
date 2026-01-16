@@ -29,7 +29,10 @@ export default function ProductCard({ product, onAdd, index = 0 }) {
             <div className="text-[8px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-400">
               {getCategoryLabel(product.category)}
             </div>
-            <h3 className="truncate text-xs sm:text-sm font-bold text-slate-900">
+            <h3
+              className="line-clamp-2 text-xs sm:text-sm font-bold text-slate-900 leading-tight"
+              title={product.nameJp || product.name}
+            >
               {product.nameJp || product.name}
             </h3>
           </div>

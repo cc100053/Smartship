@@ -168,12 +168,12 @@ export default function ParcelVisualizer3D({ dimensions, mode, placements = [] }
           />
           <InfoCard
             label="重量"
-            value={formatWeight(dimensions?.weightG || 0)}
+            value={dimensions?.weightG ? formatWeight(dimensions.weightG) : '-'}
             icon={<Box className="h-4 w-4 text-emerald-500" />}
           />
           <InfoCard
             label="点数"
-            value={`${dimensions?.itemCount || 0} 点`}
+            value={dimensions?.itemCount ? `${dimensions.itemCount} 点` : '-'}
             icon={<Layers className="h-4 w-4 text-rose-500" />}
           />
         </div>

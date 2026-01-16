@@ -3,6 +3,7 @@ export const CATEGORY_LABELS = {
   Games: 'ゲーム',
   Fashion: 'ファッション',
   Electronics: '電子機器',
+  Hobbies: 'ホビー',
   Other: 'その他',
 };
 

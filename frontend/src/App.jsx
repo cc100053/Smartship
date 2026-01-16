@@ -28,13 +28,13 @@ export default function App() {
                 SmartShip
               </p>
               <p className="text-[9px] sm:text-[10px] font-medium text-slate-500">
-                スマートシップ
+                メルカリ特化型配送アシスタント
               </p>
             </div>
           </a>
 
           <h1 className="hidden sm:block text-sm font-medium text-slate-500">
-            送料計算を、もっとスマートに。
+            メルカリ便・郵便の送料比較を、もっとスマートに。
           </h1>
         </motion.header>
 

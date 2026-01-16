@@ -98,7 +98,9 @@ public class ShippingMatcher {
         for (ShippingCarrier carrier : notFitting) {
             if (carrier.getPriceYen() < recommended.getPriceYen()) {
                 cheaperNotFit = carrier;
-                break;
+                // Keep looking to find the *closest* cheaper option (highest price among
+                // cheaper ones)
+                // Since the list is sorted by price ASC, the last one we find is the closest.
             }
         }
 

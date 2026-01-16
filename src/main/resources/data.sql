@@ -32,12 +32,21 @@ INSERT INTO product_reference (category, name, name_jp, length_cm, width_cm, hei
 ('Electronics', 'Wireless Earbuds', 'ワイヤレスイヤホン', 10.0, 10.0, 4.0, 150, 'phone'),
 
 -- Others
-('Other', 'Trading Card (Single)', 'トレカ (1枚・硬質ケース)', 11.0, 8.0, 0.5, 20, 'cards'),
-('Other', 'Trading Card Box', 'トレカBOX (シュリンク付)', 14.0, 14.0, 4.0, 300, 'cards'),
-('Other', 'Cosmetics (Lipstick)', '口紅/リップ', 10.0, 3.0, 3.0, 40, 'gift'),
-('Other', 'Cosmetics (Compact)', 'ファンデーション', 12.0, 8.0, 2.0, 80, 'gift'),
-('Other', 'K-POP Acrylic Stand', 'アクリルスタンド', 15.0, 10.0, 1.0, 50, 'gift'),
-('Other', 'Key Holder/Strap', 'キーホルダー/ストラップ', 10.0, 6.0, 1.0, 30, 'gift');
+('Hobbies', 'Trading Card (Single)', 'トレカ (1枚・硬質ケース)', 11.0, 8.0, 0.5, 20, 'cards'),
+('Hobbies', 'Trading Card Box', 'トレカBOX (シュリンク付)', 14.0, 14.0, 4.0, 300, 'cards'),
+('Hobbies', 'Cosmetics (Lipstick)', '口紅/リップ', 10.0, 3.0, 3.0, 40, 'gift'),
+('Hobbies', 'Cosmetics (Compact)', 'ファンデーション', 12.0, 8.0, 2.0, 80, 'gift'),
+('Hobbies', 'K-POP Acrylic Stand', 'アクリルスタンド', 15.0, 10.0, 1.0, 50, 'gift'),
+('Hobbies', 'Key Holder/Strap', 'キーホルダー/ストラップ', 10.0, 6.0, 1.0, 30, 'gift'),
+
+-- Hobbies (Anime Figures & Plushies)
+('Hobbies', 'Prize Figure (Boxed)', 'プライズフィギュア (箱入)', 18.0, 12.0, 9.0, 350, 'gamepad'),
+('Hobbies', 'Scale Figure (Boxed)', 'スケールフィギュア (箱入)', 25.0, 20.0, 15.0, 800, 'gamepad'),
+('Hobbies', 'Plush Toy (Standard)', 'ぬいぐるみ (中)', 30.0, 20.0, 15.0, 300, 'gift'),
+('Hobbies', 'Mascot Plush (Chibigurumi)', 'ちびぐるみ (マスコット)', 11.0, 8.0, 5.0, 40, 'gift'),
+
+-- Kids
+('Fashion', 'Kids Clothing (Set)', '子供服 (セット)', 20.0, 15.0, 3.0, 150, 'shirt');
 
 
 -- 2. Shipping Carriers (Mercari & Yahoo Auction Standards 2024/2025)
@@ -71,7 +80,7 @@ INSERT INTO shipping_carrier (company_name, service_name, max_length, max_width,
 ('日本郵便', 'ゆうパック 160サイズ', 160.0, 160.0, 160.0, 25000, 160, 1700, TRUE, '郵便局, ローソン', '3辺合計160cm以内・25kg以内'),
 ('日本郵便', 'ゆうパック 170サイズ', 170.0, 170.0, 170.0, 25000, 170, 1900, TRUE, '郵便局, ローソン', '3辺合計170cm以内・25kg以内'),
 
--- Non-Mercari Bin Options (Standard Mail / Letter Pack)
+-- Non-Mercari Bin Options (Standard Mail / Letter Pack) - Updated Oct 1, 2024
 ('日本郵便 (その他)', 'レターパックライト', 34.0, 24.8, 3.0, 4000, NULL, 430, TRUE, '郵便ポスト, 郵便局', 'A4サイズ・厚さ3cm以内・4kg以内'),
 ('日本郵便 (その他)', 'レターパックプラス', 34.0, 24.8, 10.0, 4000, NULL, 600, TRUE, '郵便ポスト, 郵便局', 'A4サイズ・対面受取・4kg以内'),
 ('日本郵便 (その他)', 'スマートレター', 25.0, 17.0, 2.0, 1000, NULL, 210, FALSE, '郵便ポスト, 郵便局', 'A5サイズ・厚さ2cm以内・1kg以内'),

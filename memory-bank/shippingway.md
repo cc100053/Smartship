@@ -94,3 +94,17 @@
 - `com.smartship.controller.ShippingController`: リクエストの受け付けとデータ展開
 - `com.smartship.service.ShippingMatcher`: 価格順の比較と推奨ロジック
 - `com.smartship.service.PackingService`: 3Dパッキングとサイズ計算
+
+## 付録: 標準商品データ (マスタの一部)
+システムの検証・テスト用に登録されている主な商品カテゴリとサイズ定義は以下の通りです。
+特に「Hobbies」カテゴリは、メルカリ等で取引の多いアイテムを基準に設定されています。
+
+| カテゴリ | 商品名 | サイズ (cm) | 重量 (g) | 備考 |
+| :--- | :--- | :--- | :--- | :--- |
+| **Hobbies** | Prize Figure (Boxed) | 18.0 × 12.0 × 9.0 | 350g | 一般的なプライズフィギュア |
+| **Hobbies** | Scale Figure (Boxed) | 25.0 × 20.0 × 15.0 | 800g | 大型・高額フィギュア |
+| **Hobbies** | Plush Toy (Standard) | 30.0 × 20.0 × 15.0 | 300g | 中型ぬいぐるみ |
+| **Hobbies** | Mascot Plush (Chibigurumi) | 11.0 × 8.0 × 5.0 | 40g | ちびぐるみ (圧縮可) |
+| **Fashion** | Kids Clothing (Set) | 20.0 × 15.0 × 3.0 | 150g | 子供服セット |
+| **Electronics** | Smartphone (In Box) | 16.0 × 9.0 × 5.0 | 400g | 箱入りスマホ |
+
