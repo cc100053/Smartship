@@ -33,52 +33,73 @@ public class ShippingMatcher {
             return results;
         }
 
+        // Get all carriers sorted by price
         List<ShippingCarrier> allCarriers = carrierRepository.findAllByOrderByPriceYenAsc();
-        ShippingCarrier cheapestFitting = null;
+        List<ShippingCarrier> fittingCarriers = new ArrayList<>();
         List<ShippingCarrier> notFitting = new ArrayList<>();
 
+        // First pass: categorize into fitting and not-fitting
         for (ShippingCarrier carrier : allCarriers) {
-            // Use the dimensions from the 3D View (Standard Packing) for validation
-            // This ensures "What You See Is What You Get" consistency.
-            // We check if the packed block (dims) fits into the carrier's limits (allowing
-            // rotation).
             boolean canFit = checkDimensionsFit(carrier, dims);
 
-            if (canFit) {
-                // Additional Validation: Size Sum Limit (Already done geometrically if checked
-                // correctly, but good for explicit sum limit)
-                if (carrier.getSizeSumLimit() != null) {
-                    if (dims.getSizeSum() > carrier.getSizeSumLimit()) {
-                        canFit = false;
-                    }
+            if (canFit && carrier.getSizeSumLimit() != null) {
+                if (dims.getSizeSum() > carrier.getSizeSumLimit()) {
+                    canFit = false;
                 }
             }
 
             if (canFit) {
-                String reason = generateFitReason(carrier, dims);
-                boolean isRecommended = cheapestFitting == null;
-                if (isRecommended) {
-                    cheapestFitting = carrier;
-                }
-
-                results.add(new ShippingMatch(carrier, true, isRecommended, reason));
+                fittingCarriers.add(carrier);
             } else {
                 notFitting.add(carrier);
             }
         }
 
-        if (results.isEmpty()) {
+        if (fittingCarriers.isEmpty()) {
             return results;
         }
 
-        if (!notFitting.isEmpty()) {
-            ShippingMatch recommended = results.get(0);
-            String betterReason = generateRecommendationReason(recommended.carrier(), notFitting, dims);
+        // Find the cheapest TRACKABLE option for recommendation
+        ShippingCarrier recommended = null;
+        for (ShippingCarrier carrier : fittingCarriers) {
+            if (Boolean.TRUE.equals(carrier.getHasTracking())) {
+                recommended = carrier;
+                break; // First trackable (already sorted by price) is cheapest trackable
+            }
+        }
+
+        // If no trackable option found, use the cheapest overall
+        if (recommended == null) {
+            recommended = fittingCarriers.get(0);
+        }
+
+        // Build results: recommended first, then all others sorted by price
+        for (ShippingCarrier carrier : fittingCarriers) {
+            boolean isRecommended = carrier.equals(recommended);
+            String reason = generateFitReason(carrier, dims);
+            results.add(new ShippingMatch(carrier, true, isRecommended, reason));
+        }
+
+        // Move recommended to the front if it's not already there
+        for (int i = 0; i < results.size(); i++) {
+            if (results.get(i).recommended()) {
+                ShippingMatch rec = results.remove(i);
+                results.add(0, rec);
+                break;
+            }
+        }
+
+        // Update recommended with "why not" reason
+        if (!notFitting.isEmpty() && !results.isEmpty()) {
+            ShippingMatch rec = results.get(0);
+            String sizeInfo = generateFitReason(rec.carrier(), dims);
+            String whyNot = generateWhyNotReason(rec.carrier(), notFitting, dims);
+            String combinedReason = sizeInfo + (whyNot != null ? "|||" + whyNot : "");
             results.set(0, new ShippingMatch(
-                    recommended.carrier(),
-                    recommended.canFit(),
-                    recommended.recommended(),
-                    betterReason));
+                    rec.carrier(),
+                    rec.canFit(),
+                    rec.recommended(),
+                    combinedReason));
         }
 
         return results;
@@ -127,57 +148,57 @@ public class ShippingMatcher {
     }
 
     private String generateFitReason(ShippingCarrier carrier, Dimensions dims) {
-        StringBuilder reason = new StringBuilder();
         if (carrier.getSizeSumLimit() != null) {
-            double sizeSum = dims.getSizeSum();
-            reason.append(String.format("3辺合計 %.0fcm (上限 %dcm)", sizeSum, carrier.getSizeSumLimit()));
+            return String.format("3辺合計 %dcm対応", carrier.getSizeSumLimit());
         } else {
-            reason.append(String.format("%.0f×%.0f×%.0fcm 対応",
-                    carrier.getMaxLength(), carrier.getMaxWidth(), carrier.getMaxHeight()));
+            return String.format("最大 %.0f×%.0f×%.0fcm",
+                    carrier.getMaxLength(), carrier.getMaxWidth(), carrier.getMaxHeight());
         }
-        return reason.toString();
     }
 
-    private String generateRecommendationReason(ShippingCarrier recommended,
+    private String generateWhyNotReason(ShippingCarrier recommended,
             List<ShippingCarrier> notFitting,
             Dimensions dims) {
-        ShippingCarrier cheaperNotFit = null;
+        ShippingCarrier nearestCheaper = null;
+        int nearestCheaperPrice = 0;
+
         for (ShippingCarrier carrier : notFitting) {
             if (carrier.getPriceYen() < recommended.getPriceYen()) {
-                cheaperNotFit = carrier;
-                // Keep looking to find the *closest* cheaper option (highest price among
-                // cheaper ones)
-                // Since the list is sorted by price ASC, the last one we find is the closest.
+                // Find the closest cheaper option (highest price among cheaper ones)
+                if (nearestCheaper == null || carrier.getPriceYen() > nearestCheaperPrice) {
+                    nearestCheaper = carrier;
+                    nearestCheaperPrice = carrier.getPriceYen();
+                }
             }
         }
 
-        if (cheaperNotFit == null) {
-            return "最安価格の配送方法です！";
+        if (nearestCheaper == null) {
+            return null; // No cheaper options, just show size info
         }
 
         StringBuilder reason = new StringBuilder();
-        reason.append(cheaperNotFit.getServiceName()).append("は使えない理由: ");
+        reason.append(nearestCheaper.getServiceName()).append("は使えない理由: ");
 
         // Use the old Stacked Dimensions to guess the reason.
         // This might be slightly inaccurate if 3D packing failed for a complex reason,
         // but it covers 90% of cases (too heavy, too big total volume).
-        if (cheaperNotFit.getMaxHeight() != null && dims.getHeightCm() > cheaperNotFit.getMaxHeight()) {
+        if (nearestCheaper.getMaxHeight() != null && dims.getHeightCm() > nearestCheaper.getMaxHeight()) {
             reason.append(String.format("厚さ超過 (%.1fcm > %.1fcm)",
-                    dims.getHeightCm(), cheaperNotFit.getMaxHeight()));
-        } else if (cheaperNotFit.getMaxLength() != null && dims.getLengthCm() > cheaperNotFit.getMaxLength()) {
+                    dims.getHeightCm(), nearestCheaper.getMaxHeight()));
+        } else if (nearestCheaper.getMaxLength() != null && dims.getLengthCm() > nearestCheaper.getMaxLength()) {
             reason.append(String.format("長さ超過 (%.1fcm > %.1fcm)",
-                    dims.getLengthCm(), cheaperNotFit.getMaxLength()));
-        } else if (cheaperNotFit.getMaxWidth() != null && dims.getWidthCm() > cheaperNotFit.getMaxWidth()) {
+                    dims.getLengthCm(), nearestCheaper.getMaxLength()));
+        } else if (nearestCheaper.getMaxWidth() != null && dims.getWidthCm() > nearestCheaper.getMaxWidth()) {
             reason.append(String.format("幅超過 (%.1fcm > %.1fcm)",
-                    dims.getWidthCm(), cheaperNotFit.getMaxWidth()));
-        } else if (cheaperNotFit.getMaxWeightG() != null
-                && dims.getWeightG() > cheaperNotFit.getMaxWeightG()) {
+                    dims.getWidthCm(), nearestCheaper.getMaxWidth()));
+        } else if (nearestCheaper.getMaxWeightG() != null
+                && dims.getWeightG() > nearestCheaper.getMaxWeightG()) {
             reason.append(String.format("重量超過 (%dg > %dg)",
-                    dims.getWeightG(), cheaperNotFit.getMaxWeightG()));
-        } else if (cheaperNotFit.getSizeSumLimit() != null
-                && dims.getSizeSum() > cheaperNotFit.getSizeSumLimit()) {
+                    dims.getWeightG(), nearestCheaper.getMaxWeightG()));
+        } else if (nearestCheaper.getSizeSumLimit() != null
+                && dims.getSizeSum() > nearestCheaper.getSizeSumLimit()) {
             reason.append(String.format("サイズ超過 (3辺合計 %.0fcm > %dcm)",
-                    dims.getSizeSum(), cheaperNotFit.getSizeSumLimit()));
+                    dims.getSizeSum(), nearestCheaper.getSizeSumLimit()));
         } else {
             reason.append("形状的に箱に入りません (3D Packing)");
         }

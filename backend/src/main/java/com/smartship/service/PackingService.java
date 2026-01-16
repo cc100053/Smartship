@@ -30,6 +30,7 @@ public class PackingService {
     }
 
     private static final double SOFT_ITEM_COMPRESSION = 0.8;
+    private static final double PLUSH_ITEM_COMPRESSION = 0.6; // Plush toys can be compressed more
 
     public boolean canFit(List<ProductReference> items, ShippingCarrier carrier) {
         if (items.isEmpty()) {
@@ -42,13 +43,14 @@ public class PackingService {
                 .build();
         List<BoxItem> boxItems = createBoxItems(items);
 
-        // Use BruteForcePackager as LAFF was missing
+        // Use BruteForcePackager with timeout to prevent freeze on many items
         BruteForcePackager packager = BruteForcePackager.newBuilder().build();
 
         PackagerResult result = packager.newResultBuilder()
                 .withContainerItems(containerItems)
                 .withBoxItems(boxItems)
                 .withMaxContainerCount(1)
+                .withDeadline(System.currentTimeMillis() + 1000) // 1 second timeout
                 .build();
 
         return result.isSuccess();
@@ -72,11 +74,13 @@ public class PackingService {
 
         List<BoxItem> boxItems = createBoxItems(items);
 
+        // Use BruteForcePackager with timeout to prevent freeze on many items
         BruteForcePackager packager = BruteForcePackager.newBuilder().build();
 
         PackagerResult result = packager.newResultBuilder()
                 .withContainerItems(containerItems)
                 .withBoxItems(boxItems)
+                .withDeadline(System.currentTimeMillis() + 1000) // 1 second timeout
                 .build();
 
         // If standard containers fail (too big), try a fallback huge container
@@ -95,6 +99,7 @@ public class PackingService {
             result = packager.newResultBuilder()
                     .withContainerItems(containerItems)
                     .withBoxItems(boxItems)
+                    .withDeadline(System.currentTimeMillis() + 1000) // 1 second timeout
                     .build();
         }
 
@@ -196,13 +201,24 @@ public class PackingService {
     private List<BoxItem> createBoxItems(List<ProductReference> items) {
         List<BoxItem> boxItems = new ArrayList<>();
         for (ProductReference item : items) {
+            double l = item.getLengthCm();
+            double w = item.getWidthCm();
             double h = item.getHeightCm();
-            if ("Fashion".equals(item.getCategory())) {
+
+            // Apply compression for soft/compressible items
+            String name = item.getName();
+            if (name != null && name.toLowerCase().contains("plush")) {
+                // Plush toys (ぬいぐるみ/ちびぐるみ) can be compressed to 60%
+                l *= PLUSH_ITEM_COMPRESSION;
+                w *= PLUSH_ITEM_COMPRESSION;
+                h *= PLUSH_ITEM_COMPRESSION;
+            } else if ("Fashion".equals(item.getCategory())) {
                 h *= SOFT_ITEM_COMPRESSION;
             }
+
             Box box = Box.newBuilder()
                     .withId(item.getName())
-                    .withSize(toMm(item.getLengthCm()), toMm(item.getWidthCm()), toMm(h))
+                    .withSize(toMm(l), toMm(w), toMm(h))
                     .withWeight(item.getWeightG())
                     .withRotate3D()
                     .build();

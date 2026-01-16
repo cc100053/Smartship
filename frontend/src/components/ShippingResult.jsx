@@ -11,6 +11,13 @@ const formatWeight = (weightG) => {
 
 const formatDimension = (value) => Number(value).toFixed(1);
 
+// Extract extra fee from notes (e.g., "専用BOX代70円別途" or "シール代5円別途")
+const extractExtraFee = (notes) => {
+  if (!notes) return null;
+  const match = notes.match(/([^・]+代\d+円別途)/);
+  return match ? match[1] : null;
+};
+
 export default function ShippingResult({ calculation, loading, error }) {
   if (loading) {
     return (
@@ -81,6 +88,9 @@ export default function ShippingResult({ calculation, loading, error }) {
             <Truck className="h-6 w-6" />
           </div>
         </div>
+        <p className="mt-3 text-[12px] text-slate-400">
+          ※ ぬいぐるみは0.6倍、衣類は0.8倍で圧縮計算済み
+        </p>
       </motion.div>
 
       {/* Options */}
@@ -92,7 +102,7 @@ export default function ShippingResult({ calculation, loading, error }) {
         </h4>
 
         {options && options.length ? (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {options.map((option, index) => {
               const isRecommended = option.recommended;
               return (
@@ -101,43 +111,77 @@ export default function ShippingResult({ calculation, loading, error }) {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.1 }}
-                  whileHover={{ scale: 1.02 }}
+                  whileHover={{ scale: 1.01 }}
                   className={cn(
-                    "relative overflow-hidden rounded-3xl border p-6 transition-all duration-300",
+                    "relative overflow-hidden rounded-2xl border px-4 py-3 transition-all duration-300",
                     isRecommended
                       ? "border-emerald-500/30 bg-gradient-to-br from-emerald-50 to-white shadow-lg shadow-emerald-500/10"
                       : "border-slate-200/60 bg-white/60 hover:border-slate-300 hover:bg-white"
                   )}
                 >
                   {isRecommended && (
-                    <div className="absolute top-0 right-0 rounded-bl-2xl bg-emerald-500 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white">
+                    <div className="absolute top-0 right-0 rounded-bl-xl bg-emerald-500 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white">
                       最安・最適
                     </div>
                   )}
 
-                  <div className="flex flex-wrap items-center justify-between gap-4">
-                    <div className="flex items-start gap-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 min-w-0">
                       <div className={cn(
-                        "flex h-12 w-12 items-center justify-center rounded-2xl shadow-sm",
+                        "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl shadow-sm",
                         isRecommended ? "bg-emerald-100 text-emerald-600" : "bg-slate-100 text-slate-500"
                       )}>
-                        {isRecommended ? <CheckCircle2 className="h-6 w-6" /> : <Truck className="h-6 w-6" />}
+                        {isRecommended ? <CheckCircle2 className="h-5 w-5" /> : <Truck className="h-5 w-5" />}
                       </div>
-                      <div>
-                        <h5 className="text-lg font-bold text-slate-900">
+                      <div className="min-w-0">
+                        <h5 className="text-base font-bold text-slate-900">
                           {option.serviceName}
                         </h5>
-                        <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                        <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
                           {option.companyName}
                         </p>
-                        <p className="mt-2 text-sm text-slate-600 leading-relaxed max-w-sm">
-                          {option.reason}
-                        </p>
+                        <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[10px]">
+                          <span className={cn(
+                            "inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium",
+                            option.hasTracking
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-slate-100 text-slate-500"
+                          )}>
+                            {option.hasTracking ? "追跡可" : "追跡不可"}
+                          </span>
+                          {option.maxWeightG && (
+                            <span className="text-slate-500">
+                              〜{option.maxWeightG >= 1000 ? `${(option.maxWeightG / 1000).toFixed(0)}kg` : `${option.maxWeightG}g`}
+                            </span>
+                          )}
+                          {extractExtraFee(option.notes) && (
+                            <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-700">
+                              +{extractExtraFee(option.notes)}
+                            </span>
+                          )}
+                        </div>
+                        {(() => {
+                          const parts = option.reason?.split('|||') || [option.reason];
+                          const sizeInfo = parts[0];
+                          const whyNot = parts[1];
+                          return (
+                            <>
+                              <p className="mt-1.5 text-xs text-slate-600">
+                                {sizeInfo}
+                              </p>
+                              {whyNot && (
+                                <p className="mt-1 text-[10px] text-slate-400 italic bg-slate-50 rounded px-1.5 py-0.5">
+                                  💡 {whyNot}
+                                </p>
+                              )}
+                            </>
+                          );
+                        })()}
                       </div>
                     </div>
 
-                    <div className="text-right">
-                      <p className="text-3xl font-bold tracking-tight text-slate-900">
+                    <div className="shrink-0 text-right">
+                      <p className="text-2xl font-bold tracking-tight text-slate-900">
                         ¥{option.priceYen.toLocaleString()}
                       </p>
                     </div>
