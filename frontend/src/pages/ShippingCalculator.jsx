@@ -39,7 +39,8 @@ export default function ShippingCalculator() {
   // Custom Hooks
   const {
     cartItems,
-    cartDimensions,
+    packedDimensions,
+    dimensionsLoading,
     addToCart,
     incrementItem,
     decrementItem,
@@ -73,7 +74,17 @@ export default function ShippingCalculator() {
     };
   }, [manualInput]);
 
-  const visualDimensions = mode === 'manual' ? manualDimensions : cartDimensions;
+  // Use packedDimensions from backend for cart mode (real-time 3D packing)
+  const visualDimensions = useMemo(() => {
+    if (mode === 'manual') {
+      return calculation?.dimensions || manualDimensions;
+    }
+    // For cart mode: prefer packedDimensions (from API), fall back to calculation.dimensions
+    if (packedDimensions?.dimensions) {
+      return packedDimensions.dimensions;
+    }
+    return packedDimensions || calculation?.dimensions || null;
+  }, [calculation, mode, manualDimensions, packedDimensions]);
 
   const tabItems = useMemo(() => {
     const unique = new Set(categories.filter(Boolean));
@@ -371,7 +382,11 @@ export default function ShippingCalculator() {
           </div>
 
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 items-start">
-            <ParcelVisualizer3D dimensions={visualDimensions} mode={mode} />
+            <ParcelVisualizer3D
+              dimensions={visualDimensions}
+              mode={mode}
+              placements={packedDimensions?.placements || []}
+            />
             <div ref={resultRef}>
               <ShippingResult calculation={calculation} loading={calcLoading} error={calcError} />
             </div>

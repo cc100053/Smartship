@@ -1,45 +1,52 @@
-import { useState, useMemo } from 'react';
-
-const SOFT_ITEM_COMPRESSION = 0.8;
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { calculateDimensions } from '../api/shippingApi';
 
 export function useCart() {
     const [cartItems, setCartItems] = useState([]);
+    const [packedDimensions, setPackedDimensions] = useState(null);
+    const [dimensionsLoading, setDimensionsLoading] = useState(false);
+    const debounceRef = useRef(null);
 
-    const cartDimensions = useMemo(() => {
-        if (!cartItems.length) return null;
+    // Fetch packed dimensions from backend when cart changes
+    const fetchPackedDimensions = useCallback(async (items) => {
+        if (!items.length) {
+            setPackedDimensions(null);
+            return;
+        }
 
-        let maxLength = 0;
-        let maxWidth = 0;
-        let totalHeight = 0;
-        let totalWeight = 0;
-        let totalItems = 0;
+        const payload = items.map((item) => ({
+            productId: item.product.id,
+            quantity: item.quantity,
+        }));
 
-        cartItems.forEach(({ product, quantity }) => {
-            if (!product || quantity <= 0) return;
+        setDimensionsLoading(true);
+        try {
+            const result = await calculateDimensions(payload);
+            setPackedDimensions(result); // result contains { dimensions, placements }
+        } catch (err) {
+            console.error('[useCart] Failed to fetch packed dimensions:', err);
+            // Keep previous dimensions on error
+        } finally {
+            setDimensionsLoading(false);
+        }
+    }, []);
 
-            maxLength = Math.max(maxLength, product.lengthCm);
-            maxWidth = Math.max(maxWidth, product.widthCm);
+    // Debounced effect to fetch dimensions when cart changes
+    useEffect(() => {
+        if (debounceRef.current) {
+            clearTimeout(debounceRef.current);
+        }
 
-            let itemHeight = product.heightCm * quantity;
-            if (product.category === 'Fashion') {
-                itemHeight *= SOFT_ITEM_COMPRESSION;
+        debounceRef.current = setTimeout(() => {
+            fetchPackedDimensions(cartItems);
+        }, 300); // 300ms debounce
+
+        return () => {
+            if (debounceRef.current) {
+                clearTimeout(debounceRef.current);
             }
-
-            totalHeight += itemHeight;
-            totalWeight += product.weightG * quantity;
-            totalItems += quantity;
-        });
-
-        if (!totalItems) return null;
-
-        return {
-            lengthCm: maxLength,
-            widthCm: maxWidth,
-            heightCm: totalHeight,
-            weightG: totalWeight,
-            itemCount: totalItems,
         };
-    }, [cartItems]);
+    }, [cartItems, fetchPackedDimensions]);
 
     const addToCart = (product) => {
         setCartItems((prev) => {
@@ -81,11 +88,13 @@ export function useCart() {
 
     const clearCart = () => {
         setCartItems([]);
+        setPackedDimensions(null);
     };
 
     return {
         cartItems,
-        cartDimensions,
+        packedDimensions,
+        dimensionsLoading,
         addToCart,
         incrementItem,
         decrementItem,

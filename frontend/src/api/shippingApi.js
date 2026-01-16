@@ -32,3 +32,10 @@ export const calculateFromManual = (payload) =>
     method: 'POST',
     body: JSON.stringify(payload),
   });
+
+// New: Get packed dimensions only (for real-time preview)
+export const calculateDimensions = (items) =>
+  requestJson('/api/shipping/calculate/dimensions', {
+    method: 'POST',
+    body: JSON.stringify({ items }),
+  });
