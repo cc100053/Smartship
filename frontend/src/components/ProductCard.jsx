@@ -17,7 +17,6 @@ export default function ProductCard({ product, onAdd, index = 0 }) {
 
   return (
     <motion.article
-      whileHover={{ y: -2 }}
       className="group relative flex w-full items-center justify-between gap-2 sm:gap-3 rounded-xl border border-white/60 bg-white/40 p-2 sm:p-3 shadow-sm backdrop-blur-md transition-shadow hover:shadow-md overflow-hidden"
     >
       <div className="min-w-0 flex-1">
@@ -48,14 +47,13 @@ export default function ProductCard({ product, onAdd, index = 0 }) {
       </div>
 
       {onAdd ? (
-        <motion.button
+        <button
           type="button"
           onClick={onAdd}
-          whileTap={{ scale: 0.95 }}
-          className="flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white shadow-sm transition-colors hover:bg-slate-800"
+          className="flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white shadow-sm transition-all hover:bg-slate-800 hover:scale-105 active:scale-95"
         >
           <Plus className="h-4 w-4" />
-        </motion.button>
+        </button>
       ) : null}
     </motion.article>
   );
