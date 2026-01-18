@@ -97,7 +97,7 @@ function ReferenceObject({ position, size, scale, name }) {
   // Pulse animation for hologram effect
   useFrame(({ clock }) => {
     if (meshRef.current) {
-      const pulse = Math.sin(clock.getElapsedTime() * 2) * 0.05 + 0.4;
+      const pulse = Math.sin(clock.getElapsedTime() * 2) * 0.05 + 0.2; // Pulse around 0.2 opacity
       meshRef.current.material.opacity = pulse;
     }
   });
@@ -119,6 +119,8 @@ function ReferenceObject({ position, size, scale, name }) {
           opacity={GHOST_MATERIAL.opacity}
           transparent={GHOST_MATERIAL.transparent}
           depthWrite={GHOST_MATERIAL.depthWrite}
+          emissive={GHOST_MATERIAL.emissive}
+          emissiveIntensity={GHOST_MATERIAL.emissiveIntensity}
         />
       </mesh>
 
@@ -139,7 +141,7 @@ function ReferenceObject({ position, size, scale, name }) {
 
 function Scene({ placements, maxDim, dimensions }) {
   // Calculate center of the packed items to center the camera view
-  const scale = 4 / Math.max(maxDim, 100); // Scale down to fit in view (approx 4 units for more padding)
+  const scale = 3 / Math.max(maxDim, 100); // Scale down to fit in view (approx 3 units for more padding)
 
   // Calculate AABB for all placements (memoized for performance)
   const aabb = useMemo(() => calculateAABB(placements), [placements]);
@@ -157,14 +159,8 @@ function Scene({ placements, maxDim, dimensions }) {
   }, [aabb, referenceModel, scale, placements]);
 
   // Calculate center offset for camera view
-  // Include reference object in the center calculation for better framing
-  const centerX = useMemo(() => {
-    if (referencePosition) {
-      // Center between package and reference object
-      return ((aabb.max.x * scale) + referencePosition.x) / 2;
-    }
-    return (aabb.max.x * scale) / 2;
-  }, [aabb, referencePosition, scale]);
+  // Anchor to the product only (ignore reference object)
+  const centerX = (aabb.max.x * scale) / 2;
 
   const centerZ = (aabb.max.y * scale) / 2; // Y in lib -> Z in Three
 
@@ -205,24 +201,33 @@ export default function ParcelVisualizer3D({ dimensions, mode, placements = [] }
   // Convert cm to mm for internal consistency if needed, but placements are in mm
   const maxDim = hasDimensions ? Math.max(dimensions.lengthCm, dimensions.widthCm, dimensions.heightCm) * 10 : 100;
 
-  const dimensionLabel = hasDimensions
-    ? `${formatDimension(dimensions.lengthCm)} x ${formatDimension(dimensions.widthCm)} x ${formatDimension(dimensions.heightCm)} cm`
-    : '-';
+  const dimensionLabel = hasDimensions ? (
+    <div className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0 text-left leading-tight">
+      <span className="text-[10px] text-slate-400 font-sans self-center">縦</span>
+      <span>{formatDimension(dimensions.lengthCm)} cm</span>
+      <span className="text-[10px] text-slate-400 font-sans self-center">横</span>
+      <span>{formatDimension(dimensions.widthCm)} cm</span>
+      <span className="text-[10px] text-slate-400 font-sans self-center">高さ</span>
+      <span>{formatDimension(dimensions.heightCm)} cm</span>
+    </div>
+  ) : (
+    '-'
+  );
 
   return (
     <div className="rounded-2xl sm:rounded-3xl border border-white/60 bg-white/40 p-3 sm:p-5 shadow-sm backdrop-blur-md">
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3 sm:mb-4">
         <div>
-          <p className="text-[8px] sm:text-[10px] uppercase tracking-wider text-slate-500 font-bold">3D ビュー</p>
+          <p className="text-[0.5rem] sm:text-[0.625rem] uppercase tracking-wider text-slate-500 font-bold">3D ビュー</p>
           <h3 className="text-base sm:text-xl font-bold text-slate-900">荷物イメージ</h3>
         </div>
-        <span className="rounded-full border border-slate-200/50 bg-white/50 px-2 sm:px-3 py-0.5 sm:py-1 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-500 backdrop-blur-sm">
+        <span className="rounded-full border border-slate-200/50 bg-white/50 px-2 sm:px-3 py-0.5 sm:py-1 text-[0.56rem] sm:text-[0.625rem] font-bold uppercase tracking-wider text-slate-500 backdrop-blur-sm">
           {mode === 'manual' ? '手動' : 'カート'}
         </span>
       </div>
 
-      <div className="grid gap-3 sm:gap-4 grid-cols-[1.2fr_1fr] sm:grid-cols-[1.5fr_1fr]">
-        <div className="relative h-48 sm:h-64 rounded-xl sm:rounded-2xl border border-white/50 bg-slate-900/90 shadow-inner overflow-hidden">
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-[1.5fr_1fr]">
+        <div className="relative h-64 sm:h-80 min-h-[16rem] rounded-xl sm:rounded-2xl border border-white/50 bg-slate-900/90 shadow-inner overflow-hidden">
           {placements && placements.length > 0 ? (
             <Canvas camera={{ position: [8, 8, 8], fov: 45 }}>
               <Scene placements={placements} maxDim={maxDim} dimensions={dimensions} />
@@ -236,23 +241,23 @@ export default function ParcelVisualizer3D({ dimensions, mode, placements = [] }
 
           {/* Reference Object Legend */}
           {placements && placements.length > 0 && hasDimensions && (
-            <div className="absolute bottom-2 left-2 text-[10px] text-white/80 font-medium bg-black/50 px-2 py-1 rounded flex items-center gap-1.5">
+            <div className="absolute bottom-2 left-2 text-[0.625rem] text-white/80 font-medium bg-black/50 px-2 py-1 rounded flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-sky-300/70 animate-pulse"></span>
-              <span>参考: {getReferenceModel(dimensions).name}</span>
+              <span>参照物: {getReferenceModel(dimensions).name}</span>
             </div>
           )}
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-2 sm:space-y-3">
           <InfoCard
             label="サイズ"
             value={dimensionLabel}
-            icon={<Scale className="h-4 w-4 text-indigo-500" />}
+            icon={<Box className="h-4 w-4 text-indigo-500" />}
           />
           <InfoCard
             label="重量"
             value={dimensions?.weightG ? formatWeight(dimensions.weightG) : '-'}
-            icon={<Box className="h-4 w-4 text-emerald-500" />}
+            icon={<Scale className="h-4 w-4 text-emerald-500" />}
           />
           <InfoCard
             label="点数"
@@ -261,6 +266,17 @@ export default function ParcelVisualizer3D({ dimensions, mode, placements = [] }
           />
         </div>
       </div>
+
+      <div className="mt-2 text-left">
+        <a
+          href="https://pj.mercari.com/mercari-spot/mercari_school_list.pdf"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[0.625rem] text-slate-400 hover:text-slate-600 transition-colors leading-3 block"
+        >
+          参考: https://pj.mercari.com/mercari-spot/mercari_school_list.pdf
+        </a>
+      </div>
     </div>
   );
 }
@@ -268,11 +284,13 @@ export default function ParcelVisualizer3D({ dimensions, mode, placements = [] }
 function InfoCard({ label, value, icon }) {
   return (
     <div className="group rounded-xl sm:rounded-2xl border border-white/60 bg-white/40 p-2 sm:p-3 transition-colors hover:bg-white/60">
-      <div className="flex items-center gap-1.5 sm:gap-2 text-[9px] sm:text-xs uppercase tracking-wider text-slate-500">
+      <div className="flex items-center gap-1.5 sm:gap-2 text-[0.56rem] sm:text-xs uppercase tracking-wider text-slate-500">
         {icon}
         <span>{label}</span>
       </div>
-      <p className="mt-0.5 sm:mt-1 font-mono text-xs sm:text-sm font-semibold text-slate-700">{value}</p>
+      <div className="mt-0.5 sm:mt-1 font-mono text-xs sm:text-sm font-semibold text-slate-700">
+        {value}
+      </div>
     </div>
   );
 }

@@ -136,10 +136,12 @@ export function calculateReferencePosition(aabb, refSize, scale, gapPaddingCm = 
  * Ghost material properties for the hologram effect
  */
 export const GHOST_MATERIAL = {
-    color: '#FFFFFF',
-    metalness: 0.1,
-    roughness: 0.9,
-    opacity: 0.4,
+    color: '#00FFFF', // Cyan for hologram effect
+    metalness: 0.8,
+    roughness: 0.2, // Shiny
+    opacity: 0.2,   // More transparent
     transparent: true,
-    depthWrite: false // Prevents z-fighting with transparent objects
+    depthWrite: false,
+    emissive: '#0088AA', // Slight floaty glow
+    emissiveIntensity: 0.2
 };

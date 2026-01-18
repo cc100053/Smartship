@@ -7,6 +7,7 @@ import ManualInputForm from '../components/ManualInputForm';
 import ParcelVisualizer3D from '../components/ParcelVisualizer3D';
 import ProductCard from '../components/ProductCard';
 import ShippingResult from '../components/ShippingResult';
+import ScrollToTopButton from '../components/ScrollToTopButton';
 import { getCategoryLabel } from '../utils/labels';
 import { cn } from '../utils/cn';
 import { useCart } from '../hooks/useCart';
@@ -35,6 +36,7 @@ export default function ShippingCalculator() {
 
   const cartRef = useRef(null);
   const resultRef = useRef(null);
+  const productListRef = useRef(null);
 
   // Custom Hooks
   const {
@@ -268,11 +270,11 @@ export default function ShippingCalculator() {
 
   return (
     <section id="shipping-calculator" className="flex flex-col gap-4 lg:h-full overflow-x-hidden">
-      <div className="grid gap-4 sm:gap-6 lg:grid-cols-12 lg:h-full lg:overflow-hidden">
+      <div className="grid gap-4 sm:gap-6 md:grid-cols-12 lg:grid-cols-12 lg:h-full lg:overflow-hidden">
 
         {/* --- Product Library Section (Left Column on Desktop, First on Mobile) --- */}
         <motion.div
-          className="order-1 lg:col-span-5 flex flex-col gap-3 sm:gap-4 lg:h-full lg:overflow-hidden min-w-0"
+          className="order-1 md:col-span-5 lg:col-span-5 flex flex-col gap-3 sm:gap-4 lg:h-full lg:overflow-hidden min-w-0"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
@@ -291,42 +293,53 @@ export default function ShippingCalculator() {
             )}
           </div>
 
-          <div className="flex-1 overflow-y-auto rounded-2xl pb-2 custom-scrollbar max-h-[50vh] lg:max-h-none min-w-0">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={loading ? 'loading' : activeCategory}
-                className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-1 xl:grid-cols-2 content-start"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-              >
-                {loading ? (
-                  Array.from({ length: 6 }).map((_, i) => (
-                    <div
-                      key={`skeleton-${i}`}
-                      className="h-24 sm:h-40 rounded-2xl bg-slate-200/50 animate-pulse"
-                    />
-                  ))
-                ) : (
-                  products.map((product, index) => (
-                    <ProductCard
-                      key={product.id}
-                      product={product}
-                      index={index}
-                      onAdd={(event) => handleAddToCart(product, event)}
-                    />
-                  ))
-                )}
-              </motion.div>
-            </AnimatePresence>
+          <div className="relative flex-1 overflow-hidden min-w-0 flex flex-col">
+            <div
+              ref={productListRef}
+              className="flex-1 overflow-y-auto rounded-2xl pb-2 custom-scrollbar max-h-[50vh] lg:max-h-none"
+            >
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={loading ? 'loading' : activeCategory}
+                  className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-1 xl:grid-cols-2 content-start"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  {loading ? (
+                    Array.from({ length: 6 }).map((_, i) => (
+                      <div
+                        key={`skeleton-${i}`}
+                        className="h-24 sm:h-40 rounded-2xl bg-slate-200/50 animate-pulse"
+                      />
+                    ))
+                  ) : (
+                    products.map((product, index) => (
+                      <ProductCard
+                        key={product.id}
+                        product={product}
+                        index={index}
+                        onAdd={(event) => handleAddToCart(product, event)}
+                      />
+                    ))
+                  )}
+                </motion.div>
+              </AnimatePresence>
+            </div>
+            <ScrollToTopButton
+              scrollContainerRef={productListRef}
+              className="absolute bottom-4 right-4 h-8 w-8 sm:h-10 sm:w-10"
+              threshold={200}
+            />
           </div>
         </motion.div>
 
         {/* --- Calculator & Visualizer Section (Right Column on Desktop, Second on Mobile) --- */}
-        <motion.div
-          className="order-2 lg:col-span-7 flex flex-col gap-3 sm:gap-4 lg:h-full lg:overflow-y-auto custom-scrollbar min-w-0"
-          initial={{ opacity: 0, y: 20 }}
+        < motion.div
+          className="order-2 md:col-span-7 lg:col-span-7 flex flex-col gap-3 sm:gap-4 lg:h-full lg:overflow-y-auto custom-scrollbar min-w-0"
+          initial={{ opacity: 0, y: 20 }
+          }
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.1 }}
         >
@@ -413,7 +426,7 @@ export default function ShippingCalculator() {
           </div>
         </motion.div>
 
-      </div>
-    </section>
+      </div >
+    </section >
   );
 }

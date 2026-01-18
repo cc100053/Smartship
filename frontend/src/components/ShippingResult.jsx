@@ -71,7 +71,7 @@ export default function ShippingResult({ calculation, loading, error }) {
   const weightLabel = formatWeight(dimensions.weightG);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 px-6">
       {/* Summary */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
@@ -108,10 +108,16 @@ export default function ShippingResult({ calculation, loading, error }) {
               return (
                 <motion.div
                   key={`${option.id}-${option.serviceName}`}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  whileHover={{ scale: 1.01 }}
+                  initial={{ opacity: 0, x: -20, zIndex: 0 }}
+                  animate={{ opacity: 1, x: 0, zIndex: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  whileHover={{
+                    scale: 1.1,
+                    zIndex: 50,
+                    backgroundColor: '#ffffff',
+                    boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
+                    transition: { duration: 0.1 }
+                  }}
                   className={cn(
                     "relative overflow-hidden rounded-2xl border px-4 py-3 transition-all duration-300",
                     isRecommended
@@ -160,6 +166,11 @@ export default function ShippingResult({ calculation, loading, error }) {
                             </span>
                           )}
                         </div>
+                        {option.sendLocation && (
+                          <p className="mt-1 text-[10px] text-slate-500">
+                            📍 {option.sendLocation}
+                          </p>
+                        )}
                         {(() => {
                           const parts = option.reason?.split('|||') || [option.reason];
                           const sizeInfo = parts[0];

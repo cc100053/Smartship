@@ -1,4 +1,5 @@
 import { getCategoryLabel } from '../utils/labels';
+import { getIconForProduct } from '../utils/productIcons';
 
 const formatWeight = (weightG) => {
   if (weightG >= 1000) {
@@ -54,9 +55,17 @@ export default function CartPanel({
               key={item.product.id}
               className="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50/80 px-3 py-3 text-sm"
             >
-              <div>
-                <p className="font-semibold text-slate-900">{item.product.nameJp || item.product.name}</p>
-                <p className="text-xs text-slate-500">{getCategoryLabel(item.product.category)}</p>
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
+                  {(() => {
+                    const Icon = getIconForProduct(item.product);
+                    return <Icon className="h-5 w-5" />;
+                  })()}
+                </span>
+                <div>
+                  <p className="font-semibold text-slate-900">{item.product.nameJp || item.product.name}</p>
+                  <p className="text-xs text-slate-500">{getCategoryLabel(item.product.category)}</p>
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <button
