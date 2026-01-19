@@ -65,6 +65,9 @@ export default function CartPanel({
                 <div>
                   <p className="font-semibold text-slate-900">{item.product.nameJp || item.product.name}</p>
                   <p className="text-xs text-slate-500">{getCategoryLabel(item.product.category)}</p>
+                  <p className="text-xs text-slate-400 mt-0.5 font-mono">
+                    {item.product.lengthCm}x{item.product.widthCm}x{item.product.heightCm}cm / {item.product.weightG}g
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">

@@ -43,7 +43,7 @@ export default function App() {
 
         <motion.main
           ref={mainRef}
-          className="flex-1 min-h-0 overflow-y-auto lg:overflow-visible"
+          className="flex-1 min-h-0 overflow-y-auto min-[1170px]:overflow-visible"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}

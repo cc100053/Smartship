@@ -203,9 +203,9 @@ export default function ParcelVisualizer3D({ dimensions, mode, placements = [] }
 
   const dimensionLabel = hasDimensions ? (
     <div className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0 text-left leading-tight">
-      <span className="text-[10px] text-slate-400 font-sans self-center">縦</span>
+      <span className="text-[10px] text-slate-400 font-sans self-center">長さ</span>
       <span>{formatDimension(dimensions.lengthCm)} cm</span>
-      <span className="text-[10px] text-slate-400 font-sans self-center">横</span>
+      <span className="text-[10px] text-slate-400 font-sans self-center">幅</span>
       <span>{formatDimension(dimensions.widthCm)} cm</span>
       <span className="text-[10px] text-slate-400 font-sans self-center">高さ</span>
       <span>{formatDimension(dimensions.heightCm)} cm</span>

@@ -1,5 +1,6 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Truck, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Truck, CheckCircle2, AlertCircle, JapaneseYen } from 'lucide-react';
 import { cn } from '../utils/cn';
 
 const formatWeight = (weightG) => {
@@ -19,6 +20,13 @@ const extractExtraFee = (notes) => {
 };
 
 export default function ShippingResult({ calculation, loading, error }) {
+  // Check if device supports hover to prevent accidental triggers on mobile scroll
+  const [isHoverSupported, setIsHoverSupported] = useState(false);
+
+  useEffect(() => {
+    setIsHoverSupported(window.matchMedia('(hover: hover)').matches);
+  }, []);
+
   if (loading) {
     return (
       <div className="space-y-4 rounded-3xl border border-white/60 bg-white/40 p-6 backdrop-blur-md">
@@ -57,7 +65,7 @@ export default function ShippingResult({ calculation, loading, error }) {
         className="flex min-h-[200px] flex-col items-center justify-center rounded-3xl border border-dashed border-slate-300 bg-white/30 p-8 text-center"
       >
         <div className="mb-4 rounded-full bg-white/50 p-4 font-display text-2xl shadow-sm text-slate-300">
-          ¥
+          <JapaneseYen className="h-8 w-8 text-slate-300" />
         </div>
         <p className="text-sm font-medium text-slate-500">
           計算を実行して最適な配送方法を確認。
@@ -111,13 +119,13 @@ export default function ShippingResult({ calculation, loading, error }) {
                   initial={{ opacity: 0, x: -20, zIndex: 0 }}
                   animate={{ opacity: 1, x: 0, zIndex: 0 }}
                   transition={{ delay: index * 0.05 }}
-                  whileHover={{
+                  whileHover={isHoverSupported ? {
                     scale: 1.1,
                     zIndex: 50,
                     backgroundColor: '#ffffff',
                     boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
                     transition: { duration: 0.1 }
-                  }}
+                  } : {}}
                   className={cn(
                     "relative overflow-hidden rounded-2xl border px-4 py-3 transition-all duration-300",
                     isRecommended

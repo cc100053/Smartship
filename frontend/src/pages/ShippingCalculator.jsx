@@ -269,21 +269,21 @@ export default function ShippingCalculator() {
   };
 
   return (
-    <section id="shipping-calculator" className="flex flex-col gap-4 lg:h-full overflow-x-hidden">
-      <div className="grid gap-4 sm:gap-6 md:grid-cols-12 lg:grid-cols-12 lg:h-full lg:overflow-hidden">
+    <section id="shipping-calculator" className="flex flex-col gap-4 min-[1170px]:h-full overflow-x-hidden">
+      <div className="grid gap-6 min-[1170px]:grid-cols-12 min-[1170px]:h-full min-[1170px]:overflow-hidden">
 
         {/* --- Product Library Section (Left Column on Desktop, First on Mobile) --- */}
         <motion.div
-          className="order-1 md:col-span-5 lg:col-span-5 flex flex-col gap-3 sm:gap-4 lg:h-full lg:overflow-hidden min-w-0"
+          className="order-1 min-[1170px]:col-span-5 flex flex-col gap-4 min-[1170px]:h-full min-[1170px]:overflow-hidden min-w-0"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <div className="flex-none rounded-2xl border border-white/60 bg-white/40 p-3 sm:p-4 shadow-sm backdrop-blur-md">
-            <h2 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900">
+          <div className="flex-none rounded-2xl border border-white/60 bg-white/40 p-4 shadow-sm backdrop-blur-md">
+            <h2 className="text-xl font-bold tracking-tight text-slate-900">
               商品を選択
             </h2>
-            <div className="mt-3 sm:mt-4">
+            <div className="mt-4">
               <CategoryTabs categories={tabItems} value={activeCategory} onChange={setActiveCategory} />
             </div>
             {error && (
@@ -296,12 +296,12 @@ export default function ShippingCalculator() {
           <div className="relative flex-1 overflow-hidden min-w-0 flex flex-col">
             <div
               ref={productListRef}
-              className="flex-1 overflow-y-auto rounded-2xl pb-2 custom-scrollbar max-h-[50vh] lg:max-h-none"
+              className="flex-1 overflow-y-auto rounded-2xl pb-2 custom-scrollbar max-h-[50vh] min-[1170px]:max-h-none"
             >
               <AnimatePresence mode="wait">
                 <motion.div
                   key={loading ? 'loading' : activeCategory}
-                  className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-1 xl:grid-cols-2 content-start"
+                  className="grid grid-cols-2 gap-3 min-[1170px]:grid-cols-1 min-[1350px]:grid-cols-2 content-start"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
@@ -311,7 +311,7 @@ export default function ShippingCalculator() {
                     Array.from({ length: 6 }).map((_, i) => (
                       <div
                         key={`skeleton-${i}`}
-                        className="h-24 sm:h-40 rounded-2xl bg-slate-200/50 animate-pulse"
+                        className="h-40 rounded-2xl bg-slate-200/50 animate-pulse"
                       />
                     ))
                   ) : (
@@ -329,7 +329,7 @@ export default function ShippingCalculator() {
             </div>
             <ScrollToTopButton
               scrollContainerRef={productListRef}
-              className="absolute bottom-4 right-4 h-8 w-8 sm:h-10 sm:w-10"
+              className="absolute bottom-4 right-4 h-10 w-10"
               threshold={200}
             />
           </div>
@@ -337,7 +337,7 @@ export default function ShippingCalculator() {
 
         {/* --- Calculator & Visualizer Section (Right Column on Desktop, Second on Mobile) --- */}
         < motion.div
-          className="order-2 md:col-span-7 lg:col-span-7 flex flex-col gap-3 sm:gap-4 lg:h-full lg:overflow-y-auto custom-scrollbar min-w-0"
+          className="order-2 min-[1170px]:col-span-7 flex flex-col gap-4 min-[1170px]:h-full min-[1170px]:overflow-y-auto custom-scrollbar min-w-0"
           initial={{ opacity: 0, y: 20 }
           }
           animate={{ opacity: 1, y: 0 }}
