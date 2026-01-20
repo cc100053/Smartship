@@ -17,6 +17,9 @@ source .env
 set +a
 ```
 
+## Docker
+docker-compose up --build
+
 PowerShell:
 ```powershell
 $env:DB_USER="postgres.bjsizwtgzjeaobdmpndz"

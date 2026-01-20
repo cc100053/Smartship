@@ -89,8 +89,10 @@ export default function ShippingResult({ calculation, loading, error }) {
         <div className="flex items-center justify-between">
           <div>
             <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">発送内容</p>
-            <p className="mt-1 text-lg font-bold text-slate-900">{dimensionLabel}</p>
-            <p className="text-sm text-slate-500 font-medium">{weightLabel} • {dimensions.itemCount} 点</p>
+            <p className="mt-1 text-lg font-bold text-slate-900">
+              {dimensionLabel}
+            </p>
+            <p className="text-sm text-slate-500 font-medium">合計: {(dimensions.lengthCm + dimensions.widthCm + dimensions.heightCm).toFixed(1)} cm • {weightLabel} • {dimensions.itemCount} 点</p>
           </div>
           <div className="rounded-full bg-slate-100 p-3 text-slate-400">
             <Truck className="h-6 w-6" />

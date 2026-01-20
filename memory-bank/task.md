@@ -1,15 +1,15 @@
 # Task Tracking
 
-## Current Objective: Implementing Dynamic Reference Object & Refinements
+## Current Objective: Refine Video Presentation Script
 
-- [x] Implement `referenceObjectUtils.js` for dynamic model selection and AABB logic
-- [x] Create `ReferenceObject` component in `ParcelVisualizer3D.jsx`
-- [x] Integrate Reference Object into 3D Scene with smart positioning (no overlap)
-- [x] Fix "Add Product" button click area issue in `ProductCard.jsx`
-- [x] Update Memory Bank documentation
-    - [x] `implementation_plan.md`: Add reference object feature details
-    - [x] `shippingway.md`: (Optional) Update if shipping logic changed (none so far)
+- [x] Refine and shorten the presentation script (approx 1.5 min)
+- [x] Create `docs/video_presentation_script.md`
+- [x] Verify script length and flow
+- [x] Draft Live Demo script section
+- [x] Refine Live Demo script based on user feedback
+- [ ] Review full script with user
 
-## Future Tasks
-- [ ] Verify actual .glb model loading (currently using placeholders)
-- [ ] Refine 3D camera controls
+## Previous Tasks
+- [x] Locate "発送内容" section in frontend code
+- [x] Implement logic to calculate sum of dimensions (cm)
+- [x] Update UI to display the calculated sum
