@@ -20,6 +20,20 @@ set +a
 ## Docker
 docker-compose up --build
 
+## Azure
+Updating Your App (CI/CD)
+When you push code changes:
+
+1. Rebuild and push new image
+cd backend
+az acr build --registry $ACR_NAME --image smartship-backend:latest .
+
+2. Update container app to use new image
+az containerapp update \
+  --name $APP_NAME \
+  --resource-group $RESOURCE_GROUP \
+  --image "$ACR_NAME.azurecr.io/smartship-backend:latest"
+
 PowerShell:
 ```powershell
 $env:DB_USER="postgres.bjsizwtgzjeaobdmpndz"

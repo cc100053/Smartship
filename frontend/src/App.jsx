@@ -52,6 +52,17 @@ export default function App() {
         </motion.main>
 
         <ScrollToTopButton scrollContainerRef={mainRef} />
+
+        <motion.footer
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
+          className="flex-none mt-3 sm:mt-4 py-2 sm:py-3 text-center"
+        >
+          <p className="text-xs text-slate-500">
+            © 2026 SmartShip. All rights reserved.
+          </p>
+        </motion.footer>
       </div>
     </div>
   );
