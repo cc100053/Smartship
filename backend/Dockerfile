@@ -1,5 +1,5 @@
 # Use an official OpenJDK runtime as a parent image
-FROM eclipse-temurin:17-jdk-jammy AS build
+FROM eclipse-temurin:21-jdk-jammy AS build
 WORKDIR /workspace/app
 
 # Copy the maven wrapper and pom.xml
@@ -22,7 +22,7 @@ RUN ./mvnw clean package -DskipTests
 RUN mkdir -p target/dependency && (cd target/dependency; jar -xf ../*.jar)
 
 # Production stage
-FROM eclipse-temurin:17-jre-jammy
+FROM eclipse-temurin:21-jre-jammy
 VOLUME /tmp
 ARG DEPENDENCY=/workspace/app/target/dependency
 # Copy the dependency and application classes
