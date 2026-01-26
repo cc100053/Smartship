@@ -20,21 +20,38 @@ set +a
 ## Docker
 docker-compose up --build
 
-## Azure
-Updating Your App (CI/CD)
-When you push code changes:
+## Deployment
 
-1. Rebuild and push new image
+### Frontend (Vercel)
+The frontend is hosted on Vercel and connected to the GitHub repository.
+*   **Auto-Deploy**: Just push to the `master` branch on GitHub. Vercel will automatically detect changes in the `frontend/` directory and deploy them.
+
+### Backend (Azure Container Apps)
+The backend is hosted on Azure Container Apps. You need to manually build and update the image when you change backend code.
+
+**Prerequisites:**
+*   Azure CLI installed (`az login`)
+*   Variables set:
+    ```bash
+    ACR_NAME="your_acr_name"           # e.g. smartshipacr
+    RESOURCE_GROUP="your_rg_name"      # e.g. smartship-rg
+    BACKEND_APP="smartship-backend"    # Container App name
+    ```
+
+**Update Steps:**
+```bash
+# 1. Build and push to Azure Container Registry (ACR)
 cd backend
 az acr build --registry $ACR_NAME --image smartship-backend:latest .
 
-2. Update container app to use new image
+# 2. Tell Azure to restart the app with the new image
 az containerapp update \
-  --name $APP_NAME \
+  --name $BACKEND_APP \
   --resource-group $RESOURCE_GROUP \
   --image "$ACR_NAME.azurecr.io/smartship-backend:latest"
+```
 
-PowerShell:
+### PowerShell (Local Dev)
 ```powershell
 $env:DB_USER="postgres.bjsizwtgzjeaobdmpndz"
 $env:DB_PASSWORD="your_actual_password"
