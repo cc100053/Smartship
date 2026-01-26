@@ -26,6 +26,23 @@ public class ShippingMatcher {
         this.packingService = packingService;
     }
 
+    /**
+     * Find best shipping options by trying to pack items into each carrier's
+     * container.
+     * 
+     * KEY IMPROVEMENT: Instead of calculating a single bounding box and checking
+     * which
+     * containers it fits, we now TRY PACKING into each container. This allows the
+     * 3D
+     * algorithm to rotate/arrange items differently per container, potentially
+     * finding
+     * cheaper options (e.g., laying items flat to fit ネコポス's 3cm height).
+     * 
+     * @param items The products to ship
+     * @param dims  Pre-calculated dimensions (used for weight check and "why not"
+     *              reasons)
+     * @return List of shipping options, cheapest fitting first
+     */
     public List<ShippingMatch> findBestOptions(List<ProductReference> items, Dimensions dims) {
         List<ShippingMatch> results = new ArrayList<>();
 
@@ -33,20 +50,29 @@ public class ShippingMatcher {
             return results;
         }
 
-        // Get all carriers sorted by price
+        // Get all carriers sorted by price (cheapest first)
         List<ShippingCarrier> allCarriers = carrierRepository.findAllByOrderByPriceYenAsc();
         List<ShippingCarrier> fittingCarriers = new ArrayList<>();
         List<ShippingCarrier> notFitting = new ArrayList<>();
 
-        // First pass: categorize into fitting and not-fitting
+        // First pass: Try ACTUAL 3D packing for each carrier (not just dimension check)
         for (ShippingCarrier carrier : allCarriers) {
-            boolean canFit = checkDimensionsFit(carrier, dims);
-
-            if (canFit && carrier.getSizeSumLimit() != null) {
-                if (dims.getSizeSum() > carrier.getSizeSumLimit()) {
-                    canFit = false;
-                }
+            // Quick pre-check 1: weight must fit (no packing can fix overweight)
+            if (carrier.getMaxWeightG() != null && dims.getWeightG() > carrier.getMaxWeightG()) {
+                notFitting.add(carrier);
+                continue;
             }
+
+            // Quick pre-check 2: size sum limit (3辺合計) - critical for ゆうパック sizing!
+            // The 3D packing library doesn't know about this Japanese postal rule
+            if (carrier.getSizeSumLimit() != null && dims.getSizeSum() > carrier.getSizeSumLimit()) {
+                notFitting.add(carrier);
+                continue;
+            }
+
+            // Use PackingService to try fitting items into this carrier's container
+            // This runs the 3D algorithm with the carrier's actual L×W×H constraints
+            boolean canFit = packingService.canFit(items, carrier);
 
             if (canFit) {
                 fittingCarriers.add(carrier);

@@ -9,6 +9,7 @@ import com.github.skjolber.packing.api.PackagerResult;
 import com.github.skjolber.packing.api.Placement;
 import com.github.skjolber.packing.packer.bruteforce.FastBruteForcePackager;
 import com.github.skjolber.packing.packer.laff.FastLargestAreaFitFirstPackager;
+import com.github.skjolber.packing.packer.laff.LargestAreaFitFirstPackager;
 import com.smartship.dto.Dimensions;
 import com.smartship.dto.PackingResult;
 import com.smartship.dto.PlacementInfo;
@@ -54,6 +55,18 @@ public class PackingService {
     private static final double SOFT_ITEM_COMPRESSION = 0.8;
     private static final double PLUSH_ITEM_COMPRESSION = 0.6; // Plush toys can be compressed more
 
+    /**
+     * Check if items can fit into a carrier's container using 3D bin packing.
+     * 
+     * Tries multiple packagers in order of speed vs. accuracy:
+     * 1. FastLargestAreaFitFirstPackager (fast, 2D stacking)
+     * 2. LargestAreaFitFirstPackager (slower, 3D stacking - may find tighter fits)
+     * 3. FastBruteForcePackager (slowest, but optimal for ≤6 items)
+     * 
+     * @param items   Products to pack
+     * @param carrier Shipping carrier with container dimensions
+     * @return true if items fit, false otherwise
+     */
     public boolean canFit(List<ProductReference> items, ShippingCarrier carrier) {
         if (items.isEmpty()) {
             return true;
@@ -65,18 +78,48 @@ public class PackingService {
                 .build();
         List<BoxItem> boxItems = createBoxItems(items);
 
-        // Use FastLargestAreaFitFirstPackager - stacks in 2D within each level for
-        // tighter packing
-        FastLargestAreaFitFirstPackager packager = FastLargestAreaFitFirstPackager.newBuilder().build();
+        // Try 1: FastLargestAreaFitFirstPackager (fast, 2D stacking per level)
+        try (FastLargestAreaFitFirstPackager fastPackager = FastLargestAreaFitFirstPackager.newBuilder().build()) {
+            PackagerResult result = fastPackager.newResultBuilder()
+                    .withContainerItems(containerItems)
+                    .withBoxItems(boxItems)
+                    .withMaxContainerCount(1)
+                    .withDeadline(System.currentTimeMillis() + 500) // 500ms timeout
+                    .build();
+            if (result.isSuccess()) {
+                return true;
+            }
+        }
 
-        PackagerResult result = packager.newResultBuilder()
-                .withContainerItems(containerItems)
-                .withBoxItems(boxItems)
-                .withMaxContainerCount(1)
-                .withDeadline(System.currentTimeMillis() + 5000) // 5 second timeout
-                .build();
+        // Try 2: LargestAreaFitFirstPackager (3D stacking - may find tighter fits)
+        try (LargestAreaFitFirstPackager laffPackager = LargestAreaFitFirstPackager.newBuilder().build()) {
+            PackagerResult result = laffPackager.newResultBuilder()
+                    .withContainerItems(containerItems)
+                    .withBoxItems(boxItems)
+                    .withMaxContainerCount(1)
+                    .withDeadline(System.currentTimeMillis() + 1000) // 1s timeout
+                    .build();
+            if (result.isSuccess()) {
+                return true;
+            }
+        }
 
-        return result.isSuccess();
+        // Try 3: FastBruteForcePackager for small item counts (≤6 items)
+        if (items.size() <= 6) {
+            try (FastBruteForcePackager brutePackager = FastBruteForcePackager.newBuilder().build()) {
+                PackagerResult result = brutePackager.newResultBuilder()
+                        .withContainerItems(containerItems)
+                        .withBoxItems(boxItems)
+                        .withMaxContainerCount(1)
+                        .withDeadline(System.currentTimeMillis() + 2000) // 2s timeout
+                        .build();
+                if (result.isSuccess()) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     public Dimensions calculatePackedDimensions(List<ProductReference> items) {
@@ -92,8 +135,10 @@ public class PackingService {
             return calculatePackedResultLibrary(items);
         }
 
-        // Try multiple sorting strategies and pick the one with the most shipping-efficient bounding box.
-        // Prefer smaller size sum (L+W+H), then smaller max dimension, then smaller volume.
+        // Try multiple sorting strategies and pick the one with the most
+        // shipping-efficient bounding box.
+        // Prefer smaller size sum (L+W+H), then smaller max dimension, then smaller
+        // volume.
         List<SortStrategy> strategies = List.of(
                 new SortStrategy("VolumeDesc", (a, b) -> Double.compare(b.getVolumeCm3(), a.getVolumeCm3())),
                 new SortStrategy("VolumeAsc", (a, b) -> Double.compare(a.getVolumeCm3(), b.getVolumeCm3())),
@@ -396,7 +441,8 @@ public class PackingService {
             return packed;
         }
 
-        return normalizeResult(toPlacementInfos(current), packed.dimensions().getWeightG(), packed.dimensions().getItemCount());
+        return normalizeResult(toPlacementInfos(current), packed.dimensions().getWeightG(),
+                packed.dimensions().getItemCount());
     }
 
     private List<PlacementInfo> toPlacementInfos(List<MutablePlacement> placements) {
