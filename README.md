@@ -23,28 +23,28 @@ docker-compose up --build
 ## Deployment
 
 ### Frontend (Vercel)
-The frontend is hosted on Vercel and connected to the GitHub repository.
-*   **Auto-Deploy**: Just push to the `master` branch on GitHub. Vercel will automatically detect changes in the `frontend/` directory and deploy them.
+The frontend is hosted on Vercel and connected to GitHub.
+*   **Auto-Deploy**: Just push to the `master` branch. Vercel automatically deploys changes from the `frontend/` directory.
 
 ### Backend (Azure Container Apps)
-The backend is hosted on Azure Container Apps. You need to manually build and update the image when you change backend code.
+The backend is hosted on Azure. You must manually build and update the image.
 
-**Prerequisites:**
-*   Azure CLI installed (`az login`)
-*   Variables set:
-    ```bash
-    ACR_NAME="your_acr_name"           # e.g. smartshipacr
-    RESOURCE_GROUP="your_rg_name"      # e.g. smartship-rg
-    BACKEND_APP="smartship-backend"    # Container App name
-    ```
-
-**Update Steps:**
+**1. Set Variables (Run in Terminal)**
+Run these lines in your terminal before the update commands.
 ```bash
-# 1. Build and push to Azure Container Registry (ACR)
+# Replace with your actual names
+ACR_NAME="your_registry_name"       # e.g. smartshipacr
+RESOURCE_GROUP="your_resource_group" # e.g. smartship-rg
+BACKEND_APP="smartship-backend"      # Container App name
+```
+
+**2. Update Steps**
+```bash
+# Build & Push Image
 cd backend
 az acr build --registry $ACR_NAME --image smartship-backend:latest .
 
-# 2. Tell Azure to restart the app with the new image
+# Update App
 az containerapp update \
   --name $BACKEND_APP \
   --resource-group $RESOURCE_GROUP \
