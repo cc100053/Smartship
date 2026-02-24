@@ -49,8 +49,13 @@ The `BruteForcePackager` attempts to fit items into a container by trying permut
 
 ### Step-by-Step Decision Process
 
-1.  **Define Bounds**: The algorithm takes a specific standard container (e.g., "Nekopos": $31.2 \times 22.8 \times 3.0$ cm).
-2.  **Permutation Search**: It tries to place **Item 1**. It tests all 6 orientations.
+1.  **Select Box (Cheapest First)**:
+    The system iterates through all available shipping containers, sorted by price (Nekopos -> Compact -> ...). It tries to fit the items into the *cheapest* container first.
+
+2.  **Define Bounds**:
+    The algorithm takes the dimensions of the current candidate container (e.g., "Nekopos": $31.2 \times 22.8 \times 3.0$ cm).
+
+3.  **Permutation Search**: It tries to place **Item 1**. It tests all 6 orientations.
     *   *Example*: A book is $20 \times 15 \times 5$ cm.
     *   If placed standard ($h=5$cm), it exceeds Nekopos height limit (3cm). **Fail**.
     *   The algorithm rotates it to lay flat ($h$ becomes one of the smaller dimensions). **Success**.
