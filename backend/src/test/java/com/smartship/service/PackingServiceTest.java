@@ -253,4 +253,43 @@ public class PackingServiceTest {
         assertTrue(mover.z() >= 50 && mover.x() >= 100,
                 "Mover should be relocated to non-origin top gap. Got x=" + mover.x() + ", z=" + mover.z());
     }
+
+    @Test
+    public void testJapanesePlushNamesReceiveSameCompressionAsPlushKeyword() {
+        // Reproduce user-reported cart shape:
+        // Base 4 + small plush item (Japanese name).
+        List<ProductReference> jpItems = new ArrayList<>();
+        jpItems.add(new ProductReference(null, "ホビー", "トレカ (1枚・硬質ケース)", "トレカ (1枚・硬質ケース)", 11, 8, 0.5, 20, null));
+        jpItems.add(new ProductReference(null, "ホビー", "スケールフィギュア (箱入)", "スケールフィギュア (箱入)", 25, 20, 15, 800, null));
+        jpItems.add(new ProductReference(null, "ホビー", "ぬいぐるみ (中)", "ぬいぐるみ (中)", 30, 20, 15, 300, null));
+        jpItems.add(new ProductReference(null, "ホビー", "プライズフィギュア (箱入)", "プライズフィギュア (箱入)", 18, 12, 9, 350, null));
+        jpItems.add(new ProductReference(null, "ホビー", "ちびぐるみ (マスコット)", "ちびぐるみ (マスコット)", 11, 8, 5, 40, null));
+
+        // Same geometry, but with English "plush" keyword so current backend
+        // compression rule is activated.
+        List<ProductReference> plushKeywordItems = new ArrayList<>();
+        plushKeywordItems.add(new ProductReference(null, "Hobby", "Trading Card Case", "Trading Card Case", 11, 8, 0.5, 20, null));
+        plushKeywordItems.add(new ProductReference(null, "Hobby", "Scale Figure Box", "Scale Figure Box", 25, 20, 15, 800, null));
+        plushKeywordItems.add(new ProductReference(null, "Hobby", "Medium plush", "Medium plush", 30, 20, 15, 300, null));
+        plushKeywordItems.add(new ProductReference(null, "Hobby", "Prize Figure Box", "Prize Figure Box", 18, 12, 9, 350, null));
+        plushKeywordItems.add(new ProductReference(null, "Hobby", "Chibi plush mascot", "Chibi plush mascot", 11, 8, 5, 40, null));
+
+        var jpResult = packingService.calculatePackedResult(jpItems);
+        var plushResult = packingService.calculatePackedResult(plushKeywordItems);
+
+        double jpSum = jpResult.dimensions().getSizeSum();
+        double plushSum = plushResult.dimensions().getSizeSum();
+
+        System.out.println("JP names size sum: " + jpSum + " (" +
+                jpResult.dimensions().getLengthCm() + "x" +
+                jpResult.dimensions().getWidthCm() + "x" +
+                jpResult.dimensions().getHeightCm() + ")");
+        System.out.println("plush keyword size sum: " + plushSum + " (" +
+                plushResult.dimensions().getLengthCm() + "x" +
+                plushResult.dimensions().getWidthCm() + "x" +
+                plushResult.dimensions().getHeightCm() + ")");
+
+        assertTrue(Math.abs(plushSum - jpSum) <= 1.0,
+                "Japanese plush names should be compressed similarly to English 'plush' names.");
+    }
 }

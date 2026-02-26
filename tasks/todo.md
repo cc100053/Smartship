@@ -55,3 +55,56 @@ Investigate and fix the case where a small added item is placed in a way that in
   - Ran with Java 21 explicitly:
     - `JAVA_HOME=$(/usr/libexec/java_home -v 21) PATH="$JAVA_HOME/bin:$PATH" ./mvnw clean test -Dtest=PackingServiceTest`
   - Result: all tests passed (`Tests run: 8, Failures: 0, Errors: 0`).
+
+---
+
+# Carrier-Specific Matching Fix
+
+## Goal
+Fix false size-class rejection by using carrier-specific packing results for size-sum checks instead of global packed dimensions.
+
+## Tasks
+- [x] **1. Add Carrier-Specific Packing API**
+  - Implement `calculatePackedResultForCarrier(items, carrier)` in `PackingService`.
+  - Reuse multi-strategy sorting and multiple packers against a single carrier container.
+- [x] **2. Update ShippingMatcher Logic**
+  - Remove global `dims.getSizeSum()` hard prefilter.
+  - Validate size-sum using carrier-specific packed dimensions.
+  - Improve why-not reason to use carrier-specific failure reason when available.
+- [x] **3. Verification**
+  - Run `PackingServiceTest` on Java 21.
+  - Ensure backend compiles cleanly after `ShippingMatcher` update.
+
+## Review
+- **Implemented**:
+  - Added `calculatePackedResultForCarrier(List<ProductReference>, ShippingCarrier)` and carrier-only pack flow in `PackingService`.
+  - Added single-carrier multi-strategy + multi-packager candidate search without huge-container fallback.
+  - Updated `ShippingMatcher` to use carrier-specific packed result for fit and size-sum checks.
+  - Removed global packed `dims.getSizeSum()` hard prefilter from matching path.
+  - Added carrier-specific not-fit reasons and used them in recommended option "why not" text.
+- **Verification**:
+  - Compile: `JAVA_HOME=$(/usr/libexec/java_home -v 21) PATH="$JAVA_HOME/bin:$PATH" ./mvnw -q -DskipTests compile` ✅
+  - Tests: `JAVA_HOME=$(/usr/libexec/java_home -v 21) PATH="$JAVA_HOME/bin:$PATH" ./mvnw test -Dtest=PackingServiceTest` ✅
+  - Result: `Tests run: 8, Failures: 0, Errors: 0`.
+
+---
+
+# Plush Compression Root Cause Fix
+
+## Goal
+Fix the mismatch where UI claims plush compression for Japanese plush names, but backend applied 0.6 compression only for English `"plush"` names.
+
+## Tasks
+- [x] **1. Unify Compression Detection**
+  - Added shared compression helper in `PackingService`.
+  - Plush detection now checks `name` and `nameJp` for `plush`, `ぬいぐるみ`, `ちびぐるみ`.
+  - Fashion detection now supports both `Fashion` and `ファッション`.
+- [x] **2. Remove Debug Noise**
+  - Removed temporary noisy pass-0 `System.out` debug logs.
+- [x] **3. Add Regression Test**
+  - Added test verifying Japanese plush names are compressed equivalently to English plush keyword names.
+- [x] **4. Verification**
+  - Ran `./mvnw test -Dtest=PackingServiceTest` on Java 21.
+
+## Review
+- `PackingServiceTest` now passes with 9 tests, including plush-name regression.

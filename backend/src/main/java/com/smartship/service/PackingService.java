@@ -20,6 +20,7 @@ import jakarta.annotation.PostConstruct;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -124,6 +125,48 @@ public class PackingService {
 
     public Dimensions calculatePackedDimensions(List<ProductReference> items) {
         return calculatePackedResult(items).dimensions();
+    }
+
+    /**
+     * Calculate the best packed result for a specific carrier container.
+     *
+     * Unlike the global library path, this method does NOT use huge-container
+     * fallback because callers need a true "fits this carrier" result.
+     *
+     * @return best carrier-specific packed result, or null if the items do not fit
+     *         this carrier
+     */
+    public PackingResult calculatePackedResultForCarrier(List<ProductReference> items, ShippingCarrier carrier) {
+        if (items == null || items.isEmpty() || carrier == null) {
+            return null;
+        }
+
+        Container container = createContainer(carrier);
+        List<SortStrategy> strategies = List.of(
+                new SortStrategy("OriginalOrder", null),
+                new SortStrategy("VolumeDesc", (a, b) -> Double.compare(b.getVolumeCm3(), a.getVolumeCm3())),
+                new SortStrategy("VolumeAsc", (a, b) -> Double.compare(a.getVolumeCm3(), b.getVolumeCm3())),
+                new SortStrategy("FootprintDesc",
+                        (a, b) -> Double.compare(b.getWidthCm() * b.getLengthCm(), a.getWidthCm() * a.getLengthCm())),
+                new SortStrategy("HeightDesc", (a, b) -> Double.compare(b.getHeightCm(), a.getHeightCm())));
+
+        PackingResult bestResult = null;
+        PackingScore bestScore = null;
+
+        for (SortStrategy strategy : strategies) {
+            PackingResult result = tryPackWithSortForCarrier(items, container, strategy.comparator);
+            if (result == null || result.dimensions() == null) {
+                continue;
+            }
+
+            PackingScore candidateScore = score(result.dimensions());
+            if (candidateScore.volume() > 0 && (bestScore == null || isBetter(candidateScore, bestScore))) {
+                bestScore = candidateScore;
+                bestResult = result;
+            }
+        }
+
+        return bestResult;
     }
 
     public PackingResult calculatePackedResult(List<ProductReference> items) {
@@ -415,6 +458,96 @@ public class PackingService {
         return bestResult;
     }
 
+    /**
+     * Try packing items with a given sort order into a single carrier container.
+     * Returns best compacted result from multiple packers, or null if no fit.
+     */
+    private PackingResult tryPackWithSortForCarrier(List<ProductReference> items,
+            Container container, Comparator<ProductReference> comparator) {
+        List<BoxItem> boxItems = comparator != null
+                ? createBoxItemsWithSort(items, comparator)
+                : createBoxItemsOriginalOrder(items);
+
+        List<ContainerItem> containerItems = ContainerItem.newListBuilder()
+                .withContainer(container)
+                .build();
+
+        PackingResult bestResult = null;
+        PackingScore bestScore = null;
+
+        Packager<?> fastPackager = FastLargestAreaFitFirstPackager.newBuilder().build();
+        try {
+            PackingResult candidate = tryCarrierPackCandidate(
+                    fastPackager, containerItems, boxItems, items, 700);
+            if (candidate != null) {
+                PackingScore candidateScore = score(candidate.dimensions());
+                if (candidateScore.volume() > 0) {
+                    bestResult = candidate;
+                    bestScore = candidateScore;
+                }
+            }
+        } finally {
+            closeQuietly(fastPackager);
+        }
+
+        Packager<?> laffPackager = LargestAreaFitFirstPackager.newBuilder().build();
+        try {
+            PackingResult candidate = tryCarrierPackCandidate(
+                    laffPackager, containerItems, boxItems, items, 1200);
+            if (candidate != null) {
+                PackingScore candidateScore = score(candidate.dimensions());
+                if (candidateScore.volume() > 0
+                        && (bestScore == null || isBetter(candidateScore, bestScore))) {
+                    bestResult = candidate;
+                    bestScore = candidateScore;
+                }
+            }
+        } finally {
+            closeQuietly(laffPackager);
+        }
+
+        if (items.size() <= BRUTE_FORCE_ITEM_LIMIT) {
+            Packager<?> brutePackager = FastBruteForcePackager.newBuilder().build();
+            try {
+                PackingResult candidate = tryCarrierPackCandidate(
+                        brutePackager, containerItems, boxItems, items, 1500);
+                if (candidate != null) {
+                    PackingScore candidateScore = score(candidate.dimensions());
+                    if (candidateScore.volume() > 0
+                            && (bestScore == null || isBetter(candidateScore, bestScore))) {
+                        bestResult = candidate;
+                        bestScore = candidateScore;
+                    }
+                }
+            } finally {
+                closeQuietly(brutePackager);
+            }
+        }
+
+        return bestResult;
+    }
+
+    private PackingResult tryCarrierPackCandidate(Packager<?> packager, List<ContainerItem> containerItems,
+            List<BoxItem> boxItems, List<ProductReference> items, long timeoutMs) {
+        PackagerResult result = packager.newResultBuilder()
+                .withContainerItems(containerItems)
+                .withBoxItems(boxItems)
+                .withMaxContainerCount(1)
+                .withDeadline(System.currentTimeMillis() + timeoutMs)
+                .build();
+
+        if (!result.isSuccess()) {
+            return null;
+        }
+
+        Container packedContainer = result.get(0);
+        if (packedContainer.getStack() == null) {
+            return null;
+        }
+
+        return compactPlacements(buildPackingResult(packedContainer, items));
+    }
+
     private PackagerResult tryPackInHugeContainer(Packager<?> packager, List<BoxItem> boxItems, long timeoutMs) {
         Container huge = Container.newBuilder()
                 .withDescription("Huge")
@@ -527,17 +660,10 @@ public class PackingService {
                     continue;
                 }
 
-                System.out.println("[Pass0] Edge item " + i + " '" + item.name
-                        + "' at (" + item.x + "," + item.y + "," + item.z
-                        + ") dims=" + item.width + "x" + item.depth + "x" + item.height
-                        + " extends bbox by " + String.format("%.1f", fullScore.sizeSum() - scoreWithout.sizeSum())
-                        + "cm");
-
                 // This item extends the bounding box. Try to relocate it to a
                 // position that keeps size sum ≤ sizeSum of other items' bbox.
                 // Generate candidate positions: on top of each support + floor-level gaps
                 List<int[]> candidates = generateDefensiveCandidates(item, current, i);
-                System.out.println("[Pass0]   Generated " + candidates.size() + " candidate positions");
 
                 for (int[] pos : candidates) {
                     int cx = pos[0], cy = pos[1], cz = pos[2];
@@ -571,15 +697,10 @@ public class PackingService {
             }
 
             if (bestDefensiveMove == null) {
-                System.out.println("[Pass0]   No valid defensive move found in pass " + pass);
                 break;
             }
 
             MutablePlacement moved = current.get(bestDefensiveMove.index);
-            System.out.println("[Pass0]   MOVED '" + moved.name + "' from ("
-                    + moved.x + "," + moved.y + "," + moved.z + ") to ("
-                    + bestDefensiveMove.x + "," + bestDefensiveMove.y + "," + bestDefensiveMove.z
-                    + ") score=" + String.format("%.1f", bestDefensiveMove.score.sizeSum()));
             moved.x = bestDefensiveMove.x;
             moved.y = bestDefensiveMove.y;
             moved.z = bestDefensiveMove.z;
@@ -1316,24 +1437,11 @@ public class PackingService {
 
         List<BoxItem> boxItems = new ArrayList<>();
         for (ProductReference item : sortedItems) {
-            double l = item.getLengthCm();
-            double w = item.getWidthCm();
-            double h = item.getHeightCm();
-
-            // Apply compression for soft/compressible items
-            String name = item.getName();
-            if (name != null && name.toLowerCase().contains("plush")) {
-                // Plush toys (ぬいぐるみ/ちびぐるみ) can be compressed to 60%
-                l *= PLUSH_ITEM_COMPRESSION;
-                w *= PLUSH_ITEM_COMPRESSION;
-                h *= PLUSH_ITEM_COMPRESSION;
-            } else if ("Fashion".equals(item.getCategory())) {
-                h *= SOFT_ITEM_COMPRESSION;
-            }
+            CompressedSize size = getCompressedSize(item);
 
             Box box = Box.newBuilder()
                     .withId(item.getName())
-                    .withSize(toMm(l), toMm(w), toMm(h))
+                    .withSize(toMm(size.lengthCm()), toMm(size.widthCm()), toMm(size.heightCm()))
                     .withWeight(item.getWeightG())
                     .withRotate3D()
                     .build();
@@ -1345,24 +1453,11 @@ public class PackingService {
     private List<BoxItem> createBoxItemsOriginalOrder(List<ProductReference> items) {
         List<BoxItem> boxItems = new ArrayList<>();
         for (ProductReference item : items) {
-            double l = item.getLengthCm();
-            double w = item.getWidthCm();
-            double h = item.getHeightCm();
-
-            // Apply compression for soft/compressible items
-            String name = item.getName();
-            if (name != null && name.toLowerCase().contains("plush")) {
-                // Plush toys (ぬいぐるみ/ちびぐるみ) can be compressed to 60%
-                l *= PLUSH_ITEM_COMPRESSION;
-                w *= PLUSH_ITEM_COMPRESSION;
-                h *= PLUSH_ITEM_COMPRESSION;
-            } else if ("Fashion".equals(item.getCategory())) {
-                h *= SOFT_ITEM_COMPRESSION;
-            }
+            CompressedSize size = getCompressedSize(item);
 
             Box box = Box.newBuilder()
                     .withId(item.getName())
-                    .withSize(toMm(l), toMm(w), toMm(h))
+                    .withSize(toMm(size.lengthCm()), toMm(size.widthCm()), toMm(size.heightCm()))
                     .withWeight(item.getWeightG())
                     .withRotate3D()
                     .build();
@@ -1378,29 +1473,57 @@ public class PackingService {
 
         List<BoxItem> boxItems = new ArrayList<>();
         for (ProductReference item : sortedItems) {
-            double l = item.getLengthCm();
-            double w = item.getWidthCm();
-            double h = item.getHeightCm();
-
-            // Apply compression for soft/compressible items
-            String name = item.getName();
-            if (name != null && name.toLowerCase().contains("plush")) {
-                l *= PLUSH_ITEM_COMPRESSION;
-                w *= PLUSH_ITEM_COMPRESSION;
-                h *= PLUSH_ITEM_COMPRESSION;
-            } else if ("Fashion".equals(item.getCategory())) {
-                h *= SOFT_ITEM_COMPRESSION;
-            }
+            CompressedSize size = getCompressedSize(item);
 
             Box box = Box.newBuilder()
                     .withId(item.getName())
-                    .withSize(toMm(l), toMm(w), toMm(h))
+                    .withSize(toMm(size.lengthCm()), toMm(size.widthCm()), toMm(size.heightCm()))
                     .withWeight(item.getWeightG())
                     .withRotate3D()
                     .build();
             boxItems.add(new BoxItem(box, 1));
         }
         return boxItems;
+    }
+
+    private record CompressedSize(double lengthCm, double widthCm, double heightCm) {
+    }
+
+    private CompressedSize getCompressedSize(ProductReference item) {
+        double l = item.getLengthCm();
+        double w = item.getWidthCm();
+        double h = item.getHeightCm();
+
+        if (isPlushItem(item)) {
+            // Plush toys (ぬいぐるみ/ちびぐるみ/plush) can be compressed to 60%
+            l *= PLUSH_ITEM_COMPRESSION;
+            w *= PLUSH_ITEM_COMPRESSION;
+            h *= PLUSH_ITEM_COMPRESSION;
+        } else if (isFashionItem(item)) {
+            h *= SOFT_ITEM_COMPRESSION;
+        }
+
+        return new CompressedSize(l, w, h);
+    }
+
+    private boolean isPlushItem(ProductReference item) {
+        return containsPlushKeyword(item.getName()) || containsPlushKeyword(item.getNameJp());
+    }
+
+    private boolean containsPlushKeyword(String value) {
+        if (value == null || value.isBlank()) {
+            return false;
+        }
+        String lower = value.toLowerCase(Locale.ROOT);
+        return lower.contains("plush") || value.contains("ぬいぐるみ") || value.contains("ちびぐるみ");
+    }
+
+    private boolean isFashionItem(ProductReference item) {
+        String category = item.getCategory();
+        if (category == null || category.isBlank()) {
+            return false;
+        }
+        return "fashion".equalsIgnoreCase(category) || category.contains("ファッション");
     }
 
     private Dimensions basicSum(List<ProductReference> items) {

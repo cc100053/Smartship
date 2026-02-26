@@ -1,11 +1,14 @@
 package com.smartship.service;
 
 import com.smartship.dto.Dimensions;
+import com.smartship.dto.PackingResult;
 import com.smartship.entity.ProductReference;
 import com.smartship.entity.ShippingCarrier;
 import com.smartship.repository.ShippingCarrierRepository;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -54,31 +57,41 @@ public class ShippingMatcher {
         List<ShippingCarrier> allCarriers = carrierRepository.findAllByOrderByPriceYenAsc();
         List<ShippingCarrier> fittingCarriers = new ArrayList<>();
         List<ShippingCarrier> notFitting = new ArrayList<>();
+        Map<ShippingCarrier, Dimensions> fittingDimsByCarrier = new HashMap<>();
+        Map<ShippingCarrier, String> notFitReasonByCarrier = new HashMap<>();
 
         // First pass: Try ACTUAL 3D packing for each carrier (not just dimension check)
         for (ShippingCarrier carrier : allCarriers) {
             // Quick pre-check 1: weight must fit (no packing can fix overweight)
             if (carrier.getMaxWeightG() != null && dims.getWeightG() > carrier.getMaxWeightG()) {
                 notFitting.add(carrier);
+                notFitReasonByCarrier.put(carrier,
+                        String.format("重量超過 (%dg > %dg)", dims.getWeightG(), carrier.getMaxWeightG()));
                 continue;
             }
 
-            // Quick pre-check 2: size sum limit (3辺合計) - critical for ゆうパック sizing!
-            // The 3D packing library doesn't know about this Japanese postal rule
-            if (carrier.getSizeSumLimit() != null && dims.getSizeSum() > carrier.getSizeSumLimit()) {
+            // Carrier-specific packing result (single container). This prevents
+            // false rejections from using only global packed dimensions.
+            PackingResult packedForCarrier = packingService.calculatePackedResultForCarrier(items, carrier);
+            if (packedForCarrier == null || packedForCarrier.dimensions() == null) {
                 notFitting.add(carrier);
+                notFitReasonByCarrier.put(carrier, "形状的に箱に入りません (3D Packing)");
                 continue;
             }
 
-            // Use PackingService to try fitting items into this carrier's container
-            // This runs the 3D algorithm with the carrier's actual L×W×H constraints
-            boolean canFit = packingService.canFit(items, carrier);
+            Dimensions carrierDims = packedForCarrier.dimensions();
 
-            if (canFit) {
-                fittingCarriers.add(carrier);
-            } else {
+            // Apply size-sum rule using carrier-specific packed dimensions.
+            if (carrier.getSizeSumLimit() != null && carrierDims.getSizeSum() > carrier.getSizeSumLimit()) {
                 notFitting.add(carrier);
+                notFitReasonByCarrier.put(carrier,
+                        String.format("サイズ超過 (3辺合計 %.1fcm > %dcm)",
+                                carrierDims.getSizeSum(), carrier.getSizeSumLimit()));
+                continue;
             }
+
+            fittingCarriers.add(carrier);
+            fittingDimsByCarrier.put(carrier, carrierDims);
         }
 
         if (fittingCarriers.isEmpty()) {
@@ -102,7 +115,7 @@ public class ShippingMatcher {
         // Build results: recommended first, then all others sorted by price
         for (ShippingCarrier carrier : fittingCarriers) {
             boolean isRecommended = carrier.equals(recommended);
-            String reason = generateFitReason(carrier, dims);
+            String reason = generateFitReason(carrier, fittingDimsByCarrier.getOrDefault(carrier, dims));
             results.add(new ShippingMatch(carrier, true, isRecommended, reason));
         }
 
@@ -118,8 +131,8 @@ public class ShippingMatcher {
         // Update recommended with "why not" reason
         if (!notFitting.isEmpty() && !results.isEmpty()) {
             ShippingMatch rec = results.get(0);
-            String sizeInfo = generateFitReason(rec.carrier(), dims);
-            String whyNot = generateWhyNotReason(rec.carrier(), notFitting, dims);
+            String sizeInfo = generateFitReason(rec.carrier(), fittingDimsByCarrier.getOrDefault(rec.carrier(), dims));
+            String whyNot = generateWhyNotReason(rec.carrier(), notFitting, notFitReasonByCarrier, dims);
             String combinedReason = sizeInfo + (whyNot != null ? "|||" + whyNot : "");
             results.set(0, new ShippingMatch(
                     rec.carrier(),
@@ -184,6 +197,7 @@ public class ShippingMatcher {
 
     private String generateWhyNotReason(ShippingCarrier recommended,
             List<ShippingCarrier> notFitting,
+            Map<ShippingCarrier, String> notFitReasonByCarrier,
             Dimensions dims) {
         ShippingCarrier nearestCheaper = null;
         int nearestCheaperPrice = 0;
@@ -200,6 +214,11 @@ public class ShippingMatcher {
 
         if (nearestCheaper == null) {
             return null; // No cheaper options, just show size info
+        }
+
+        String explicitReason = notFitReasonByCarrier.get(nearestCheaper);
+        if (explicitReason != null && !explicitReason.isBlank()) {
+            return nearestCheaper.getServiceName() + "は使えない理由: " + explicitReason;
         }
 
         StringBuilder reason = new StringBuilder();
