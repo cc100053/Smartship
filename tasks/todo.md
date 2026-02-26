@@ -191,3 +191,64 @@ Make 3D preview render even when backend returns dimensions but no per-item plac
 - Verified with:
   - `cd frontend && npm run build` ✅
   - Result: build succeeded.
+
+---
+
+# Backend Load Stability Cleanup
+
+## Goal
+Stop first-load failures that force manual page refreshes, and remove stale config/code that contributes to unstable startup behavior.
+
+## Tasks
+- [x] **1. Frontend retry hardening**
+  - Add retry/backoff for initial product/category API fetches so cold backend startup does not require manual refresh.
+- [x] **2. Backend startup resilience config**
+  - Harden datasource/Hibernate startup settings to avoid crashy startup on transient DB issues.
+- [x] **3. Remove stale backend noise/config**
+  - Remove legacy debug `System.out` logs and outdated config mismatches.
+  - Add missing `.env.example` referenced by README.
+- [x] **4. Verification**
+  - Run backend compile/tests and frontend build.
+- [x] **5. Docs sync**
+  - Update README/setup notes and task review.
+
+## Review
+- Root-cause signal found during reproduction: backend can fail startup with DB auth errors (`FATAL: Tenant or user not found`), and frontend initial fetch previously had no retry path.
+- Added API retry/backoff in `frontend/src/api/shippingApi.js` for initial reads and lightweight retry for calculation requests.
+- Hardened backend startup config in `backend/src/main/resources/application.properties`:
+  - Hikari resilience settings (`initialization-fail-timeout=0`, pool/timeout tuning, test query)
+  - Reduced startup fragility (`ddl-auto=none`, `hibernate.boot.allow_jdbc_metadata_access=false`)
+  - Added `app.frontend-extra-origins` support.
+- Replaced hard-coded CORS origins with env-driven list in `backend/src/main/java/com/smartship/config/CorsConfig.java`.
+- Removed stale debug logging noise from backend service/controller.
+- Added missing `.env.example` and updated README setup notes with Supabase username format troubleshooting.
+- Verification:
+  - `cd backend && ./mvnw -q -DskipTests compile` ✅
+  - `cd backend && ./mvnw -q -Dtest=PackingServiceTest test` ✅
+  - `cd frontend && npm run build` ✅
+
+---
+
+# Docker Compose Startup Regression Fix
+
+## Goal
+Restore `docker-compose up --build` startup after backend config hardening introduced a JPA initialization regression.
+
+## Tasks
+- [x] **1. Reproduce compose failure**
+  - Captured backend crash loop and root error from container logs.
+- [x] **2. Fix JPA dialect initialization regression**
+  - Restored explicit Hibernate dialect setting.
+  - Removed metadata-access disable that prevented dialect resolution at startup.
+- [x] **3. Re-verify compose boot**
+  - Re-ran `docker-compose up --build` and confirmed backend reached `Started SmartshipApplication`.
+
+## Review
+- Root cause: `spring.jpa.properties.hibernate.boot.allow_jdbc_metadata_access=false` combined with removed explicit dialect caused `Unable to determine Dialect without JDBC metadata` during container startup.
+- Applied fix in `backend/src/main/resources/application.properties`:
+  - `spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect`
+  - removed `hibernate.boot.allow_jdbc_metadata_access=false`
+  - kept datasource resilience settings and frontend retry hardening.
+- Verification:
+  - `docker-compose up --build` ✅
+  - `docker-compose ps` shows both `backend` and `frontend` containers `Up` ✅

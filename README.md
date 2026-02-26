@@ -9,6 +9,8 @@ cp .env.example .env
 ```
 
 2) Edit `.env` with your actual Supabase credentials.
+- `DB_USER` should match Supabase pooler format (usually `postgres.<project-ref>`).
+- If backend startup logs show `FATAL: Tenant or user not found`, re-check `DB_USER` / `DB_PASSWORD`.
 
 3) Load the variables before running the backend (bash):
 ```bash

@@ -16,7 +16,6 @@ import com.smartship.dto.PlacementInfo;
 import com.smartship.entity.ProductReference;
 import com.smartship.entity.ShippingCarrier;
 import com.smartship.repository.ShippingCarrierRepository;
-import jakarta.annotation.PostConstruct;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -34,10 +33,6 @@ public class PackingService {
     private static final int THIN_ITEM_HEIGHT_MM = 10; // 1 cm
     private static final int COMPACTION_PASSES = 4;
 
-    static {
-        System.out.println("[DEBUG] PackingService class loading...");
-    }
-
     @Autowired
     public PackingService(ShippingCarrierRepository carrierRepository) {
         this.carrierRepository = carrierRepository;
@@ -46,11 +41,6 @@ public class PackingService {
     // For tests or non-spring usage
     public PackingService() {
         this.carrierRepository = null;
-    }
-
-    @PostConstruct
-    public void init() {
-        System.out.println("[DEBUG] PackingService bean initialized!");
     }
 
     private static final double SOFT_ITEM_COMPRESSION = 0.8;
@@ -164,11 +154,6 @@ public class PackingService {
         }
 
         if (bestResult != null) {
-            System.out.println("[PackingService] Best strategy: " + bestStrategy +
-                    " (SizeSum: " + String.format("%.1f", bestScore.sizeSum()) +
-                    " cm, FootprintAR: " + String.format("%.2f", bestScore.footprintAspect()) +
-                    ", MaxDim: " + String.format("%.1f", bestScore.maxDim()) +
-                    " cm, Volume: " + String.format("%.0f", bestScore.volume()) + " cm³)");
             return bestResult;
         }
 
@@ -290,13 +275,7 @@ public class PackingService {
                     .build();
 
             if (result.isSuccess() && result.get(0).getStack() != null) {
-                PackingResult packed = buildPackingResult(result.get(0), items);
-                Dimensions dims = packed.dimensions();
-                System.out.println("[PackingService-Library] Native LAFF result: "
-                        + String.format("%.1f", dims.getLengthCm()) + "x"
-                        + String.format("%.1f", dims.getWidthCm()) + "x"
-                        + String.format("%.1f", dims.getHeightCm()));
-                return packed;
+                return buildPackingResult(result.get(0), items);
             }
         }
 

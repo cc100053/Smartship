@@ -75,9 +75,6 @@ public class ShippingController {
 
     @PostMapping("/calculate/cart")
     public CalculationResponse calculateCart(@RequestBody CartCalculationRequest request) {
-        System.out.println("[ShippingController] calculateCart called with " +
-                (request.items() != null ? request.items().size() : 0) + " item types");
-
         if (request == null || request.items() == null || request.items().isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cart items are required.");
         }
@@ -114,12 +111,8 @@ public class ShippingController {
             }
         }
 
-        System.out.println("[ShippingController] Expanded items count: " + expandedItems.size());
-
         // Use PackingService to get REAL packed dimensions to show the user
         Dimensions dims = packingService.calculatePackedDimensions(expandedItems);
-        System.out.println("[ShippingController] Packed dims: L=" + dims.getLengthCm() +
-                ", W=" + dims.getWidthCm() + ", H=" + dims.getHeightCm());
 
         return buildResponse(expandedItems, dims);
     }

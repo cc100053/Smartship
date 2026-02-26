@@ -27,3 +27,11 @@
 ## 7. When asked for library-only behavior, remove heuristics from active path
 - **Mistake**: Kept adding custom optimization layers after the user explicitly asked to rely on upstream library behavior.
 - **Rule**: If the user requests \"library-only\" packing, implement a direct library path (single packer flow) and disable custom strategy sweeps/post-process fallback chains in the active code path.
+
+## 8. Startup stability needs both backend resilience and frontend retry
+- **Mistake**: Treated load flakiness as only algorithm/code debt without verifying boot/runtime failures and first-request behavior.
+- **Rule**: For \"need multiple refreshes\" issues, always (1) reproduce backend boot logs, (2) harden datasource startup config, and (3) add frontend retry/backoff for initial API reads.
+
+## 9. Re-verify Docker startup after JPA property changes
+- **Mistake**: Changed Hibernate startup properties without validating `docker-compose up --build`, which introduced a dialect-resolution startup failure.
+- **Rule**: Any change to datasource/JPA boot properties must be verified with both local Maven run and Docker Compose startup before closing the task.
