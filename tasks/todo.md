@@ -108,3 +108,86 @@ Fix the mismatch where UI claims plush compression for Japanese plush names, but
 
 ## Review
 - `PackingServiceTest` now passes with 9 tests, including plush-name regression.
+
+---
+
+# Extreme Points Bounding Box Minimization
+
+## Goal
+Replace the library packing path from "try standard containers" to a true "minimize bounding box" flow so small items are not placed in protruding positions that inflate total dimensions.
+
+## Tasks
+- [x] **1. Switch library path to huge-container-first extraction**
+  - Keep multiple packers (Fast LAFF / LAFF / optional brute-force) for seed placements.
+  - Remove dependency on fallback-container trial order for `calculatePackedResultLibrary`.
+- [x] **2. Implement Extreme Points minimization pass**
+  - Rebuild placements with greedy Extreme Points search.
+  - For each item, evaluate candidate points and choose the placement minimizing global bounding-box score.
+  - Keep collision safety and normalize coordinates.
+- [x] **3. Integrate EP pass in candidate scoring**
+  - Score candidates after EP minimization (and existing compaction, if still beneficial).
+  - Return best result by existing score tie-breakers.
+- [x] **4. Add regression verification**
+  - Add/update backend tests for small-item protrusion and EP behavior.
+  - Run `PackingServiceTest`.
+- [x] **5. Documentation sync**
+  - Update `memory-bank/packing-logic.md` with new production path.
+
+## Review
+- Updated `calculatePackedResultLibrary` to use huge-container extraction for all packers, then `minimizeBoundingBoxWithExtremePoints` + `compactPlacements`.
+- Added Extreme Points rebuild implementation in `PackingService` with support/collision checks, tie-breakers, and a flat-profile guard (`<=3.0cm` seed height).
+- Added regression test `testExtremePointsMinimizationRemovesProtrusion` in `PackingServiceTest`.
+- Verified with:
+  - `cd backend && ./mvnw -q -Dtest=PackingServiceTest test`
+  - Result: pass (`Failures: 0, Errors: 0`).
+
+---
+
+# Native Library-Only Packing Refactor
+
+## Goal
+Use `3d-bin-container-packing` native behavior directly and remove custom packing heuristics/fallback chains from the active path.
+
+## Tasks
+- [x] **1. Align with upstream usage**
+  - Reviewed upstream repository packing API usage and packager options.
+- [x] **2. Remove custom active-path heuristics**
+  - Switched active `calculatePackedResultLibrary` flow to single `LargestAreaFitFirstPackager` call.
+  - Removed active-path sort strategy sweep, extreme-points pass, custom compaction, and huge-container retry chain.
+- [x] **3. Apply same native path for carrier checks**
+  - Updated `canFit` and `calculatePackedResultForCarrier` to use native LAFF path with raw dimensions.
+- [x] **4. Verify**
+  - Ran backend packing tests and compile.
+- [x] **5. Documentation sync**
+  - Updated `memory-bank/packing-logic.md` to match current active behavior.
+
+## Review
+- Code now uses library-native LAFF packing directly in active paths.
+- Verification:
+  - `cd backend && ./mvnw -q -Dtest=PackingServiceTest test` ✅
+  - `cd backend && ./mvnw -q -DskipTests compile` ✅
+
+---
+
+# 3D Preview Fallback Rendering Fix
+
+## Goal
+Make 3D preview render even when backend returns dimensions but no per-item placements.
+
+## Tasks
+- [x] **1. Identify render gate bug**
+  - Confirmed canvas was gated by `placements.length > 0`.
+- [x] **2. Add fallback placement rendering**
+  - Generate a synthetic placement from packed dimensions when placements are empty.
+  - Keep existing real placements path unchanged.
+- [x] **3. Validate scene helpers**
+  - Updated reference object positioning to work with dimension-only fallback.
+- [x] **4. Verify frontend build**
+  - Run `npm run build` in frontend.
+ 
+## Review
+- Updated `ParcelVisualizer3D` to render from `displayPlacements`, which falls back to a synthetic dimension-based box when API placements are empty.
+- Kept normal per-item placement rendering unchanged when placements are present.
+- Verified with:
+  - `cd frontend && npm run build` ✅
+  - Result: build succeeded.

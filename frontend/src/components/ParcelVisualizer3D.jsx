@@ -130,7 +130,10 @@ function ReferenceObject({ position, size, scale }) {
 function Scene({ placements, maxDim, dimensions }) {
   const scale = 3 / Math.max(maxDim, 100);
   const aabb = useMemo(() => calculateAABB(placements), [placements]);
-  const hasDims = dimensions && dimensions.lengthCm > 0;
+  const hasDims = dimensions &&
+    dimensions.lengthCm > 0 &&
+    dimensions.widthCm > 0 &&
+    dimensions.heightCm > 0;
 
   const referenceModel = useMemo(() => {
     if (!hasDims) return null;
@@ -138,7 +141,7 @@ function Scene({ placements, maxDim, dimensions }) {
   }, [hasDims, dimensions]);
 
   const referencePosition = useMemo(() => {
-    if (!referenceModel || !placements || placements.length === 0 || !hasDims) return null;
+    if (!referenceModel || !hasDims) return null;
     const maxX = dimensions.lengthCm ? dimensions.lengthCm * 10 : aabb.max.x;
     const maxY = dimensions.widthCm ? dimensions.widthCm * 10 : aabb.max.y;
     const maxZ = dimensions.heightCm ? dimensions.heightCm * 10 : aabb.max.z;
@@ -221,7 +224,32 @@ class CanvasErrorBoundary extends Component {
 
 // ── Main Component ────────────────────────────────────────────────
 export default function ParcelVisualizer3D({ dimensions, mode, placements = [] }) {
-  const hasDimensions = dimensions && dimensions.lengthCm > 0;
+  const hasDimensions = dimensions &&
+    dimensions.lengthCm > 0 &&
+    dimensions.widthCm > 0 &&
+    dimensions.heightCm > 0;
+  const hasPlacements = placements && placements.length > 0;
+
+  const displayPlacements = useMemo(() => {
+    if (hasPlacements) {
+      return placements;
+    }
+    if (!hasDimensions) {
+      return [];
+    }
+
+    // Fallback preview when backend returns dimensions without per-item placements.
+    return [{
+      x: 0,
+      y: 0,
+      z: 0,
+      width: Math.max(1, Math.round(dimensions.lengthCm * 10)),
+      depth: Math.max(1, Math.round(dimensions.widthCm * 10)),
+      height: Math.max(1, Math.round(dimensions.heightCm * 10)),
+      color: '#38bdf8',
+      name: 'Package',
+    }];
+  }, [dimensions, hasDimensions, hasPlacements, placements]);
 
 
   const maxDim = hasDimensions
@@ -255,11 +283,11 @@ export default function ParcelVisualizer3D({ dimensions, mode, placements = [] }
 
       <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-[1.5fr_1fr]">
         <div className="relative h-64 sm:h-80 min-h-[16rem] rounded-xl sm:rounded-2xl border border-white/50 bg-slate-900/90 shadow-inner overflow-hidden group">
-          {placements && placements.length > 0 ? (
+          {displayPlacements.length > 0 ? (
             <CanvasErrorBoundary>
               <Canvas camera={{ position: [8, 8, 8], fov: 45 }}>
                 <Scene
-                  placements={placements}
+                  placements={displayPlacements}
                   maxDim={maxDim}
                   dimensions={dimensions}
                 />
@@ -274,7 +302,7 @@ export default function ParcelVisualizer3D({ dimensions, mode, placements = [] }
           )}
 
           {/* Reference object legend */}
-          {placements && placements.length > 0 && hasDimensions && (
+          {displayPlacements.length > 0 && hasDimensions && (
             <div className="absolute bottom-2 left-2 text-[0.625rem] text-white/80 font-medium bg-black/50 px-2 py-1 rounded flex items-center gap-1.5 pointer-events-none">
               <span className="w-2 h-2 rounded-full bg-sky-300/70 animate-pulse"></span>
               <span>参照物: {getReferenceModel(dimensions).name}</span>

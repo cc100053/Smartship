@@ -19,3 +19,11 @@
 ## 5. Respect local-only investigation constraints
 - **Mistake**: Started querying external data tooling when the user asked to investigate locally.
 - **Rule**: If the user says to stay local, restrict investigation to repository code, local configs, and local test reproduction; do not call external data sources.
+
+## 6. Container-first packing can bias global size
+- **Mistake**: Relied on trying standard containers first and only doing local compaction, which can preserve protruding placements and inflate the overall bounding box.
+- **Rule**: For global dimension quality issues, run a dedicated bounding-box minimization phase (Extreme Points rebuild) after extraction and score candidates on the final global box, not container trial order.
+
+## 7. When asked for library-only behavior, remove heuristics from active path
+- **Mistake**: Kept adding custom optimization layers after the user explicitly asked to rely on upstream library behavior.
+- **Rule**: If the user requests \"library-only\" packing, implement a direct library path (single packer flow) and disable custom strategy sweeps/post-process fallback chains in the active code path.
