@@ -276,49 +276,161 @@ public class PackingService {
 
     private PackingResult calculatePackedResultLibrary(List<ProductReference> items) {
         List<Container> containers = getLibraryContainers();
+
+        // Try multiple sort strategies and pick result with smallest bounding box
+        List<SortStrategy> strategies = List.of(
+                new SortStrategy("OriginalOrder", null),
+                new SortStrategy("VolumeDesc", (a, b) -> Double.compare(b.getVolumeCm3(), a.getVolumeCm3())),
+                new SortStrategy("VolumeAsc", (a, b) -> Double.compare(a.getVolumeCm3(), b.getVolumeCm3())),
+                new SortStrategy("FootprintDesc",
+                        (a, b) -> Double.compare(b.getWidthCm() * b.getLengthCm(), a.getWidthCm() * a.getLengthCm())),
+                new SortStrategy("HeightDesc", (a, b) -> Double.compare(b.getHeightCm(), a.getHeightCm())));
+
+        PackingResult bestResult = null;
+        PackingScore bestScore = null;
+        String bestStrategy = "";
+
+        for (SortStrategy strategy : strategies) {
+            PackingResult result = tryPackWithSortLibrary(items, containers, strategy.comparator);
+            if (result != null && result.dimensions() != null) {
+                PackingScore candidateScore = score(result.dimensions());
+                if (candidateScore.volume() > 0 && (bestScore == null || isBetter(candidateScore, bestScore))) {
+                    bestScore = candidateScore;
+                    bestResult = result;
+                    bestStrategy = strategy.name;
+                }
+            }
+        }
+
+        if (bestResult != null) {
+            System.out.println("[PackingService-Library] Best strategy: " + bestStrategy +
+                    " (SizeSum: " + String.format("%.1f", bestScore.sizeSum()) +
+                    " cm, Volume: " + String.format("%.0f", bestScore.volume()) + " cm³)");
+            return bestResult;
+        }
+
+        // Fallback to basic sum if all strategies fail
+        return new PackingResult(basicSum(items), List.of());
+    }
+
+    /**
+     * Try packing items with a given sort order using the library containers.
+     * Returns compacted PackingResult, or null if packing failed entirely.
+     */
+    private PackingResult tryPackWithSortLibrary(List<ProductReference> items,
+            List<Container> containers, Comparator<ProductReference> comparator) {
+        List<BoxItem> boxItems = comparator != null
+                ? createBoxItemsWithSort(items, comparator)
+                : createBoxItemsOriginalOrder(items);
+
         List<ContainerItem> containerItems = ContainerItem.newListBuilder()
                 .withContainers(containers)
                 .build();
-        List<BoxItem> boxItems = createBoxItemsOriginalOrder(items);
 
-        Packager<?> packager = FastLargestAreaFitFirstPackager.newBuilder().build();
+        PackingResult bestResult = null;
+        PackingScore bestScore = null;
+
+        // Candidate 1: Fast LAFF (fast path)
+        Packager<?> fastPackager = FastLargestAreaFitFirstPackager.newBuilder().build();
         try {
-            PackagerResult result = packager.newResultBuilder()
+            PackagerResult fastResult = fastPackager.newResultBuilder()
                     .withContainerItems(containerItems)
                     .withBoxItems(boxItems)
-                    .withDeadline(System.currentTimeMillis() + 2000)
+                    .withMaxContainerCount(1)
+                    .withDeadline(System.currentTimeMillis() + 1000)
                     .build();
 
-            if (!result.isSuccess()) {
-                Container huge = Container.newBuilder()
-                        .withDescription("Huge")
-                        .withSize(3000, 3000, 3000)
-                        .withEmptyWeight(0)
-                        .withMaxLoadWeight(100_000_000)
-                        .build();
+            if (!fastResult.isSuccess()) {
+                fastResult = tryPackInHugeContainer(fastPackager, boxItems, 500);
+            }
 
-                PackagerResult hugeResult = packager.newResultBuilder()
-                        .withContainerItems(ContainerItem.newListBuilder().withContainer(huge).build())
-                        .withBoxItems(boxItems)
-                        .withDeadline(System.currentTimeMillis() + 500)
-                        .build();
-
-                if (!hugeResult.isSuccess()) {
-                    return new PackingResult(basicSum(items), List.of());
+            if (fastResult != null && fastResult.isSuccess()) {
+                PackingResult candidate = compactPlacements(buildPackingResult(fastResult.get(0), items));
+                PackingScore candidateScore = score(candidate.dimensions());
+                if (candidateScore.volume() > 0) {
+                    bestResult = candidate;
+                    bestScore = candidateScore;
                 }
-                result = hugeResult;
             }
-
-            Container packedContainer = result.get(0);
-            if (packedContainer.getStack() == null) {
-                return new PackingResult(basicSum(items), List.of());
-            }
-
-            PackingResult packed = buildPackingResult(packedContainer, items);
-            return compactPlacements(packed);
         } finally {
-            closeQuietly(packager);
+            closeQuietly(fastPackager);
         }
+
+        // Candidate 2: Standard LAFF (slower, can find tighter layouts than fast LAFF)
+        Packager<?> laffPackager = LargestAreaFitFirstPackager.newBuilder().build();
+        try {
+            PackagerResult laffResult = laffPackager.newResultBuilder()
+                    .withContainerItems(containerItems)
+                    .withBoxItems(boxItems)
+                    .withMaxContainerCount(1)
+                    .withDeadline(System.currentTimeMillis() + 1500)
+                    .build();
+
+            if (!laffResult.isSuccess()) {
+                laffResult = tryPackInHugeContainer(laffPackager, boxItems, 700);
+            }
+
+            if (laffResult != null && laffResult.isSuccess()) {
+                PackingResult candidate = compactPlacements(buildPackingResult(laffResult.get(0), items));
+                PackingScore candidateScore = score(candidate.dimensions());
+                if (candidateScore.volume() > 0
+                        && (bestScore == null || isBetter(candidateScore, bestScore))) {
+                    bestResult = candidate;
+                    bestScore = candidateScore;
+                }
+            }
+        } finally {
+            closeQuietly(laffPackager);
+        }
+
+        // Candidate 3: Brute-force for small item counts (more optimal placements)
+        if (items.size() <= BRUTE_FORCE_ITEM_LIMIT) {
+            Packager<?> brutePackager = FastBruteForcePackager.newBuilder().build();
+            try {
+                PackagerResult bruteResult = brutePackager.newResultBuilder()
+                        .withContainerItems(containerItems)
+                        .withBoxItems(boxItems)
+                        .withMaxContainerCount(1)
+                        .withDeadline(System.currentTimeMillis() + 1500)
+                        .build();
+
+                if (!bruteResult.isSuccess()) {
+                    bruteResult = tryPackInHugeContainer(brutePackager, boxItems, 700);
+                }
+
+                if (bruteResult != null && bruteResult.isSuccess()) {
+                    PackingResult candidate = compactPlacements(buildPackingResult(bruteResult.get(0), items));
+                    PackingScore candidateScore = score(candidate.dimensions());
+                    if (candidateScore.volume() > 0
+                            && (bestScore == null || isBetter(candidateScore, bestScore))) {
+                        bestResult = candidate;
+                        bestScore = candidateScore;
+                    }
+                }
+            } finally {
+                closeQuietly(brutePackager);
+            }
+        }
+
+        return bestResult;
+    }
+
+    private PackagerResult tryPackInHugeContainer(Packager<?> packager, List<BoxItem> boxItems, long timeoutMs) {
+        Container huge = Container.newBuilder()
+                .withDescription("Huge")
+                .withSize(3000, 3000, 3000)
+                .withEmptyWeight(0)
+                .withMaxLoadWeight(100_000_000)
+                .build();
+
+        PackagerResult hugeResult = packager.newResultBuilder()
+                .withContainerItems(ContainerItem.newListBuilder().withContainer(huge).build())
+                .withBoxItems(boxItems)
+                .withMaxContainerCount(1)
+                .withDeadline(System.currentTimeMillis() + timeoutMs)
+                .build();
+
+        return hugeResult.isSuccess() ? hugeResult : null;
     }
 
     private PackagerResult packInContainer(Packager<?> packager, Container container,
@@ -391,10 +503,94 @@ public class PackingService {
         }
 
         boolean movedAny = false;
+
+        // Pass 0: Defensive relocation — first priority
+        // Find items that are on the bounding box edge (extending total size).
+        // Try to relocate them into positions that do NOT increase the size sum
+        // beyond the bounding box of the remaining items.
+        for (int pass = 0; pass < COMPACTION_PASSES; pass++) {
+            Dimensions fullDims = dimensionsFromPlacements(toPlacementInfos(current),
+                    packed.dimensions().getWeightG(), packed.dimensions().getItemCount());
+            PackingScore fullScore = score(fullDims);
+
+            MoveCandidate bestDefensiveMove = null;
+
+            for (int i = 0; i < current.size(); i++) {
+                MutablePlacement item = current.get(i);
+
+                // Check if this item is on the bounding box edge
+                // (i.e., removing it would shrink the bounding box)
+                Dimensions dimsWithout = dimensionsWithout(current, i,
+                        packed.dimensions().getWeightG(), packed.dimensions().getItemCount());
+                PackingScore scoreWithout = score(dimsWithout);
+                if (scoreWithout.sizeSum() >= fullScore.sizeSum() - 1e-6) {
+                    continue;
+                }
+
+                System.out.println("[Pass0] Edge item " + i + " '" + item.name
+                        + "' at (" + item.x + "," + item.y + "," + item.z
+                        + ") dims=" + item.width + "x" + item.depth + "x" + item.height
+                        + " extends bbox by " + String.format("%.1f", fullScore.sizeSum() - scoreWithout.sizeSum())
+                        + "cm");
+
+                // This item extends the bounding box. Try to relocate it to a
+                // position that keeps size sum ≤ sizeSum of other items' bbox.
+                // Generate candidate positions: on top of each support + floor-level gaps
+                List<int[]> candidates = generateDefensiveCandidates(item, current, i);
+                System.out.println("[Pass0]   Generated " + candidates.size() + " candidate positions");
+
+                for (int[] pos : candidates) {
+                    int cx = pos[0], cy = pos[1], cz = pos[2];
+
+                    if (cx == item.x && cy == item.y && cz == item.z) {
+                        continue;
+                    }
+
+                    // Collision-free check
+                    List<PlacementInfo> candidateList = toPlacementInfos(current);
+                    candidateList.set(i, new PlacementInfo(item.name, cx, cy, cz,
+                            item.width, item.depth, item.height, item.color));
+                    if (wouldOverlap(i, cx, cy, cz, candidateList)) {
+                        continue;
+                    }
+
+                    // Check if size sum doesn't increase beyond other items' bbox
+                    Dimensions candidateDims = dimensionsFromPlacements(candidateList,
+                            packed.dimensions().getWeightG(), packed.dimensions().getItemCount());
+                    PackingScore candidateScore = score(candidateDims);
+
+                    // Defensive gate: must not worsen the score
+                    if (!isBetter(candidateScore, fullScore)) {
+                        continue;
+                    }
+
+                    if (bestDefensiveMove == null || isBetter(candidateScore, bestDefensiveMove.score)) {
+                        bestDefensiveMove = new MoveCandidate(i, cx, cy, cz, candidateScore);
+                    }
+                }
+            }
+
+            if (bestDefensiveMove == null) {
+                System.out.println("[Pass0]   No valid defensive move found in pass " + pass);
+                break;
+            }
+
+            MutablePlacement moved = current.get(bestDefensiveMove.index);
+            System.out.println("[Pass0]   MOVED '" + moved.name + "' from ("
+                    + moved.x + "," + moved.y + "," + moved.z + ") to ("
+                    + bestDefensiveMove.x + "," + bestDefensiveMove.y + "," + bestDefensiveMove.z
+                    + ") score=" + String.format("%.1f", bestDefensiveMove.score.sizeSum()));
+            moved.x = bestDefensiveMove.x;
+            moved.y = bestDefensiveMove.y;
+            moved.z = bestDefensiveMove.z;
+            movedAny = true;
+        }
+
+        // Pass 1: Slide toward origin (existing logic)
         for (int pass = 0; pass < COMPACTION_PASSES; pass++) {
             Dimensions baseDims = dimensionsFromPlacements(toPlacementInfos(current),
                     packed.dimensions().getWeightG(), packed.dimensions().getItemCount());
-            double baseVolume = volumeCm3(baseDims);
+            PackingScore baseScore = score(baseDims);
 
             MoveCandidate bestMove = null;
 
@@ -412,21 +608,23 @@ public class PackingService {
                 List<PlacementInfo> candidate = toPlacementInfos(current);
                 candidate.set(i, new PlacementInfo(item.name, targetX, targetY, targetZ,
                         item.width, item.depth, item.height, item.color));
+                if (wouldOverlap(i, targetX, targetY, targetZ, candidate)) {
+                    continue;
+                }
 
                 Dimensions candidateDims = dimensionsFromPlacements(candidate,
                         packed.dimensions().getWeightG(), packed.dimensions().getItemCount());
-                double candidateVolume = volumeCm3(candidateDims);
-                double delta = candidateVolume - baseVolume;
                 PackingScore candidateScore = score(candidateDims);
+                if (!isBetter(candidateScore, baseScore)) {
+                    continue;
+                }
 
-                if (bestMove == null || delta < bestMove.delta - 1e-6
-                        || (Math.abs(delta - bestMove.delta) <= 1e-6
-                                && isBetter(candidateScore, bestMove.score))) {
-                    bestMove = new MoveCandidate(i, targetX, targetY, targetZ, delta, candidateScore);
+                if (bestMove == null || isBetter(candidateScore, bestMove.score)) {
+                    bestMove = new MoveCandidate(i, targetX, targetY, targetZ, candidateScore);
                 }
             }
 
-            if (bestMove == null || bestMove.delta >= -1e-6) {
+            if (bestMove == null) {
                 break;
             }
 
@@ -435,6 +633,87 @@ public class PackingService {
             moved.y = bestMove.y;
             moved.z = bestMove.z;
             movedAny = true;
+        }
+
+        // Pass 2: Gated gap-stacking — try placing items on top of supports
+        // Strict safety gates:
+        // 1. Item must fit within support's footprint (containment)
+        // 2. Placement must be collision-free with all other items
+        // 3. Bounding box size sum (L+W+H) must strictly improve
+        Dimensions currentDims = dimensionsFromPlacements(toPlacementInfos(current),
+                packed.dimensions().getWeightG(), packed.dimensions().getItemCount());
+        PackingScore currentScore = score(currentDims);
+
+        // Preserve already-flat results for 3cm-class envelopes.
+        // Stacking pass is beneficial for generic boxes, but can regress flat-mail
+        // use-cases by increasing thickness.
+        if (currentDims.getHeightCm() > 3.0) {
+            for (int pass = 0; pass < COMPACTION_PASSES; pass++) {
+                MoveCandidate bestStackMove = null;
+
+                for (int i = 0; i < current.size(); i++) {
+                    MutablePlacement item = current.get(i);
+
+                    for (int j = 0; j < current.size(); j++) {
+                        if (i == j)
+                            continue;
+                        MutablePlacement support = current.get(j);
+
+                        // Gate 1: Item must fit entirely within support's footprint
+                        if (item.width > support.width || item.depth > support.depth) {
+                            continue;
+                        }
+
+                        int candidateZ = support.z + support.height;
+                        List<XYAnchor> topAnchors = generateTopAnchors(item, support, current, i);
+                        for (XYAnchor anchor : topAnchors) {
+                            int candidateX = anchor.x;
+                            int candidateY = anchor.y;
+
+                            // Skip if position is unchanged
+                            if (candidateX == item.x && candidateY == item.y && candidateZ == item.z) {
+                                continue;
+                            }
+
+                            // Gate 2: Collision-free check
+                            List<PlacementInfo> candidateList = toPlacementInfos(current);
+                            candidateList.set(i, new PlacementInfo(item.name, candidateX, candidateY, candidateZ,
+                                    item.width, item.depth, item.height, item.color));
+                            if (wouldOverlap(i, candidateX, candidateY, candidateZ, candidateList)) {
+                                continue;
+                            }
+
+                            // Gate 3: Bounding box score must strictly improve
+                            Dimensions candidateDims = dimensionsFromPlacements(candidateList,
+                                    packed.dimensions().getWeightG(), packed.dimensions().getItemCount());
+                            PackingScore candidateScore = score(candidateDims);
+                            if (!isBetter(candidateScore, currentScore)) {
+                                continue;
+                            }
+
+                            if (bestStackMove == null || isBetter(candidateScore, bestStackMove.score)) {
+                                bestStackMove = new MoveCandidate(i, candidateX, candidateY, candidateZ,
+                                        candidateScore);
+                            }
+                        }
+                    }
+                }
+
+                if (bestStackMove == null) {
+                    break;
+                }
+
+                MutablePlacement moved = current.get(bestStackMove.index);
+                moved.x = bestStackMove.x;
+                moved.y = bestStackMove.y;
+                moved.z = bestStackMove.z;
+                movedAny = true;
+
+                // Update baseline for next pass
+                currentDims = dimensionsFromPlacements(toPlacementInfos(current),
+                        packed.dimensions().getWeightG(), packed.dimensions().getItemCount());
+                currentScore = score(currentDims);
+            }
         }
 
         if (!movedAny) {
@@ -555,7 +834,145 @@ public class PackingService {
         }
     }
 
-    private record MoveCandidate(int index, int x, int y, int z, double delta, PackingScore score) {
+    private record MoveCandidate(int index, int x, int y, int z, PackingScore score) {
+    }
+
+    /**
+     * Compute bounding box dimensions excluding item at given index.
+     * Used by Pass 0 to check if an item is on the bounding box edge.
+     */
+    private Dimensions dimensionsWithout(List<MutablePlacement> placements, int excludeIndex,
+            int weightG, int itemCount) {
+        int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE, minZ = Integer.MAX_VALUE;
+        int maxX = 0, maxY = 0, maxZ = 0;
+        boolean hasAny = false;
+
+        for (int i = 0; i < placements.size(); i++) {
+            if (i == excludeIndex)
+                continue;
+            MutablePlacement p = placements.get(i);
+            minX = Math.min(minX, p.x);
+            minY = Math.min(minY, p.y);
+            minZ = Math.min(minZ, p.z);
+            maxX = Math.max(maxX, p.x + p.width);
+            maxY = Math.max(maxY, p.y + p.depth);
+            maxZ = Math.max(maxZ, p.z + p.height);
+            hasAny = true;
+        }
+
+        if (!hasAny) {
+            return new Dimensions(0, 0, 0, weightG, itemCount);
+        }
+
+        return new Dimensions(
+                toCm(maxX - minX), toCm(maxY - minY), toCm(maxZ - minZ),
+                weightG, itemCount);
+    }
+
+    /**
+     * Generate ALL candidate positions for defensive relocation of an edge item.
+     * Uses x/y/z anchor points from ALL items' edges and surfaces.
+     * No footprint constraint — collision detection handles physical validity.
+     */
+    private List<int[]> generateDefensiveCandidates(MutablePlacement item,
+            List<MutablePlacement> placements, int movingIndex) {
+        // Collect anchor points from all axis-aligned edges of every item
+        java.util.LinkedHashSet<Integer> xAnchors = new java.util.LinkedHashSet<>();
+        java.util.LinkedHashSet<Integer> yAnchors = new java.util.LinkedHashSet<>();
+        java.util.LinkedHashSet<Integer> zAnchors = new java.util.LinkedHashSet<>();
+
+        xAnchors.add(0);
+        yAnchors.add(0);
+        zAnchors.add(0);
+
+        for (int k = 0; k < placements.size(); k++) {
+            if (k == movingIndex)
+                continue;
+            MutablePlacement other = placements.get(k);
+
+            // Left/right edges
+            xAnchors.add(other.x);
+            xAnchors.add(other.x + other.width);
+            xAnchors.add(other.x - item.width); // right-align against left edge
+
+            // Front/back edges
+            yAnchors.add(other.y);
+            yAnchors.add(other.y + other.depth);
+            yAnchors.add(other.y - item.depth);
+
+            // Top/bottom surfaces (critical for finding shelf positions)
+            zAnchors.add(other.z);
+            zAnchors.add(other.z + other.height);
+            zAnchors.add(other.z - item.height);
+        }
+
+        // Build all (x, y, z) combinations from the anchor sets
+        List<int[]> candidates = new ArrayList<>();
+        for (int x : xAnchors) {
+            if (x < 0)
+                continue;
+            for (int y : yAnchors) {
+                if (y < 0)
+                    continue;
+                for (int z : zAnchors) {
+                    if (z < 0)
+                        continue;
+                    candidates.add(new int[] { x, y, z });
+                }
+            }
+        }
+
+        return candidates;
+    }
+
+    private record XYAnchor(int x, int y) {
+    }
+
+    private List<XYAnchor> generateTopAnchors(MutablePlacement item, MutablePlacement support,
+            List<MutablePlacement> placements, int movingIndex) {
+        List<Integer> xCandidates = new ArrayList<>();
+        List<Integer> yCandidates = new ArrayList<>();
+
+        // Support corners and opposite edges are always good anchors.
+        xCandidates.add(support.x);
+        xCandidates.add(support.x + support.width - item.width);
+        yCandidates.add(support.y);
+        yCandidates.add(support.y + support.depth - item.depth);
+
+        // Add edge-aligned anchors around other boxes to discover gap placements.
+        for (int k = 0; k < placements.size(); k++) {
+            if (k == movingIndex) {
+                continue;
+            }
+            MutablePlacement other = placements.get(k);
+            xCandidates.add(other.x);
+            xCandidates.add(other.x + other.width);
+            xCandidates.add(other.x - item.width);
+            yCandidates.add(other.y);
+            yCandidates.add(other.y + other.depth);
+            yCandidates.add(other.y - item.depth);
+        }
+
+        List<XYAnchor> anchors = new ArrayList<>();
+        java.util.LinkedHashSet<Long> seen = new java.util.LinkedHashSet<>();
+        int supportX2 = support.x + support.width;
+        int supportY2 = support.y + support.depth;
+
+        for (int x : xCandidates) {
+            if (x < support.x || x + item.width > supportX2) {
+                continue;
+            }
+            for (int y : yCandidates) {
+                if (y < support.y || y + item.depth > supportY2) {
+                    continue;
+                }
+                long key = (((long) x) << 32) ^ (y & 0xffffffffL);
+                if (seen.add(key)) {
+                    anchors.add(new XYAnchor(x, y));
+                }
+            }
+        }
+        return anchors;
     }
 
     private PackingResult buildPackingResult(Container packedContainer, List<ProductReference> items) {
@@ -835,37 +1252,40 @@ public class PackingService {
     }
 
     private List<Container> getFallbackContainers() {
+        // Geometry-only containers for dimension estimation.
+        // Weight constraints are evaluated separately in ShippingMatcher.
+        final int GEOMETRY_ONLY_MAX_LOAD = 100_000_000;
         return List.of(
                 // Nekoposu (A4 size, 3cm thick) - Prioritize flat packing!
                 Container.newBuilder().withDescription("Nekoposu").withSize(312, 228, 30).withEmptyWeight(0)
-                        .withMaxLoadWeight(1000).build(),
+                        .withMaxLoadWeight(GEOMETRY_ONLY_MAX_LOAD).build(),
                 // Yu-Packet Post (Stick style, 3cm thick)
                 Container.newBuilder().withDescription("Yu-Packet Post").withSize(327, 228, 30).withEmptyWeight(0)
-                        .withMaxLoadWeight(2000).build(),
+                        .withMaxLoadWeight(GEOMETRY_ONLY_MAX_LOAD).build(),
                 // Compact Box (5cm thick)
                 Container.newBuilder().withDescription("Compact").withSize(250, 200, 50).withEmptyWeight(0)
-                        .withMaxLoadWeight(5000).build(),
+                        .withMaxLoadWeight(GEOMETRY_ONLY_MAX_LOAD).build(),
                 // Letter Pack Plus (User specified ~7cm height target)
                 Container.newBuilder().withDescription("Letter Pack Plus").withSize(340, 248, 70).withEmptyWeight(0)
-                        .withMaxLoadWeight(4000).build(),
+                        .withMaxLoadWeight(GEOMETRY_ONLY_MAX_LOAD).build(),
                 // Size 60
                 Container.newBuilder().withDescription("Size 60").withSize(250, 200, 150).withEmptyWeight(0)
-                        .withMaxLoadWeight(2000).build(),
+                        .withMaxLoadWeight(GEOMETRY_ONLY_MAX_LOAD).build(),
                 // Size 80
                 Container.newBuilder().withDescription("Size 80").withSize(350, 250, 200).withEmptyWeight(0)
-                        .withMaxLoadWeight(5000).build(),
+                        .withMaxLoadWeight(GEOMETRY_ONLY_MAX_LOAD).build(),
                 // Size 100
                 Container.newBuilder().withDescription("Size 100").withSize(450, 350, 200).withEmptyWeight(0)
-                        .withMaxLoadWeight(10000).build(),
+                        .withMaxLoadWeight(GEOMETRY_ONLY_MAX_LOAD).build(),
                 // Size 120
                 Container.newBuilder().withDescription("Size 120").withSize(550, 400, 250).withEmptyWeight(0)
-                        .withMaxLoadWeight(15000).build(),
+                        .withMaxLoadWeight(GEOMETRY_ONLY_MAX_LOAD).build(),
                 // Size 140
                 Container.newBuilder().withDescription("Size 140").withSize(600, 450, 350).withEmptyWeight(0)
-                        .withMaxLoadWeight(20000).build(),
+                        .withMaxLoadWeight(GEOMETRY_ONLY_MAX_LOAD).build(),
                 // Size 160
                 Container.newBuilder().withDescription("Size 160").withSize(700, 500, 400).withEmptyWeight(0)
-                        .withMaxLoadWeight(25000).build());
+                        .withMaxLoadWeight(GEOMETRY_ONLY_MAX_LOAD).build());
     }
 
     private boolean isSizeSumOnlyCarrier(ShippingCarrier carrier) {

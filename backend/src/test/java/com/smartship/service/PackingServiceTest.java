@@ -3,8 +3,11 @@ package com.smartship.service;
 import com.smartship.entity.ProductReference;
 import com.smartship.entity.ShippingCarrier;
 import com.smartship.dto.Dimensions;
+import com.smartship.dto.PackingResult;
+import com.smartship.dto.PlacementInfo;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -168,5 +171,86 @@ public class PackingServiceTest {
         // Note: We do not assert Z=0 because for this specific fragmentation, the
         // packer
         // prefers stacking (Z=50) even with sorting enabled.
+    }
+
+    /**
+     * Regression test: Adding a small item should not unnecessarily inflate
+     * the bounding box when there is available gap space.
+     * 
+     * Scenario: 4 items pack to ~80cm size sum (L+W+H).
+     * Adding 1 small item should still keep size sum ≤ 80cm
+     * because it fits in gaps/on top of existing items.
+     * 
+     * This exercises calculatePackedResultLibrary() via calculatePackedResult()
+     * since USE_LIBRARY_ONLY = true.
+     */
+    @Test
+    public void testSmallItemDoesNotIncreaseSizeClass() {
+        List<ProductReference> items = new ArrayList<>();
+        // 4 base items that pack to roughly 80cm sizeSum
+        items.add(createItem("Base1", 30, 20, 10, 300));
+        items.add(createItem("Base2", 15, 15, 10, 200));
+        items.add(createItem("Base3", 15, 15, 10, 200));
+        items.add(createItem("Base4", 10, 10, 5, 100));
+
+        var baseResult = packingService.calculatePackedResult(items);
+        double baseSizeSum = baseResult.dimensions().getLengthCm()
+                + baseResult.dimensions().getWidthCm()
+                + baseResult.dimensions().getHeightCm();
+        System.out.println("Base (4 items): " + baseResult.dimensions().getLengthCm()
+                + "x" + baseResult.dimensions().getWidthCm()
+                + "x" + baseResult.dimensions().getHeightCm()
+                + " = " + baseSizeSum + " cm");
+
+        // Add a small item — should fit in gap, not increase bounding box
+        items.add(createItem("SmallExtra", 5, 5, 3, 50));
+
+        var result = packingService.calculatePackedResult(items);
+        double sizeSum = result.dimensions().getLengthCm()
+                + result.dimensions().getWidthCm()
+                + result.dimensions().getHeightCm();
+        System.out.println("With small item (5 items): " + result.dimensions().getLengthCm()
+                + "x" + result.dimensions().getWidthCm()
+                + "x" + result.dimensions().getHeightCm()
+                + " = " + sizeSum + " cm");
+
+        // The small item should not push sizeSum beyond the base + small tolerance
+        // Key: it should NOT jump to a larger size class
+        assertTrue(sizeSum <= baseSizeSum + 5.0,
+                "Adding small item should not significantly increase sizeSum. Base: "
+                        + baseSizeSum + ", Got: " + sizeSum);
+    }
+
+    @Test
+    public void testCompactionCanUseNonCornerTopGap() throws Exception {
+        // Support top is partially blocked at origin corner.
+        // The moving item only fits on the support's non-origin top area.
+        List<PlacementInfo> placements = List.of(
+                new PlacementInfo("Support", 0, 0, 0, 200, 200, 50, "#4ade80"),
+                new PlacementInfo("TopBlocker", 0, 0, 50, 100, 200, 30, "#60a5fa"),
+                new PlacementInfo("Mover", 200, 0, 0, 100, 100, 20, "#facc15"));
+
+        PackingResult initial = new PackingResult(
+                new Dimensions(30.0, 20.0, 8.0, 1000, 3),
+                placements);
+
+        Method compactPlacements = PackingService.class.getDeclaredMethod("compactPlacements", PackingResult.class);
+        compactPlacements.setAccessible(true);
+        PackingResult compacted = (PackingResult) compactPlacements.invoke(packingService, initial);
+
+        double initialSizeSum = initial.dimensions().getSizeSum();
+        double compactedSizeSum = compacted.dimensions().getSizeSum();
+
+        assertTrue(compactedSizeSum < initialSizeSum,
+                "Compaction should reduce size sum by placing mover on the available top gap.");
+
+        PlacementInfo mover = compacted.placements().stream()
+                .filter(p -> "Mover".equals(p.name()))
+                .findFirst()
+                .orElseThrow();
+
+        // Mover should be stacked on top of support, and shifted off origin to avoid blocker.
+        assertTrue(mover.z() >= 50 && mover.x() >= 100,
+                "Mover should be relocated to non-origin top gap. Got x=" + mover.x() + ", z=" + mover.z());
     }
 }

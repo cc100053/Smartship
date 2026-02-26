@@ -1,3 +1,4 @@
+import { useRef, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Plus } from 'lucide-react';
 import { getCategoryLabel } from '../utils/labels';
@@ -12,16 +13,60 @@ const formatWeight = (weightG) => {
   return `${weightG} g`;
 };
 
-
 export default function ProductCard({ product, onAdd, index = 0 }) {
   const sizeLabel = `${formatDimension(product.lengthCm)} x ${formatDimension(product.widthCm)} x ${formatDimension(product.heightCm)} cm`;
   const weightLabel = formatWeight(product.weightG);
   const Icon = getIconForProduct(product);
 
+  const cardRef = useRef(null);
+  const [tilt, setTilt] = useState({ rotateX: 0, rotateY: 0 });
+  const [glowPos, setGlowPos] = useState({ x: 50, y: 50 });
+  const [isHovering, setIsHovering] = useState(false);
+
+  const handleMouseMove = useCallback((e) => {
+    const el = cardRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+    // Tilt: max ±8 degrees
+    setTilt({
+      rotateY: (x - 0.5) * 16,
+      rotateX: (0.5 - y) * 16,
+    });
+    setGlowPos({ x: x * 100, y: y * 100 });
+  }, []);
+
+  const handleMouseEnter = useCallback(() => setIsHovering(true), []);
+  const handleMouseLeave = useCallback(() => {
+    setIsHovering(false);
+    setTilt({ rotateX: 0, rotateY: 0 });
+  }, []);
+
   return (
     <motion.article
-      className="group relative flex w-full items-center justify-between gap-2 sm:gap-3 rounded-xl border border-white/60 bg-white/40 p-2 sm:p-3 shadow-sm backdrop-blur-md transition-shadow hover:shadow-md overflow-hidden"
+      ref={cardRef}
+      onMouseMove={handleMouseMove}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      animate={{
+        rotateX: tilt.rotateX,
+        rotateY: tilt.rotateY,
+        scale: isHovering ? 1.04 : 1,
+      }}
+      transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+      style={{ transformStyle: 'preserve-3d', perspective: 800 }}
+      className="group relative flex w-full items-center justify-between gap-2 sm:gap-3 rounded-xl border border-white/60 bg-white/40 p-2 sm:p-3 shadow-sm backdrop-blur-md overflow-hidden"
     >
+      {/* Glow overlay that follows cursor */}
+      <div
+        className="pointer-events-none absolute inset-0 rounded-xl transition-opacity duration-300"
+        style={{
+          opacity: isHovering ? 1 : 0,
+          background: `radial-gradient(circle at ${glowPos.x}% ${glowPos.y}%, rgba(251,191,36,0.15) 0%, transparent 60%)`,
+        }}
+      />
+
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5 sm:gap-2">
           <span className="flex h-6 w-6 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
@@ -61,5 +106,3 @@ export default function ProductCard({ product, onAdd, index = 0 }) {
     </motion.article>
   );
 }
-
-

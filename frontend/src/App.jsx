@@ -27,7 +27,7 @@ export default function App() {
               <Package className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </div>
             <div>
-              <p className="font-display text-sm sm:text-base font-bold leading-none tracking-tight text-slate-900">
+              <p className="font-display text-sm sm:text-base font-bold leading-none tracking-tight text-shimmer">
                 SmartShip
               </p>
               <p className="text-[0.56rem] sm:text-[0.625rem] font-medium text-slate-500">
