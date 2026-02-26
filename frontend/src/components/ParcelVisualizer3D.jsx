@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, useMemo } from 'react';
+import { useRef, useMemo, Component } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Grid, Environment } from '@react-three/drei';
 import { Box, Layers, Scale } from 'lucide-react';
@@ -8,6 +8,7 @@ import {
   calculateReferencePosition,
   GHOST_MATERIAL
 } from '../utils/referenceObjectUtils';
+import * as THREE from 'three';
 
 const formatDimension = (value) => Number(value).toFixed(1);
 
@@ -18,44 +19,23 @@ const formatWeight = (weightG) => {
   return `${weightG} g`;
 };
 
-function PlacedItem({ info, scale }) {
-  // Convert mm position to Three.js units (centered)
-  // Placement coordinates are from bottom-left corner
-  const width = info.width * scale;
-  const height = info.height * scale;
-  const depth = info.depth * scale;
-
-  const x = (info.x * scale) + (width / 2);
-  const z = (info.z * scale) + (depth / 2); // Z is depth in packing lib
-  const y = (info.y * scale) + (height / 2); // Y is height in packing lib (check this)
+// ── Edges helper (memoized to avoid GPU leak) ─────────────────────
+function BoxEdges({ width, height, depth, color = 'white', opacity = 0.6 }) {
+  const geo = useMemo(() => {
+    const box = new THREE.BoxGeometry(width, height, depth);
+    const edges = new THREE.EdgesGeometry(box);
+    return edges;
+  }, [width, height, depth]);
 
   return (
-    <mesh position={[x, y, z]}>
-      <boxGeometry args={[width, height, depth]} />
-      <meshStandardMaterial
-        color={info.color}
-        transparent
-        opacity={0.8}
-        roughness={0.2}
-        metalness={0.1}
-      />
-      <lineSegments>
-        <edgesGeometry args={[new THREE.BoxGeometry(width, height, depth)]} />
-        <lineBasicMaterial color="white" opacity={0.5} transparent />
-      </lineSegments>
-    </mesh>
+    <lineSegments geometry={geo}>
+      <lineBasicMaterial color={color} opacity={opacity} transparent />
+    </lineSegments>
   );
 }
 
-// Coordinate system adjustment:
-// Packing lib: X=width, Y=depth, Z=height usually
-// Three.js: X=width, Y=height, Z=depth
+// ── PlacedBox — same structure as the original working code ───────
 function PlacedBox({ info, scale }) {
-  // Conversions based on verified PackingService mapping:
-  // Lib X -> Three X
-  // Lib Y -> Three Z (Depth)
-  // Lib Z -> Three Y (Height)
-
   const width = info.width * scale;
   const depth = info.depth * scale;
   const height = info.height * scale;
@@ -66,7 +46,6 @@ function PlacedBox({ info, scale }) {
 
   return (
     <group position={[x, y, z]}>
-      {/* Main Box */}
       <mesh>
         <boxGeometry args={[width, height, depth]} />
         <meshStandardMaterial
@@ -76,40 +55,55 @@ function PlacedBox({ info, scale }) {
           roughness={0.1}
         />
       </mesh>
-
-      {/* Edges */}
-      <lineSegments>
-        <edgesGeometry args={[new THREE.BoxGeometry(width, height, depth)]} />
-        <lineBasicMaterial color="white" opacity={0.6} transparent />
-      </lineSegments>
+      <BoxEdges width={width} height={height} depth={depth} />
     </group>
   );
 }
 
-/**
- * ReferenceObject Component
- * Renders a ghost/hologram-style reference object for scale comparison.
- * Uses a simple box geometry as a placeholder (can be replaced with GLB loader).
- */
-function ReferenceObject({ position, size, scale, name }) {
+// ── Transparent shipping box (glass outline) ──────────────────────
+function ShippingBox({ dimensions, scale }) {
+  if (!dimensions || !dimensions.lengthCm) return null;
+
+  const width = dimensions.lengthCm * 10 * scale;
+  const depth = dimensions.widthCm * 10 * scale;
+  const height = dimensions.heightCm * 10 * scale;
+
+  return (
+    <group position={[width / 2, height / 2, depth / 2]}>
+      <mesh>
+        <boxGeometry args={[width, height, depth]} />
+        <meshStandardMaterial
+          color="#ffffff"
+          transparent
+          opacity={0.12}
+          roughness={0.1}
+          metalness={0.0}
+          side={THREE.DoubleSide}
+          depthWrite={false}
+        />
+      </mesh>
+      <BoxEdges width={width} height={height} depth={depth} color="#ffffff" opacity={0.35} />
+    </group>
+  );
+}
+
+// ── Reference Object (hologram ghost) ─────────────────────────────
+function ReferenceObject({ position, size, scale }) {
   const meshRef = useRef();
 
-  // Pulse animation for hologram effect
   useFrame(({ clock }) => {
     if (meshRef.current) {
-      const pulse = Math.sin(clock.getElapsedTime() * 2) * 0.05 + 0.2; // Pulse around 0.2 opacity
-      meshRef.current.material.opacity = pulse;
+      meshRef.current.material.opacity =
+        Math.sin(clock.getElapsedTime() * 2) * 0.05 + 0.2;
     }
   });
 
-  // Convert size from cm to scene units (cm -> mm -> scene)
   const width = size.width * 10 * scale;
   const height = size.height * 10 * scale;
   const depth = size.depth * 10 * scale;
 
   return (
     <group position={[position.x, position.y, position.z]}>
-      {/* Main Reference Shape (Box placeholder - replace with useGLTF for actual models) */}
       <mesh ref={meshRef}>
         <boxGeometry args={[width, height, depth]} />
         <meshStandardMaterial
@@ -123,14 +117,7 @@ function ReferenceObject({ position, size, scale, name }) {
           emissiveIntensity={GHOST_MATERIAL.emissiveIntensity}
         />
       </mesh>
-
-      {/* Wireframe edges for clarity */}
-      <lineSegments>
-        <edgesGeometry args={[new THREE.BoxGeometry(width, height, depth)]} />
-        <lineBasicMaterial color="#88CCFF" opacity={0.6} transparent />
-      </lineSegments>
-
-      {/* Ground indicator line */}
+      <BoxEdges width={width} height={height} depth={depth} color="#88CCFF" />
       <mesh position={[0, -height / 2 + 0.001, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[width * 0.3, width * 0.35, 32]} />
         <meshBasicMaterial color="#88CCFF" transparent opacity={0.3} />
@@ -139,49 +126,54 @@ function ReferenceObject({ position, size, scale, name }) {
   );
 }
 
+// ── Scene ─────────────────────────────────────────────────────────
 function Scene({ placements, maxDim, dimensions }) {
-  // Calculate center of the packed items to center the camera view
-  const scale = 3 / Math.max(maxDim, 100); // Scale down to fit in view (approx 3 units for more padding)
-
-  // Calculate AABB for all placements (memoized for performance)
+  const scale = 3 / Math.max(maxDim, 100);
   const aabb = useMemo(() => calculateAABB(placements), [placements]);
+  const hasDims = dimensions && dimensions.lengthCm > 0;
 
-  // Get appropriate reference model based on package dimensions
   const referenceModel = useMemo(() => {
-    if (!dimensions) return null;
+    if (!hasDims) return null;
     return getReferenceModel(dimensions);
-  }, [dimensions]);
+  }, [hasDims, dimensions]);
 
-  // Calculate reference object position (to the right of package, no overlap)
   const referencePosition = useMemo(() => {
-    if (!referenceModel || !placements || placements.length === 0) return null;
-    return calculateReferencePosition(aabb, referenceModel.realWorldSize, scale, 5);
-  }, [aabb, referenceModel, scale, placements]);
+    if (!referenceModel || !placements || placements.length === 0 || !hasDims) return null;
+    const maxX = dimensions.lengthCm ? dimensions.lengthCm * 10 : aabb.max.x;
+    const maxY = dimensions.widthCm ? dimensions.widthCm * 10 : aabb.max.y;
+    const maxZ = dimensions.heightCm ? dimensions.heightCm * 10 : aabb.max.z;
+    const boxAABB = {
+      min: { x: 0, y: 0, z: 0 },
+      max: { x: maxX, y: maxY, z: maxZ },
+      center: { x: maxX / 2, y: maxY / 2, z: maxZ / 2 },
+      size: { x: maxX, y: maxY, z: maxZ },
+    };
+    return calculateReferencePosition(boxAABB, referenceModel.realWorldSize, scale, 5);
+  }, [aabb, dimensions, hasDims, referenceModel, scale, placements]);
 
-  // Calculate center offset for camera view
-  // Anchor to the product only (ignore reference object)
-  const centerX = (aabb.max.x * scale) / 2;
-
-  const centerZ = (aabb.max.y * scale) / 2; // Y in lib -> Z in Three
+  const centerX = ((hasDims && dimensions.lengthCm ? dimensions.lengthCm * 10 : aabb.max.x) * scale) / 2;
+  const centerZ = ((hasDims && dimensions.widthCm ? dimensions.widthCm * 10 : aabb.max.y) * scale) / 2;
 
   return (
     <>
-      <ambientLight intensity={0.5} />
-      <pointLight position={[10, 20, 10]} intensity={1} />
+      <ambientLight intensity={0.6} />
+      <pointLight position={[10, 20, 10]} intensity={1.5} />
 
       <group position={[-centerX, 0, -centerZ]}>
-        {/* Placed packages */}
+        {/* Glass shipping box */}
+        {hasDims && <ShippingBox dimensions={dimensions} scale={scale} />}
+
+        {/* Packed items */}
         {placements && placements.map((p, i) => (
           <PlacedBox key={i} info={p} scale={scale} />
         ))}
 
-        {/* Dynamic Reference Object */}
+        {/* Reference object */}
         {referenceModel && referencePosition && (
           <ReferenceObject
             position={referencePosition}
             size={referenceModel.realWorldSize}
             scale={scale}
-            name={referenceModel.name}
           />
         )}
       </group>
@@ -193,13 +185,48 @@ function Scene({ placements, maxDim, dimensions }) {
   );
 }
 
-import * as THREE from 'three';
+// ── Error Boundary ────────────────────────────────────────────────
+class CanvasErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
 
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, info) {
+    console.warn('3D Viewer error caught:', error, info);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full text-white/50">
+          <Box className="h-8 w-8 mb-2 opacity-50" />
+          <p className="text-xs">3D表示でエラーが発生しました</p>
+          <button
+            onClick={() => this.setState({ hasError: false })}
+            className="mt-2 text-xs text-sky-400 hover:text-sky-300 underline"
+          >
+            再試行
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+// ── Main Component ────────────────────────────────────────────────
 export default function ParcelVisualizer3D({ dimensions, mode, placements = [] }) {
   const hasDimensions = dimensions && dimensions.lengthCm > 0;
 
-  // Convert cm to mm for internal consistency if needed, but placements are in mm
-  const maxDim = hasDimensions ? Math.max(dimensions.lengthCm, dimensions.widthCm, dimensions.heightCm) * 10 : 100;
+
+  const maxDim = hasDimensions
+    ? Math.max(dimensions.lengthCm, dimensions.widthCm, dimensions.heightCm) * 10
+    : 100;
 
   const dimensionLabel = hasDimensions ? (
     <div className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0 text-left leading-tight">
@@ -227,11 +254,18 @@ export default function ParcelVisualizer3D({ dimensions, mode, placements = [] }
       </div>
 
       <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-[1.5fr_1fr]">
-        <div className="relative h-64 sm:h-80 min-h-[16rem] rounded-xl sm:rounded-2xl border border-white/50 bg-slate-900/90 shadow-inner overflow-hidden">
+        <div className="relative h-64 sm:h-80 min-h-[16rem] rounded-xl sm:rounded-2xl border border-white/50 bg-slate-900/90 shadow-inner overflow-hidden group">
           {placements && placements.length > 0 ? (
-            <Canvas camera={{ position: [8, 8, 8], fov: 45 }}>
-              <Scene placements={placements} maxDim={maxDim} dimensions={dimensions} />
-            </Canvas>
+            <CanvasErrorBoundary>
+              <Canvas camera={{ position: [8, 8, 8], fov: 45 }}>
+                <Scene
+                  placements={placements}
+                  maxDim={maxDim}
+                  dimensions={dimensions}
+                />
+              </Canvas>
+
+            </CanvasErrorBoundary>
           ) : (
             <div className="flex flex-col items-center justify-center h-full text-white/50">
               <Box className="h-8 w-8 mb-2 opacity-50" />
@@ -239,9 +273,9 @@ export default function ParcelVisualizer3D({ dimensions, mode, placements = [] }
             </div>
           )}
 
-          {/* Reference Object Legend */}
+          {/* Reference object legend */}
           {placements && placements.length > 0 && hasDimensions && (
-            <div className="absolute bottom-2 left-2 text-[0.625rem] text-white/80 font-medium bg-black/50 px-2 py-1 rounded flex items-center gap-1.5">
+            <div className="absolute bottom-2 left-2 text-[0.625rem] text-white/80 font-medium bg-black/50 px-2 py-1 rounded flex items-center gap-1.5 pointer-events-none">
               <span className="w-2 h-2 rounded-full bg-sky-300/70 animate-pulse"></span>
               <span>参照物: {getReferenceModel(dimensions).name}</span>
             </div>
