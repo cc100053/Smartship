@@ -13,10 +13,39 @@ const formatWeight = (weightG) => {
   return `${weightG} g`;
 };
 
+const CATEGORY_COLORS = {
+  Books: {
+    bg: 'bg-blue-100 text-blue-600',
+    glow: 'rgba(59, 130, 246, 0.15)',
+  },
+  Games: {
+    bg: 'bg-purple-100 text-purple-600',
+    glow: 'rgba(168, 85, 247, 0.15)',
+  },
+  Fashion: {
+    bg: 'bg-pink-100 text-pink-600',
+    glow: 'rgba(236, 72, 153, 0.15)',
+  },
+  Electronics: {
+    bg: 'bg-cyan-100 text-cyan-600',
+    glow: 'rgba(6, 182, 212, 0.15)',
+  },
+  Hobbies: {
+    bg: 'bg-emerald-100 text-emerald-600',
+    glow: 'rgba(16, 185, 129, 0.15)',
+  },
+  Other: {
+    bg: 'bg-slate-100 text-slate-600',
+    glow: 'rgba(100, 116, 139, 0.15)',
+  },
+};
+
 export default function ProductCard({ product, onAdd, index = 0 }) {
   const sizeLabel = `${formatDimension(product.lengthCm)} x ${formatDimension(product.widthCm)} x ${formatDimension(product.heightCm)} cm`;
   const weightLabel = formatWeight(product.weightG);
   const Icon = getIconForProduct(product);
+
+  const categoryColor = CATEGORY_COLORS[product.category] || CATEGORY_COLORS.Other;
 
   const cardRef = useRef(null);
   const [tilt, setTilt] = useState({ rotateX: 0, rotateY: 0 });
@@ -63,13 +92,13 @@ export default function ProductCard({ product, onAdd, index = 0 }) {
         className="pointer-events-none absolute inset-0 rounded-xl transition-opacity duration-300"
         style={{
           opacity: isHovering ? 1 : 0,
-          background: `radial-gradient(circle at ${glowPos.x}% ${glowPos.y}%, rgba(251,191,36,0.15) 0%, transparent 60%)`,
+          background: `radial-gradient(circle at ${glowPos.x}% ${glowPos.y}%, ${categoryColor.glow} 0%, transparent 60%)`,
         }}
       />
 
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5 sm:gap-2">
-          <span className="flex h-5 w-5 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
+          <span className={`flex h-5 w-5 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-lg ${categoryColor.bg}`}>
             <Icon className="h-2.5 w-2.5 sm:h-4 sm:w-4" />
           </span>
           <div className="min-w-0">
