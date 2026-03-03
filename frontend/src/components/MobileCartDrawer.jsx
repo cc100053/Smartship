@@ -57,13 +57,13 @@ export default function MobileCartDrawer({
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={() => onToggle(false)}
-                        className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-sm min-[1170px]:hidden"
+                        className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-sm lg:hidden"
                     />
                 )}
             </AnimatePresence>
 
             {/* Floating Card & Drawer Container */}
-            <div className="fixed bottom-0 left-0 right-0 z-50 pointer-events-none pb-safe min-[1170px]:hidden">
+            <div className="fixed bottom-0 left-0 right-0 z-50 pointer-events-none pb-safe lg:hidden">
                 <AnimatePresence mode="wait">
                     {!isExpanded ? (
                         /* ── COLLAPSED PILL ── */

@@ -44,26 +44,28 @@ export default function App() {
 
         <motion.main
           ref={mainRef}
-          className="flex-1 min-h-0 overflow-y-auto min-[1170px]:overflow-visible"
+          className="flex-1 min-h-0 overflow-y-auto lg:overflow-visible flex flex-col"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
         >
-          <ShippingCalculator onDrawerToggle={setCartDrawerOpen} />
+          <div className="flex-1 shrink-0">
+            <ShippingCalculator onDrawerToggle={setCartDrawerOpen} />
+          </div>
+
+          <motion.footer
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+            className="flex-none mt-auto pt-6 pb-4 sm:pt-8 sm:pb-4 text-center"
+          >
+            <p className="text-xs text-slate-500">
+              © 2026 SmartShip. All rights reserved.
+            </p>
+          </motion.footer>
         </motion.main>
 
         <ScrollToTopButton scrollContainerRef={mainRef} hidden={cartDrawerOpen} />
-
-        <motion.footer
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
-          className="flex-none mt-3 sm:mt-4 py-2 sm:py-3 text-center"
-        >
-          <p className="text-xs text-slate-500">
-            © 2026 SmartShip. All rights reserved.
-          </p>
-        </motion.footer>
       </div>
     </div>
   );

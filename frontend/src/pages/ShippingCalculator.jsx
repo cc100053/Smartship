@@ -267,18 +267,33 @@ export default function ShippingCalculator({ onDrawerToggle }) {
     }, 100);
   };
 
+  // On mobile, force cart mode since mode switcher is hidden
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 1024 && mode !== 'cart') {
+        setMode('cart');
+      }
+    };
+
+    // Check initially
+    handleResize();
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [mode]);
+
   const handleModeChange = (nextMode) => {
     setMode(nextMode);
     resetCalculation();
   };
 
   return (
-    <section id="shipping-calculator" className="flex flex-col gap-4 min-[1170px]:h-full overflow-x-hidden">
-      <div className="grid gap-6 min-[1170px]:grid-cols-12 min-[1170px]:h-full min-[1170px]:overflow-hidden">
+    <section id="shipping-calculator" className="flex flex-col gap-4 lg:h-full overflow-x-hidden">
+      <div className="grid gap-6 lg:grid-cols-12 lg:h-full lg:overflow-hidden">
 
         {/* --- Product Library Section (Left Column on Desktop, First on Mobile) --- */}
         <motion.div
-          className="order-1 min-[1170px]:col-span-5 flex flex-col gap-4 min-[1170px]:h-full min-[1170px]:overflow-hidden min-w-0"
+          className="order-1 lg:col-span-5 flex flex-col gap-4 lg:h-full lg:overflow-hidden min-w-0"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
@@ -299,12 +314,12 @@ export default function ShippingCalculator({ onDrawerToggle }) {
 
           <div className="relative flex-1 overflow-hidden min-w-0 flex flex-col">
             <div
-              className="flex-1 overflow-y-auto rounded-2xl pb-2 custom-scrollbar max-h-[50vh] min-[1170px]:max-h-none"
+              className="flex-1 overflow-y-auto rounded-2xl pb-2 custom-scrollbar lg:max-h-none"
             >
               <AnimatePresence mode="wait">
                 <motion.div
                   key={loading ? 'loading' : activeCategory}
-                  className="grid grid-cols-2 gap-3 min-[1170px]:grid-cols-1 min-[1350px]:grid-cols-2 content-start"
+                  className="grid grid-cols-2 gap-3 lg:grid-cols-1 min-[1350px]:grid-cols-2 content-start"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
@@ -333,16 +348,15 @@ export default function ShippingCalculator({ onDrawerToggle }) {
           </div>
         </motion.div>
 
-        {/* --- Calculator & Visualizer Section (Right Column on Desktop, Second on Mobile) --- */}
         < motion.div
-          className="order-2 min-[1170px]:col-span-7 flex flex-col gap-4 min-[1170px]:h-full min-[1170px]:overflow-y-auto custom-scrollbar min-w-0"
+          className="order-2 lg:col-span-7 flex flex-col gap-4 lg:h-full lg:overflow-y-auto custom-scrollbar min-w-0"
           initial={{ opacity: 0, y: 20 }
           }
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.1 }}
         >
-          {/* Mode Switcher & Inputs */}
-          <div className="rounded-2xl border border-white/60 bg-white/40 p-4 shadow-sm backdrop-blur-md">
+          {/* Mode Switcher & Inputs (Desktop Only) */}
+          <div className="hidden lg:block rounded-2xl border border-white/60 bg-white/40 p-4 shadow-sm backdrop-blur-md">
             <div className="mb-4 flex gap-2">
               {[
                 { value: 'cart', label: 'カート' },
@@ -412,7 +426,7 @@ export default function ShippingCalculator({ onDrawerToggle }) {
             </div>
           </div>
 
-          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 items-start">
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 min-[1350px]:grid-cols-2 items-start">
             <ParcelVisualizer3D
               dimensions={visualDimensions}
               mode={mode}
