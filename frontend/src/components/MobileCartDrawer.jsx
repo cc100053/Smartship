@@ -16,7 +16,7 @@ export default function MobileCartDrawer({
 }) {
     const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
     const scrollRef = useRef(null);
-    const y = useMotionValue(0);
+    const y = useMotionValue(typeof window !== 'undefined' ? window.innerHeight : 800);
     // Keep onToggle stable across re-renders inside the callback ref closure
     const onToggleRef = useRef(onToggle);
     useEffect(() => { onToggleRef.current = onToggle; }, [onToggle]);
@@ -124,7 +124,7 @@ export default function MobileCartDrawer({
                             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
                             className="mx-4 mb-4 md:mb-6 pointer-events-auto cursor-pointer rounded-2xl bg-gradient-to-r from-slate-800 to-slate-900 shadow-2xl p-3 flex items-center justify-between gap-2"
                             onClick={() => {
-                                y.set(0); // Reset y right before we open
+                                y.set(window.innerHeight); // Start at the bottom
                                 onToggle(true);
                             }}
                         >
@@ -178,9 +178,9 @@ export default function MobileCartDrawer({
                             ref={drawerCallbackRef}
                             key="expanded-drawer"
                             style={{ y }}
-                            initial={{ y: '100%' }}
+                            initial={{ y: window.innerHeight }}
                             animate={{ y: 0 }}
-                            exit={{ y: '100%' }}
+                            exit={{ y: window.innerHeight }}
                             transition={{ type: 'spring', damping: 28, stiffness: 320 }}
                             className="pointer-events-auto bg-white rounded-t-3xl shadow-[0_-10px_40px_-10px_rgba(0,0,0,0.25)] flex flex-col max-h-[85vh]"
                         >
