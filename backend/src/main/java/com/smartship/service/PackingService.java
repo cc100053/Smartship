@@ -279,7 +279,8 @@ public class PackingService {
             }
         }
 
-        // Last-resort safeguard only (non-library heuristic, used only on hard failure).
+        // Last-resort safeguard only (non-library heuristic, used only on hard
+        // failure).
         return new PackingResult(basicSum(items), List.of());
     }
 
@@ -1253,9 +1254,11 @@ public class PackingService {
         }
 
         for (Placement p : rawPlacements) {
-            int width = p.getAbsoluteEndX() - p.getAbsoluteX();
-            int depth = p.getAbsoluteEndY() - p.getAbsoluteY();
-            int height = p.getAbsoluteEndZ() - p.getAbsoluteZ();
+            // +1 to each dimension: the library uses 0-indexed inclusive end coordinates,
+            // so endX - startX is 1mm shorter than the actual item dimension.
+            int width = p.getAbsoluteEndX() - p.getAbsoluteX() + 1;
+            int depth = p.getAbsoluteEndY() - p.getAbsoluteY() + 1;
+            int height = p.getAbsoluteEndZ() - p.getAbsoluteZ() + 1;
 
             String itemName = colorIndex < items.size() ? items.get(colorIndex).getName() : "Item " + colorIndex;
 
@@ -1274,9 +1277,9 @@ public class PackingService {
         int totalWeight = items.stream().mapToInt(ProductReference::getWeightG).sum();
 
         Dimensions dims = new Dimensions(
-                toCm(maxX - minX),
-                toCm(maxY - minY),
-                toCm(maxZ - minZ),
+                toCm(maxX - minX + 1),
+                toCm(maxY - minY + 1),
+                toCm(maxZ - minZ + 1),
                 totalWeight,
                 items.size());
 
@@ -1407,9 +1410,9 @@ public class PackingService {
         }
 
         return new Dimensions(
-                toCm(maxX - minX),
-                toCm(maxY - minY),
-                toCm(maxZ - minZ),
+                toCm(maxX - minX + 1),
+                toCm(maxY - minY + 1),
+                toCm(maxZ - minZ + 1),
                 weightG,
                 itemCount);
     }
@@ -1445,9 +1448,9 @@ public class PackingService {
         }
 
         Dimensions dims = new Dimensions(
-                toCm(maxX - minX),
-                toCm(maxY - minY),
-                toCm(maxZ - minZ),
+                toCm(maxX - minX + 1),
+                toCm(maxY - minY + 1),
+                toCm(maxZ - minZ + 1),
                 weightG,
                 itemCount);
 

@@ -7,7 +7,6 @@ import ManualInputForm from '../components/ManualInputForm';
 import ParcelVisualizer3D from '../components/ParcelVisualizer3D';
 import ProductCard from '../components/ProductCard';
 import ShippingResult from '../components/ShippingResult';
-import ScrollToTopButton from '../components/ScrollToTopButton';
 import { getCategoryLabel } from '../utils/labels';
 import { cn } from '../utils/cn';
 import { useCart } from '../hooks/useCart';
@@ -36,7 +35,6 @@ export default function ShippingCalculator() {
 
   const cartRef = useRef(null);
   const resultRef = useRef(null);
-  const productListRef = useRef(null);
 
   // Custom Hooks
   const {
@@ -295,7 +293,6 @@ export default function ShippingCalculator() {
 
           <div className="relative flex-1 overflow-hidden min-w-0 flex flex-col">
             <div
-              ref={productListRef}
               className="flex-1 overflow-y-auto rounded-2xl pb-2 custom-scrollbar max-h-[50vh] min-[1170px]:max-h-none"
             >
               <AnimatePresence mode="wait">
@@ -327,11 +324,6 @@ export default function ShippingCalculator() {
                 </motion.div>
               </AnimatePresence>
             </div>
-            <ScrollToTopButton
-              scrollContainerRef={productListRef}
-              className="absolute bottom-4 right-4 h-10 w-10"
-              threshold={200}
-            />
           </div>
         </motion.div>
 
