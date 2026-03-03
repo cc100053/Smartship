@@ -17,6 +17,7 @@ export default function CartPanel({
   onCalculate,
   loading,
   containerRef,
+  isDrawer = false,
 }) {
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
   const totalWeight = items.reduce(
@@ -27,7 +28,11 @@ export default function CartPanel({
   return (
     <div
       ref={containerRef}
-      className="rounded-2xl border border-slate-200/70 bg-white/80 p-4 shadow-[0_18px_45px_-40px_rgba(15,23,42,0.7)]"
+      className={
+        isDrawer
+          ? "flex flex-col h-full"
+          : "rounded-2xl border border-slate-200/70 bg-white/80 p-4 shadow-[0_18px_45px_-40px_rgba(15,23,42,0.7)] h-full"
+      }
     >
       <div className="flex items-center justify-between">
         <div>

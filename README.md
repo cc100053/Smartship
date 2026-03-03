@@ -20,7 +20,27 @@ set +a
 ```
 
 ## Docker
-docker-compose up --build
+`docker-compose up --build`
+
+> **Note:** The current Docker setup is configured for a **production-style build**. This means if you change a file, **it will not auto-refresh**. You must rebuild the containers (`docker-compose up --build`) to see the updates.
+
+### Option 1: Run locally without Docker (Recommended for active development)
+To get automatic refreshing (hot-reloading) while writing code, run the servers locally on your machine instead of Docker:
+
+**1. Backend** (Auto-recompiles on change):
+```bash
+cd backend
+./mvnw spring-boot:run
+```
+
+**2. Frontend** (Instant hot-reload):
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+*(Only use `docker-compose up --build` when you want to test the final packaged application.)*
 
 ## Deployment
 
@@ -59,20 +79,7 @@ $env:DB_USER="postgres.bjsizwtgzjeaobdmpndz"
 $env:DB_PASSWORD="your_actual_password"
 ```
 
-## Run backend
-```bash
-cd backend
-./mvnw spring-boot:run
-```
-
-## Run frontend
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Optional API override (Vite):
+### Optional API override (Vite):
 ```bash
 VITE_API_URL=http://localhost:8080 npm run dev
 ```

@@ -4,6 +4,7 @@ import { fetchCategories, fetchProducts } from '../api/shippingApi';
 import CartPanel from '../components/CartPanel';
 import CategoryTabs from '../components/CategoryTabs';
 import ManualInputForm from '../components/ManualInputForm';
+import MobileCartDrawer from '../components/MobileCartDrawer';
 import ParcelVisualizer3D from '../components/ParcelVisualizer3D';
 import ProductCard from '../components/ProductCard';
 import ShippingResult from '../components/ShippingResult';
@@ -26,6 +27,7 @@ export default function ShippingCalculator() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [mode, setMode] = useState('cart');
+  const [cartExpanded, setCartExpanded] = useState(false);
   const [manualInput, setManualInput] = useState({
     lengthCm: '',
     widthCm: '',
@@ -213,7 +215,6 @@ export default function ShippingCalculator() {
 
     resetCalculation();
     addToCart(product);
-    // Switch to cart mode if currently in manual mode
     if (mode === 'manual') {
       setMode('cart');
     }
@@ -375,16 +376,21 @@ export default function ShippingCalculator() {
                     exit={{ opacity: 0, height: 0 }}
                     transition={{ duration: 0.2 }}
                   >
-                    <CartPanel
-                      items={cartItems}
-                      onIncrement={handleIncrement}
-                      onDecrement={handleDecrement}
-                      onRemove={handleRemove}
-                      onClear={handleClear}
-                      onCalculate={handleCartCalculate}
-                      loading={calcLoading}
-                      containerRef={cartRef}
-                    />
+                    <div className="hidden min-[1170px]:block">
+                      <CartPanel
+                        items={cartItems}
+                        onIncrement={handleIncrement}
+                        onDecrement={handleDecrement}
+                        onRemove={handleRemove}
+                        onClear={handleClear}
+                        onCalculate={handleCartCalculate}
+                        loading={calcLoading}
+                        containerRef={cartRef}
+                      />
+                    </div>
+                    <div className="min-[1170px]:hidden py-8 text-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+                      <p className="text-slate-500 text-sm">画面下のカートから確認してください 👇</p>
+                    </div>
                   </motion.div>
                 ) : (
                   <motion.div
@@ -418,7 +424,26 @@ export default function ShippingCalculator() {
           </div>
         </motion.div>
 
-      </div >
-    </section >
+      </div>
+
+      {/* Spacer to prevent fixed pill from covering content on mobile */}
+      <div className="min-[1170px]:hidden h-24 shrink-0" />
+
+      <AnimatePresence>
+        {mode === 'cart' && (
+          <MobileCartDrawer
+            isExpanded={cartExpanded}
+            onToggle={setCartExpanded}
+            items={cartItems}
+            onIncrement={handleIncrement}
+            onDecrement={handleDecrement}
+            onRemove={handleRemove}
+            onClear={handleClear}
+            onCalculate={handleCartCalculate}
+            loading={calcLoading}
+          />
+        )}
+      </AnimatePresence>
+    </section>
   );
 }
