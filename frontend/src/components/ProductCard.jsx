@@ -12,33 +12,7 @@ const formatWeight = (weightG) => {
   }
   return `${weightG} g`;
 };
-
-const CATEGORY_COLORS = {
-  Books: {
-    bg: 'bg-blue-100 text-blue-600',
-    glow: 'rgba(59, 130, 246, 0.15)',
-  },
-  Games: {
-    bg: 'bg-purple-100 text-purple-600',
-    glow: 'rgba(168, 85, 247, 0.15)',
-  },
-  Fashion: {
-    bg: 'bg-pink-100 text-pink-600',
-    glow: 'rgba(236, 72, 153, 0.15)',
-  },
-  Electronics: {
-    bg: 'bg-cyan-100 text-cyan-600',
-    glow: 'rgba(6, 182, 212, 0.15)',
-  },
-  Hobbies: {
-    bg: 'bg-emerald-100 text-emerald-600',
-    glow: 'rgba(16, 185, 129, 0.15)',
-  },
-  Other: {
-    bg: 'bg-slate-100 text-slate-600',
-    glow: 'rgba(100, 116, 139, 0.15)',
-  },
-};
+import { CATEGORY_COLORS } from '../utils/colors';
 
 export default function ProductCard({ product, onAdd, index = 0 }) {
   const sizeLabel = `${formatDimension(product.lengthCm)} x ${formatDimension(product.widthCm)} x ${formatDimension(product.heightCm)} cm`;

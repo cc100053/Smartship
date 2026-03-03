@@ -1,4 +1,4 @@
-import { motion, AnimatePresence, useDragControls } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, animate } from 'framer-motion';
 import { ShoppingBag, Trash2, Truck } from 'lucide-react';
 import CartPanel from './CartPanel';
 import { useEffect, useRef } from 'react';
@@ -15,9 +15,9 @@ export default function MobileCartDrawer({
     loading,
 }) {
     const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
-    const dragControls = useDragControls();
     const drawerRef = useRef(null);
     const scrollRef = useRef(null);
+    const y = useMotionValue(0);
 
     // Lock body scroll when expanded
     useEffect(() => {
@@ -31,21 +31,93 @@ export default function MobileCartDrawer({
         };
     }, [isExpanded]);
 
-    const handleDragEnd = (event, info) => {
-        // Collapse if dragged down more than 80px or velocity is fast downward
-        if (info.offset.y > 80 || info.velocity.y > 400) {
-            onToggle(false);
+    // Reset y when drawer opens/closes
+    useEffect(() => {
+        if (isExpanded) {
+            y.set(0);
         }
-    };
+    }, [isExpanded, y]);
 
-    // Only start drag from the whole card when scroll container is at the top
-    const handlePointerDown = (e) => {
-        const scrollTop = scrollRef.current?.scrollTop ?? 0;
-        // Allow drag initiation if we're at the top of the scroll area
-        if (scrollTop <= 0) {
-            dragControls.start(e);
-        }
-    };
+    // Attach native touch handlers (passive: false required for preventDefault)
+    useEffect(() => {
+        if (!isExpanded) return;
+        const drawer = drawerRef.current;
+        if (!drawer) return;
+
+        let startY = 0;
+        let startScrollTop = 0;
+        let isDraggingDrawer = false;
+        let velocityY = 0;
+        let lastY = 0;
+        let lastTime = 0;
+
+        const onTouchStart = (e) => {
+            startY = e.touches[0].clientY;
+            startScrollTop = scrollRef.current?.scrollTop ?? 0;
+            isDraggingDrawer = false;
+            lastY = startY;
+            lastTime = Date.now();
+            velocityY = 0;
+        };
+
+        const onTouchMove = (e) => {
+            const currentY = e.touches[0].clientY;
+            const deltaY = currentY - startY;
+            const scrollTop = scrollRef.current?.scrollTop ?? 0;
+            const now = Date.now();
+            const dt = now - lastTime || 1;
+            velocityY = (currentY - lastY) / dt * 1000;
+            lastY = currentY;
+            lastTime = now;
+
+            // Start drawer drag only when at scroll top AND moving downward
+            if (!isDraggingDrawer && deltaY > 6 && scrollTop <= 0) {
+                isDraggingDrawer = true;
+            }
+
+            if (isDraggingDrawer) {
+                // Block page scroll / background scroll
+                e.preventDefault();
+                e.stopPropagation();
+                const clamped = Math.max(0, deltaY);
+                y.set(clamped);
+            }
+            // If not a drawer drag, let native scroll happen inside scrollRef
+        };
+
+        const onTouchEnd = (e) => {
+            if (!isDraggingDrawer) return;
+            const currentDragY = y.get();
+
+            if (currentDragY > 80 || velocityY > 500) {
+                // Close: animate out then toggle
+                animate(y, window.innerHeight, {
+                    type: 'spring',
+                    damping: 28,
+                    stiffness: 180,
+                    onComplete: () => {
+                        onToggle(false);
+                        y.set(0);
+                    },
+                });
+            } else {
+                // Snap back
+                animate(y, 0, { type: 'spring', damping: 28, stiffness: 300 });
+            }
+            isDraggingDrawer = false;
+        };
+
+        // Use non-passive so we can call preventDefault inside onTouchMove
+        drawer.addEventListener('touchstart', onTouchStart, { passive: true });
+        drawer.addEventListener('touchmove', onTouchMove, { passive: false });
+        drawer.addEventListener('touchend', onTouchEnd, { passive: true });
+
+        return () => {
+            drawer.removeEventListener('touchstart', onTouchStart);
+            drawer.removeEventListener('touchmove', onTouchMove);
+            drawer.removeEventListener('touchend', onTouchEnd);
+        };
+    }, [isExpanded, onToggle, y]);
 
     return (
         <>
@@ -131,18 +203,12 @@ export default function MobileCartDrawer({
                         <motion.div
                             ref={drawerRef}
                             key="expanded-drawer"
-                            drag="y"
-                            dragControls={dragControls}
-                            dragListener={false}
-                            dragConstraints={{ top: 0, bottom: 0 }}
-                            dragElastic={{ top: 0, bottom: 0.3 }}
-                            onDragEnd={handleDragEnd}
+                            style={{ y }}
                             initial={{ y: '100%' }}
                             animate={{ y: 0 }}
                             exit={{ y: '100%' }}
                             transition={{ type: 'spring', damping: 28, stiffness: 320 }}
                             className="pointer-events-auto bg-white rounded-t-3xl shadow-[0_-10px_40px_-10px_rgba(0,0,0,0.25)] flex flex-col max-h-[85vh]"
-                            onPointerDown={handlePointerDown}
                         >
                             {/* Drag handle (visual only) */}
                             <div className="flex justify-center pt-3 pb-1 select-none">
@@ -169,7 +235,7 @@ export default function MobileCartDrawer({
                             {/* Scrollable Cart Content */}
                             <div
                                 ref={scrollRef}
-                                className="overflow-y-auto px-4 pb-8 custom-scrollbar flex-1 touch-pan-y"
+                                className="overflow-y-auto px-4 pb-8 custom-scrollbar flex-1"
                             >
                                 <CartPanel
                                     isDrawer={true}
