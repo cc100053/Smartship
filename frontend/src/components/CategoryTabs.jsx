@@ -2,6 +2,8 @@ import { useRef, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '../utils/cn';
+import { CATEGORY_COLORS } from '../utils/colors';
+import { CATEGORY_ICONS } from '../utils/productIcons';
 
 export default function CategoryTabs({ categories, value, onChange }) {
   const scrollRef = useRef(null);
@@ -59,6 +61,12 @@ export default function CategoryTabs({ categories, value, onChange }) {
           const item =
             typeof category === 'string' ? { value: category, label: category } : category;
           const isActive = item.value === value;
+          const categoryColor = CATEGORY_COLORS[item.value] || CATEGORY_COLORS.Other;
+          const Icon = CATEGORY_ICONS[item.value] || CATEGORY_ICONS.Other;
+
+          const categoryBg = categoryColor.bg.split(' ').find(c => c.startsWith('bg-')) || 'bg-slate-900';
+          const categoryText = categoryColor.bg.split(' ').find(c => c.startsWith('text-')) || 'text-white';
+
           return (
             <button
               key={item.value}
@@ -67,18 +75,21 @@ export default function CategoryTabs({ categories, value, onChange }) {
               aria-pressed={isActive}
               className={cn(
                 "relative whitespace-nowrap rounded-full px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold transition-colors focus-visible:outline-2",
-                isActive ? "text-white" : "text-slate-600 hover:text-slate-900"
+                isActive ? categoryText : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/50"
               )}
               style={{ WebkitTapHighlightColor: "transparent" }}
             >
               {isActive && (
                 <motion.div
                   layoutId="activeTab"
-                  className="absolute inset-0 z-0 rounded-full bg-slate-900 shadow-md shadow-slate-900/10"
+                  className={cn("absolute inset-0 z-0 rounded-full shadow-sm", categoryBg)}
                   transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                 />
               )}
-              <span className="relative z-10">{item.label}</span>
+              <span className="relative z-10 flex items-center gap-1.5">
+                <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                {item.label}
+              </span>
             </button>
           );
         })}

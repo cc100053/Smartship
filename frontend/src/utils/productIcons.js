@@ -1,10 +1,11 @@
 import {
     Book, Gamepad2, Shirt, Smartphone, Palette, Box,
     LaptopMinimal, Tablet, Headphones, Newspaper,
-    Footprints, IdCard, Sparkles, Rabbit, KeyRound, Monitor, PersonStanding
+    Footprints, IdCard, Sparkles, Rabbit, KeyRound, Monitor, PersonStanding, LayoutGrid
 } from 'lucide-react';
 
 export const CATEGORY_ICONS = {
+    ALL: LayoutGrid,
     Books: Book,
     Games: Gamepad2,
     Fashion: Shirt,

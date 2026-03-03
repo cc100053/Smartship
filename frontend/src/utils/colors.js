@@ -1,4 +1,8 @@
 export const CATEGORY_COLORS = {
+    ALL: {
+        bg: 'bg-slate-800 text-white',
+        glow: 'rgba(30, 41, 59, 0.15)',
+    },
     Books: {
         bg: 'bg-blue-100 text-blue-600',
         glow: 'rgba(59, 130, 246, 0.15)',
