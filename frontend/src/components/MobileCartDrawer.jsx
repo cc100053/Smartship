@@ -1,7 +1,7 @@
 import { motion, AnimatePresence, useMotionValue, animate } from 'framer-motion';
 import { ShoppingBag, Trash2, Truck } from 'lucide-react';
 import CartPanel from './CartPanel';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 
 export default function MobileCartDrawer({
     isExpanded,
@@ -15,109 +15,93 @@ export default function MobileCartDrawer({
     loading,
 }) {
     const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
-    const drawerRef = useRef(null);
     const scrollRef = useRef(null);
     const y = useMotionValue(0);
+    // Keep onToggle stable across re-renders inside the callback ref closure
+    const onToggleRef = useRef(onToggle);
+    useEffect(() => { onToggleRef.current = onToggle; }, [onToggle]);
 
     // Lock body scroll when expanded
     useEffect(() => {
-        if (isExpanded) {
-            document.body.style.overflow = 'hidden';
-        } else {
-            document.body.style.overflow = '';
-        }
-        return () => {
-            document.body.style.overflow = '';
-        };
+        document.body.style.overflow = isExpanded ? 'hidden' : '';
+        return () => { document.body.style.overflow = ''; };
     }, [isExpanded]);
 
-    // Reset y when drawer opens/closes
+    // Reset y when drawer closes (so it's at 0 on next open)
     useEffect(() => {
-        if (isExpanded) {
-            y.set(0);
-        }
+        if (!isExpanded) y.set(0);
     }, [isExpanded, y]);
 
-    // Attach native touch handlers (passive: false required for preventDefault)
-    useEffect(() => {
-        if (!isExpanded) return;
-        const drawer = drawerRef.current;
-        if (!drawer) return;
+    // ─── Callback ref: attach native touch handlers the moment the node mounts ───
+    const drawerCallbackRef = useCallback((node) => {
+        if (!node) return;   // node is null on unmount — listeners auto-clean up
 
         let startY = 0;
-        let startScrollTop = 0;
         let isDraggingDrawer = false;
-        let velocityY = 0;
         let lastY = 0;
         let lastTime = 0;
+        let velocityY = 0;
 
         const onTouchStart = (e) => {
             startY = e.touches[0].clientY;
-            startScrollTop = scrollRef.current?.scrollTop ?? 0;
-            isDraggingDrawer = false;
             lastY = startY;
             lastTime = Date.now();
             velocityY = 0;
+            isDraggingDrawer = false;
         };
 
         const onTouchMove = (e) => {
             const currentY = e.touches[0].clientY;
             const deltaY = currentY - startY;
             const scrollTop = scrollRef.current?.scrollTop ?? 0;
+
             const now = Date.now();
-            const dt = now - lastTime || 1;
+            const dt = Math.max(now - lastTime, 1);
             velocityY = (currentY - lastY) / dt * 1000;
             lastY = currentY;
             lastTime = now;
 
-            // Start drawer drag only when at scroll top AND moving downward
-            if (!isDraggingDrawer && deltaY > 6 && scrollTop <= 0) {
+            // Engage drawer-drag only when: scroll is at top AND moving downward
+            if (!isDraggingDrawer && deltaY > 8 && scrollTop <= 0) {
                 isDraggingDrawer = true;
             }
 
             if (isDraggingDrawer) {
-                // Block page scroll / background scroll
-                e.preventDefault();
+                e.preventDefault();       // stop page from also scrolling
                 e.stopPropagation();
-                const clamped = Math.max(0, deltaY);
-                y.set(clamped);
+                y.set(Math.max(0, deltaY));
             }
-            // If not a drawer drag, let native scroll happen inside scrollRef
         };
 
-        const onTouchEnd = (e) => {
+        const onTouchEnd = () => {
             if (!isDraggingDrawer) return;
             const currentDragY = y.get();
 
             if (currentDragY > 80 || velocityY > 500) {
-                // Close: animate out then toggle
                 animate(y, window.innerHeight, {
-                    type: 'spring',
-                    damping: 28,
-                    stiffness: 180,
+                    type: 'spring', damping: 28, stiffness: 180,
                     onComplete: () => {
-                        onToggle(false);
+                        onToggleRef.current(false);
                         y.set(0);
                     },
                 });
             } else {
-                // Snap back
                 animate(y, 0, { type: 'spring', damping: 28, stiffness: 300 });
             }
             isDraggingDrawer = false;
         };
 
-        // Use non-passive so we can call preventDefault inside onTouchMove
-        drawer.addEventListener('touchstart', onTouchStart, { passive: true });
-        drawer.addEventListener('touchmove', onTouchMove, { passive: false });
-        drawer.addEventListener('touchend', onTouchEnd, { passive: true });
+        node.addEventListener('touchstart', onTouchStart, { passive: true });
+        node.addEventListener('touchmove', onTouchMove, { passive: false }); // passive:false needed to call preventDefault
+        node.addEventListener('touchend', onTouchEnd, { passive: true });
 
+        // Returned cleanup runs when the node is removed from the DOM
         return () => {
-            drawer.removeEventListener('touchstart', onTouchStart);
-            drawer.removeEventListener('touchmove', onTouchMove);
-            drawer.removeEventListener('touchend', onTouchEnd);
+            node.removeEventListener('touchstart', onTouchStart);
+            node.removeEventListener('touchmove', onTouchMove);
+            node.removeEventListener('touchend', onTouchEnd);
         };
-    }, [isExpanded, onToggle, y]);
+    }, [y]); // y is stable (useMotionValue ref), so this runs only once per mount
 
     return (
         <>
@@ -136,7 +120,7 @@ export default function MobileCartDrawer({
 
             {/* Floating Card & Drawer Container */}
             <div className="fixed bottom-0 left-0 right-0 z-50 pointer-events-none pb-safe lg:hidden">
-                <AnimatePresence mode="wait">
+                <AnimatePresence>
                     {!isExpanded ? (
                         /* ── COLLAPSED PILL ── */
                         <motion.div
@@ -170,10 +154,7 @@ export default function MobileCartDrawer({
                             <div className="flex items-center gap-2 shrink-0">
                                 <button
                                     type="button"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        onClear();
-                                    }}
+                                    onClick={(e) => { e.stopPropagation(); onClear(); }}
                                     disabled={!items.length}
                                     title="カートをクリア"
                                     className="p-2.5 rounded-xl text-rose-400 hover:text-rose-300 hover:bg-white/10 transition disabled:opacity-30"
@@ -182,10 +163,7 @@ export default function MobileCartDrawer({
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        onCalculate();
-                                    }}
+                                    onClick={(e) => { e.stopPropagation(); onCalculate(); }}
                                     disabled={!items.length || loading}
                                     className="text-xs font-semibold px-4 py-2.5 bg-white text-slate-900 shadow-sm transition hover:bg-slate-50 active:scale-95 disabled:opacity-50 disabled:bg-white/50 rounded-xl whitespace-nowrap flex items-center gap-1.5"
                                 >
@@ -201,7 +179,7 @@ export default function MobileCartDrawer({
                     ) : (
                         /* ── EXPANDED DRAWER ── */
                         <motion.div
-                            ref={drawerRef}
+                            ref={drawerCallbackRef}
                             key="expanded-drawer"
                             style={{ y }}
                             initial={{ y: '100%' }}
@@ -210,20 +188,17 @@ export default function MobileCartDrawer({
                             transition={{ type: 'spring', damping: 28, stiffness: 320 }}
                             className="pointer-events-auto bg-white rounded-t-3xl shadow-[0_-10px_40px_-10px_rgba(0,0,0,0.25)] flex flex-col max-h-[85vh]"
                         >
-                            {/* Drag handle (visual only) */}
+                            {/* Drag handle bar */}
                             <div className="flex justify-center pt-3 pb-1 select-none">
                                 <div className="w-12 h-1.5 rounded-full bg-slate-200" />
                             </div>
 
-                            {/* Header: title + clear button */}
+                            {/* Header */}
                             <div className="flex items-center justify-between px-5 pt-2 pb-3 select-none">
                                 <p className="text-base font-semibold text-slate-800">選択中の商品</p>
                                 <button
                                     type="button"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        onClear();
-                                    }}
+                                    onClick={(e) => { e.stopPropagation(); onClear(); }}
                                     disabled={!items.length}
                                     className="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-rose-400 hover:text-rose-600 transition disabled:opacity-30"
                                 >
@@ -236,6 +211,7 @@ export default function MobileCartDrawer({
                             <div
                                 ref={scrollRef}
                                 className="overflow-y-auto px-4 pb-8 custom-scrollbar flex-1"
+                                style={{ overscrollBehaviorY: 'contain' }}
                             >
                                 <CartPanel
                                     isDrawer={true}
