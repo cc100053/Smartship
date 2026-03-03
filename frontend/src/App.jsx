@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { Package, ShoppingBag, Calculator } from 'lucide-react';
 import ShippingCalculator from './pages/ShippingCalculator';
 import ScrollToTopButton from './components/ScrollToTopButton';
@@ -7,6 +7,7 @@ import { cn } from './utils/cn';
 
 export default function App() {
   const mainRef = useRef(null);
+  const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   return (
     <div className="h-[100dvh] bg-neutral-50 text-neutral-900 selection:bg-rose-500/30 overflow-hidden flex flex-col">
       <div className="fixed inset-0 z-0 pointer-events-none opacity-40 overflow-hidden">
@@ -48,10 +49,10 @@ export default function App() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
         >
-          <ShippingCalculator />
+          <ShippingCalculator onDrawerToggle={setCartDrawerOpen} />
         </motion.main>
 
-        <ScrollToTopButton scrollContainerRef={mainRef} />
+        <ScrollToTopButton scrollContainerRef={mainRef} hidden={cartDrawerOpen} />
 
         <motion.footer
           initial={{ opacity: 0 }}

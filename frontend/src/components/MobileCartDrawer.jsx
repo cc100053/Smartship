@@ -1,7 +1,7 @@
-import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingBag, X } from 'lucide-react';
+import { motion, AnimatePresence, useDragControls } from 'framer-motion';
+import { ShoppingBag, X, Trash2 } from 'lucide-react';
 import CartPanel from './CartPanel';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 export default function MobileCartDrawer({
     isExpanded,
@@ -15,7 +15,10 @@ export default function MobileCartDrawer({
     loading,
 }) {
     const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
+    const dragControls = useDragControls();
+    const drawerRef = useRef(null);
 
+    // Lock body scroll when expanded
     useEffect(() => {
         if (isExpanded) {
             document.body.style.overflow = 'hidden';
@@ -27,9 +30,16 @@ export default function MobileCartDrawer({
         };
     }, [isExpanded]);
 
+    const handleDragEnd = (event, info) => {
+        // Collapse if dragged down more than 80px or velocity is fast downward
+        if (info.offset.y > 80 || info.velocity.y > 400) {
+            onToggle(false);
+        }
+    };
+
     return (
         <>
-            {/* Backdrop */}
+            {/* Backdrop — also hides the scroll-to-top button via z-index layering */}
             <AnimatePresence>
                 {isExpanded && (
                     <motion.div
@@ -46,19 +56,19 @@ export default function MobileCartDrawer({
             <div className="fixed bottom-0 left-0 right-0 z-50 pointer-events-none pb-safe min-[1170px]:hidden">
                 <AnimatePresence mode="wait">
                     {!isExpanded ? (
-                        // Option C: Floating Card with Badge (Collapsed)
+                        /* ── COLLAPSED PILL ── */
                         <motion.div
-                            layoutId="mobile-drawer-container"
                             key="collapsed-pill"
                             initial={{ y: 50, opacity: 0 }}
                             animate={{ y: 0, opacity: 1 }}
-                            exit={{ opacity: 0 }}
+                            exit={{ y: 20, opacity: 0 }}
                             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                            className="mx-4 mb-4 md:mb-6 pointer-events-auto cursor-pointer rounded-2xl bg-gradient-to-r from-slate-800 to-slate-900 shadow-2xl p-3 flex items-center justify-between"
+                            className="mx-4 mb-4 md:mb-6 pointer-events-auto cursor-pointer rounded-2xl bg-gradient-to-r from-slate-800 to-slate-900 shadow-2xl p-3 flex items-center justify-between gap-2"
                             onClick={() => onToggle(true)}
                         >
-                            <div className="flex items-center gap-3 pl-2">
-                                <div className="relative">
+                            {/* Left: icon + label */}
+                            <div className="flex items-center gap-3 pl-2 min-w-0">
+                                <div className="relative shrink-0">
                                     <ShoppingBag className="text-white/90 h-5 w-5" />
                                     {totalItems > 0 && (
                                         <motion.div
@@ -71,50 +81,75 @@ export default function MobileCartDrawer({
                                         </motion.div>
                                     )}
                                 </div>
-                                <span className="text-white font-medium text-sm">カート</span>
+                                <span className="text-white font-medium text-sm truncate">カート</span>
                             </div>
-                            <button
-                                type="button"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onCalculate();
-                                }}
-                                disabled={!items.length || loading}
-                                className="text-xs font-semibold px-4 py-2.5 bg-white text-slate-900 shadow-sm transition hover:bg-slate-50 disabled:opacity-50 disabled:bg-white/50 rounded-xl"
-                            >
-                                {loading ? '計算中...' : '計算 ▶'}
-                            </button>
+
+                            {/* Right: Clear + Calculate buttons */}
+                            <div className="flex items-center gap-2 shrink-0">
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onClear();
+                                    }}
+                                    disabled={!items.length}
+                                    title="カートをクリア"
+                                    className="p-2.5 rounded-xl text-white/60 hover:text-white hover:bg-white/10 transition disabled:opacity-30"
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onCalculate();
+                                    }}
+                                    disabled={!items.length || loading}
+                                    className="text-xs font-semibold px-4 py-2.5 bg-white text-slate-900 shadow-sm transition hover:bg-slate-50 active:scale-95 disabled:opacity-50 disabled:bg-white/50 rounded-xl whitespace-nowrap"
+                                >
+                                    {loading ? '計算中...' : '計算 ▶'}
+                                </button>
+                            </div>
                         </motion.div>
                     ) : (
-                        // Expanded Drawer
+                        /* ── EXPANDED DRAWER ── */
                         <motion.div
-                            layoutId="mobile-drawer-container"
+                            ref={drawerRef}
                             key="expanded-drawer"
+                            drag="y"
+                            dragControls={dragControls}
+                            dragListener={false}   // only drag from handle
+                            dragConstraints={{ top: 0, bottom: 0 }}
+                            dragElastic={{ top: 0, bottom: 0.3 }}
+                            onDragEnd={handleDragEnd}
                             initial={{ y: '100%' }}
                             animate={{ y: 0 }}
                             exit={{ y: '100%' }}
-                            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                            className="pointer-events-auto bg-slate-50 rounded-t-3xl shadow-[0_-10px_40px_-10px_rgba(0,0,0,0.2)] flex flex-col max-h-[85vh]"
+                            transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+                            className="pointer-events-auto bg-white rounded-t-3xl shadow-[0_-10px_40px_-10px_rgba(0,0,0,0.25)] flex flex-col max-h-[85vh]"
                         >
-                            {/* Drawer Header handle */}
+                            {/* Drag handle — initiates drag */}
                             <div
-                                className="flex justify-center pt-3 pb-2 cursor-pointer touch-none"
-                                onClick={() => onToggle(false)}
+                                className="flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing touch-none select-none"
+                                onPointerDown={(e) => dragControls.start(e)}
                             >
-                                <div className="w-12 h-1.5 rounded-full bg-slate-300" />
+                                <div className="w-12 h-1.5 rounded-full bg-slate-200" />
                             </div>
 
-                            <div className="flex justify-end px-4 pb-2">
+                            {/* Header row */}
+                            <div className="flex items-center justify-between px-5 pt-2 pb-3">
+                                <p className="text-xs uppercase tracking-[0.4em] text-slate-400">カート</p>
                                 <button
                                     onClick={() => onToggle(false)}
-                                    className="p-2 -mr-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-200/50 transition"
+                                    className="p-2 -mr-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition"
+                                    aria-label="閉じる"
                                 >
                                     <X className="h-5 w-5" />
                                 </button>
                             </div>
 
                             {/* Scrollable Cart Content */}
-                            <div className="overflow-y-auto px-4 pb-6 custom-scrollbar shrink">
+                            <div className="overflow-y-auto px-4 pb-8 custom-scrollbar flex-1">
                                 <CartPanel
                                     isDrawer={true}
                                     items={items}

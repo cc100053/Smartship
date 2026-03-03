@@ -20,7 +20,7 @@ const parsePositiveNumber = (value) => {
   return Number.isFinite(numberValue) && numberValue > 0 ? numberValue : null;
 };
 
-export default function ShippingCalculator() {
+export default function ShippingCalculator({ onDrawerToggle }) {
   const [categories, setCategories] = useState([]);
   const [activeCategory, setActiveCategory] = useState(ALL_CATEGORY);
   const [products, setProducts] = useState([]);
@@ -28,6 +28,11 @@ export default function ShippingCalculator() {
   const [error, setError] = useState('');
   const [mode, setMode] = useState('cart');
   const [cartExpanded, setCartExpanded] = useState(false);
+
+  // Notify parent when drawer opens/closes (to hide scroll-to-top button)
+  useEffect(() => {
+    onDrawerToggle?.(cartExpanded);
+  }, [cartExpanded, onDrawerToggle]);
   const [manualInput, setManualInput] = useState({
     lengthCm: '',
     widthCm: '',
@@ -376,21 +381,16 @@ export default function ShippingCalculator() {
                     exit={{ opacity: 0, height: 0 }}
                     transition={{ duration: 0.2 }}
                   >
-                    <div className="hidden min-[1170px]:block">
-                      <CartPanel
-                        items={cartItems}
-                        onIncrement={handleIncrement}
-                        onDecrement={handleDecrement}
-                        onRemove={handleRemove}
-                        onClear={handleClear}
-                        onCalculate={handleCartCalculate}
-                        loading={calcLoading}
-                        containerRef={cartRef}
-                      />
-                    </div>
-                    <div className="min-[1170px]:hidden py-8 text-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
-                      <p className="text-slate-500 text-sm">画面下のカートから確認してください 👇</p>
-                    </div>
+                    <CartPanel
+                      items={cartItems}
+                      onIncrement={handleIncrement}
+                      onDecrement={handleDecrement}
+                      onRemove={handleRemove}
+                      onClear={handleClear}
+                      onCalculate={handleCartCalculate}
+                      loading={calcLoading}
+                      containerRef={cartRef}
+                    />
                   </motion.div>
                 ) : (
                   <motion.div

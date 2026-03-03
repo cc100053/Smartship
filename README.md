@@ -28,9 +28,10 @@ set +a
 To get automatic refreshing (hot-reloading) while writing code, run the servers locally on your machine instead of Docker:
 
 **1. Backend** (Auto-recompiles on change):
-```bash
-cd backend
-./mvnw spring-boot:run
+
+Use the helper script at the project root — it auto-loads `.env` for you:
+```powershell
+.\run-backend.ps1
 ```
 
 **2. Frontend** (Instant hot-reload):

@@ -6,6 +6,7 @@ import { cn } from '../utils/cn';
 export default function ScrollToTopButton({
     scrollContainerRef,
     threshold = 300,
+    hidden = false,
     className = "fixed bottom-20 right-3 sm:bottom-4 sm:right-4"
 }) {
     const [isVisible, setIsVisible] = useState(false);
@@ -35,7 +36,7 @@ export default function ScrollToTopButton({
 
     return (
         <AnimatePresence>
-            {isVisible && (
+            {isVisible && !hidden && (
                 <motion.button
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
