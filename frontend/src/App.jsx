@@ -49,7 +49,7 @@ export default function App() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
         >
-          <div className="flex-1 shrink-0">
+          <div className="flex-1 min-h-0">
             <ShippingCalculator onDrawerToggle={setCartDrawerOpen} />
           </div>
 
