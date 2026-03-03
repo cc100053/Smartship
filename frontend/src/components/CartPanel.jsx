@@ -1,3 +1,4 @@
+import { Trash2 } from 'lucide-react';
 import { getCategoryLabel } from '../utils/labels';
 import { getIconForProduct } from '../utils/productIcons';
 
@@ -34,20 +35,23 @@ export default function CartPanel({
           : "rounded-2xl border border-slate-200/70 bg-white/80 p-4 shadow-[0_18px_45px_-40px_rgba(15,23,42,0.7)] h-full"
       }
     >
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-xs uppercase tracking-[0.4em] text-slate-400">カート</p>
-          <h3 className="mt-2 text-xl font-semibold text-slate-900">選択中の商品</h3>
+      {!isDrawer && (
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.4em] text-slate-400">カート</p>
+            <h3 className="mt-2 text-xl font-semibold text-slate-900">選択中の商品</h3>
+          </div>
+          <button
+            type="button"
+            onClick={onClear}
+            disabled={!items.length}
+            className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-rose-400 transition hover:text-rose-600 disabled:opacity-40"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            クリア
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={onClear}
-          disabled={!items.length}
-          className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400 transition hover:text-slate-600 disabled:opacity-40"
-        >
-          クリア
-        </button>
-      </div>
+      )}
 
       {items.length === 0 ? (
         <div className="mt-4 rounded-2xl border border-dashed border-slate-200/80 bg-slate-50/70 px-4 py-5 text-center text-sm text-slate-500">

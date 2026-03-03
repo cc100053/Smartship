@@ -1,5 +1,5 @@
 import { motion, AnimatePresence, useDragControls } from 'framer-motion';
-import { ShoppingBag, X, Trash2 } from 'lucide-react';
+import { ShoppingBag, Trash2, Truck } from 'lucide-react';
 import CartPanel from './CartPanel';
 import { useEffect, useRef } from 'react';
 
@@ -17,6 +17,7 @@ export default function MobileCartDrawer({
     const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
     const dragControls = useDragControls();
     const drawerRef = useRef(null);
+    const scrollRef = useRef(null);
 
     // Lock body scroll when expanded
     useEffect(() => {
@@ -37,9 +38,18 @@ export default function MobileCartDrawer({
         }
     };
 
+    // Only start drag from the whole card when scroll container is at the top
+    const handlePointerDown = (e) => {
+        const scrollTop = scrollRef.current?.scrollTop ?? 0;
+        // Allow drag initiation if we're at the top of the scroll area
+        if (scrollTop <= 0) {
+            dragControls.start(e);
+        }
+    };
+
     return (
         <>
-            {/* Backdrop — also hides the scroll-to-top button via z-index layering */}
+            {/* Backdrop */}
             <AnimatePresence>
                 {isExpanded && (
                     <motion.div
@@ -94,7 +104,7 @@ export default function MobileCartDrawer({
                                     }}
                                     disabled={!items.length}
                                     title="カートをクリア"
-                                    className="p-2.5 rounded-xl text-white/60 hover:text-white hover:bg-white/10 transition disabled:opacity-30"
+                                    className="p-2.5 rounded-xl text-rose-400 hover:text-rose-300 hover:bg-white/10 transition disabled:opacity-30"
                                 >
                                     <Trash2 className="h-4 w-4" />
                                 </button>
@@ -105,9 +115,14 @@ export default function MobileCartDrawer({
                                         onCalculate();
                                     }}
                                     disabled={!items.length || loading}
-                                    className="text-xs font-semibold px-4 py-2.5 bg-white text-slate-900 shadow-sm transition hover:bg-slate-50 active:scale-95 disabled:opacity-50 disabled:bg-white/50 rounded-xl whitespace-nowrap"
+                                    className="text-xs font-semibold px-4 py-2.5 bg-white text-slate-900 shadow-sm transition hover:bg-slate-50 active:scale-95 disabled:opacity-50 disabled:bg-white/50 rounded-xl whitespace-nowrap flex items-center gap-1.5"
                                 >
-                                    {loading ? '計算中...' : '計算 ▶'}
+                                    {loading ? '計算中...' : (
+                                        <>
+                                            <Truck className="h-3.5 w-3.5" />
+                                            <span>送料を計算</span>
+                                        </>
+                                    )}
                                 </button>
                             </div>
                         </motion.div>
@@ -118,7 +133,7 @@ export default function MobileCartDrawer({
                             key="expanded-drawer"
                             drag="y"
                             dragControls={dragControls}
-                            dragListener={false}   // only drag from handle
+                            dragListener={false}
                             dragConstraints={{ top: 0, bottom: 0 }}
                             dragElastic={{ top: 0, bottom: 0.3 }}
                             onDragEnd={handleDragEnd}
@@ -127,29 +142,35 @@ export default function MobileCartDrawer({
                             exit={{ y: '100%' }}
                             transition={{ type: 'spring', damping: 28, stiffness: 320 }}
                             className="pointer-events-auto bg-white rounded-t-3xl shadow-[0_-10px_40px_-10px_rgba(0,0,0,0.25)] flex flex-col max-h-[85vh]"
+                            onPointerDown={handlePointerDown}
                         >
-                            {/* Drag handle — initiates drag */}
-                            <div
-                                className="flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing touch-none select-none"
-                                onPointerDown={(e) => dragControls.start(e)}
-                            >
+                            {/* Drag handle (visual only) */}
+                            <div className="flex justify-center pt-3 pb-1 select-none">
                                 <div className="w-12 h-1.5 rounded-full bg-slate-200" />
                             </div>
 
-                            {/* Header row */}
-                            <div className="flex items-center justify-between px-5 pt-2 pb-3">
-                                <p className="text-xs uppercase tracking-[0.4em] text-slate-400">カート</p>
+                            {/* Header: title + clear button */}
+                            <div className="flex items-center justify-between px-5 pt-2 pb-3 select-none">
+                                <p className="text-base font-semibold text-slate-800">選択中の商品</p>
                                 <button
-                                    onClick={() => onToggle(false)}
-                                    className="p-2 -mr-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition"
-                                    aria-label="閉じる"
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onClear();
+                                    }}
+                                    disabled={!items.length}
+                                    className="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-rose-400 hover:text-rose-600 transition disabled:opacity-30"
                                 >
-                                    <X className="h-5 w-5" />
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                    クリア
                                 </button>
                             </div>
 
                             {/* Scrollable Cart Content */}
-                            <div className="overflow-y-auto px-4 pb-8 custom-scrollbar flex-1">
+                            <div
+                                ref={scrollRef}
+                                className="overflow-y-auto px-4 pb-8 custom-scrollbar flex-1 touch-pan-y"
+                            >
                                 <CartPanel
                                     isDrawer={true}
                                     items={items}
