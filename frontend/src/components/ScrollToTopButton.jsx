@@ -6,7 +6,7 @@ import { cn } from '../utils/cn';
 export default function ScrollToTopButton({
     scrollContainerRef,
     threshold = 300,
-    className = "fixed bottom-4 right-4"
+    className = "fixed bottom-20 right-3 sm:bottom-4 sm:right-4"
 }) {
     const [isVisible, setIsVisible] = useState(false);
 
@@ -42,7 +42,7 @@ export default function ScrollToTopButton({
                     exit={{ opacity: 0, scale: 0.8 }}
                     onClick={scrollToTop}
                     className={cn(
-                        "z-50 flex items-center justify-center rounded-full border border-white/50 bg-slate-900/80 text-white shadow-lg backdrop-blur-md transition-colors hover:bg-slate-800",
+                        "z-50 flex items-center justify-center rounded-full border border-white/50 bg-slate-900/80 text-white shadow-lg backdrop-blur-md transition-all opacity-50 hover:opacity-100 hover:bg-slate-800",
                         "h-10 w-10 sm:h-12 sm:w-12",
                         className
                     )}

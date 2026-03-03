@@ -56,7 +56,7 @@ export default function ProductCard({ product, onAdd, index = 0 }) {
       }}
       transition={{ type: 'spring', stiffness: 300, damping: 20 }}
       style={{ transformStyle: 'preserve-3d', perspective: 800 }}
-      className="group relative flex w-full items-center justify-between gap-2 sm:gap-3 rounded-xl border border-white/60 bg-white/40 p-2 sm:p-3 shadow-sm backdrop-blur-md overflow-hidden"
+      className="group relative flex w-full items-center justify-between gap-2 sm:gap-3 rounded-xl border border-white/60 bg-white/40 p-1.5 sm:p-3 shadow-sm backdrop-blur-md overflow-hidden"
     >
       {/* Glow overlay that follows cursor */}
       <div
@@ -69,8 +69,8 @@ export default function ProductCard({ product, onAdd, index = 0 }) {
 
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5 sm:gap-2">
-          <span className="flex h-6 w-6 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
-            <Icon className="h-3 w-3 sm:h-4 sm:w-4" />
+          <span className="flex h-5 w-5 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
+            <Icon className="h-2.5 w-2.5 sm:h-4 sm:w-4" />
           </span>
           <div className="min-w-0">
             <div className="text-[0.5rem] sm:text-[0.625rem] font-bold uppercase tracking-wider text-slate-400">
@@ -84,7 +84,7 @@ export default function ProductCard({ product, onAdd, index = 0 }) {
             </h3>
           </div>
         </div>
-        <div className="mt-1.5 sm:mt-2 flex flex-wrap gap-1 sm:gap-2 text-[0.56rem] sm:text-[0.625rem] text-slate-500">
+        <div className="hidden sm:flex mt-2 flex-wrap gap-2 text-[0.625rem] text-slate-500">
           <span className="truncate rounded-md bg-white/50 px-1 sm:px-1.5 py-0.5">
             {sizeLabel}
           </span>
