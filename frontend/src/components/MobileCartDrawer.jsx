@@ -27,11 +27,6 @@ export default function MobileCartDrawer({
         return () => { document.body.style.overflow = ''; };
     }, [isExpanded]);
 
-    // Reset y when drawer closes (so it's at 0 on next open)
-    useEffect(() => {
-        if (!isExpanded) y.set(0);
-    }, [isExpanded, y]);
-
     // ─── Callback ref: attach native touch handlers the moment the node mounts ───
     const drawerCallbackRef = useCallback((node) => {
         if (!node) return;   // node is null on unmount — listeners auto-clean up
@@ -78,13 +73,11 @@ export default function MobileCartDrawer({
             const currentDragY = y.get();
 
             if (currentDragY > 80 || velocityY > 500) {
-                animate(y, window.innerHeight, {
-                    type: 'spring', damping: 28, stiffness: 180,
-                    onComplete: () => {
-                        onToggleRef.current(false);
-                        y.set(0);
-                    },
-                });
+                // When successfully swiped down, we don't animate `y` directly to window height
+                // Instead, we just trigger onToggle(false). 
+                // AnimatePresence's `exit={{ y: '100%' }}` takes over from the CURRENT position 
+                // because Framer Motion is smart enough to interpolate from the dragged `style={{y}}`.
+                onToggleRef.current(false);
             } else {
                 animate(y, 0, { type: 'spring', damping: 28, stiffness: 300 });
             }
@@ -130,7 +123,10 @@ export default function MobileCartDrawer({
                             exit={{ y: 20, opacity: 0 }}
                             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
                             className="mx-4 mb-4 md:mb-6 pointer-events-auto cursor-pointer rounded-2xl bg-gradient-to-r from-slate-800 to-slate-900 shadow-2xl p-3 flex items-center justify-between gap-2"
-                            onClick={() => onToggle(true)}
+                            onClick={() => {
+                                y.set(0); // Reset y right before we open
+                                onToggle(true);
+                            }}
                         >
                             {/* Left: icon + label */}
                             <div className="flex items-center gap-3 pl-2 min-w-0">
