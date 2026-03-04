@@ -35,3 +35,7 @@
 ## 9. Re-verify Docker startup after JPA property changes
 - **Mistake**: Changed Hibernate startup properties without validating `docker-compose up --build`, which introduced a dialect-resolution startup failure.
 - **Rule**: Any change to datasource/JPA boot properties must be verified with both local Maven run and Docker Compose startup before closing the task.
+
+## 10. Packer placements are not always gravity-stable for visualization
+- **Mistake**: Assumed native library placements were always visually grounded, so frontend rendered raw coordinates directly.
+- **Rule**: When using backend placements for 3D UI, always run a support/stability pass (or equivalent validation) before rendering so `z > 0` items are not shown floating without support.

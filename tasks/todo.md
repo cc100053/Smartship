@@ -307,3 +307,33 @@ Execute `docs/packing_animation_plan.md`: use 3D in-scene packing animations (ne
 - Updated frontend dependencies with `@react-spring/three`.
 - Verification:
   - `cd frontend && npm run build` ✅ (build succeeded)
+
+---
+
+# 3D Floating Placement Visual Fix
+
+## Goal
+Fix the mismatch where some items appear floating in the 3D view even though packing has already reserved space for them.
+
+## Tasks
+- [x] **1. Root cause verification**
+  - Probe backend packing outputs for unsupported placements.
+  - Confirmed native library placements can contain `z > 0` items without direct support below.
+- [x] **2. Render-only gravity stabilization**
+  - Added `stabilizePlacementsForRendering(...)` in `frontend/src/utils/referenceObjectUtils.js`.
+  - Keep backend packing/dimension logic unchanged.
+- [x] **3. Integrate into 3D scene**
+  - Use stabilized placements for AABB, centering, animation targets, and rendering.
+- [x] **4. Verification**
+  - Run frontend build and ensure no regressions.
+- [x] **5. Review section**
+  - Document root cause, fix strategy, and verification result.
+
+## Review
+- Root cause confirmed: native LAFF output can include non-grounded placements (valid fit-wise, but visually floating).
+- Implemented render-only gravity settling in frontend:
+  - New helper `stabilizePlacementsForRendering(...)` lowers each box to floor/support while preserving X/Y footprint and size.
+  - `ParcelVisualizer3D` now uses stabilized placements for AABB, centering, new-item animation targets, and actual rendering.
+- Backend shipping calculation/matching logic remains unchanged.
+- Verification:
+  - `cd frontend && npm run build` ✅

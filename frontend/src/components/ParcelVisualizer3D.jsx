@@ -7,6 +7,7 @@ import {
   getReferenceModel,
   calculateAABB,
   calculateReferencePosition,
+  stabilizePlacementsForRendering,
   GHOST_MATERIAL
 } from '../utils/referenceObjectUtils';
 import * as THREE from 'three';
@@ -164,7 +165,11 @@ function ReferenceObject({ position, size, scale }) {
 function Scene({ placements, maxDim, dimensions }) {
   const prevPlacementsRef = useRef([]);
   const scale = 3 / Math.max(maxDim, 100);
-  const aabb = useMemo(() => calculateAABB(placements), [placements]);
+  const stabilizedPlacements = useMemo(
+    () => stabilizePlacementsForRendering(placements),
+    [placements]
+  );
+  const aabb = useMemo(() => calculateAABB(stabilizedPlacements), [stabilizedPlacements]);
   const hasDims = dimensions &&
     dimensions.lengthCm > 0 &&
     dimensions.widthCm > 0 &&
@@ -176,7 +181,7 @@ function Scene({ placements, maxDim, dimensions }) {
     });
 
     const usedNameCounts = {};
-    return placements.map((item) => {
+    return stabilizedPlacements.map((item) => {
       const indexForName = usedNameCounts[item.name] || 0;
       usedNameCounts[item.name] = indexForName + 1;
       const prevCount = prevNameCounts[item.name] || 0;
@@ -187,11 +192,11 @@ function Scene({ placements, maxDim, dimensions }) {
         renderKey: `${item.name}-${indexForName}`,
       };
     });
-  }, [placements]);
+  }, [stabilizedPlacements]);
 
   useEffect(() => {
-    prevPlacementsRef.current = placements;
-  }, [placements]);
+    prevPlacementsRef.current = stabilizedPlacements;
+  }, [stabilizedPlacements]);
 
   const referenceModel = useMemo(() => {
     if (!hasDims) return null;

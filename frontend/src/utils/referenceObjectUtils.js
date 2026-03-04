@@ -94,6 +94,65 @@ export function calculateAABB(placements) {
 }
 
 /**
+ * Stabilize placements for visualization by settling each box downward.
+ *
+ * Native packer output can contain unsupported (floating) placements, which is
+ * valid for fit checks but confusing in the 3D preview. This pass preserves
+ * X/Y footprint and size, then lowers each item to the nearest support plane
+ * (or floor) without changing backend packing logic.
+ *
+ * @param {Array} placements - Array of { x, y, z, width, depth, height } in mm
+ * @returns {Array} - New array with adjusted z positions for rendering
+ */
+export function stabilizePlacementsForRendering(placements) {
+    if (!placements || placements.length === 0) {
+        return [];
+    }
+
+    const stabilized = new Array(placements.length);
+    const order = placements
+        .map((placement, index) => ({ placement, index }))
+        .sort((a, b) => {
+            if (a.placement.z !== b.placement.z) {
+                return a.placement.z - b.placement.z;
+            }
+            const areaA = a.placement.width * a.placement.depth;
+            const areaB = b.placement.width * b.placement.depth;
+            if (areaA !== areaB) {
+                return areaB - areaA;
+            }
+            return a.index - b.index;
+        });
+
+    const settled = [];
+    const overlaps = (startA, sizeA, startB, sizeB) =>
+        startA < startB + sizeB && startB < startA + sizeA;
+
+    for (const { placement, index } of order) {
+        let settledZ = 0;
+
+        for (const other of settled) {
+            const overlapX = overlaps(placement.x, placement.width, other.x, other.width);
+            const overlapY = overlaps(placement.y, placement.depth, other.y, other.depth);
+            if (!overlapX || !overlapY) {
+                continue;
+            }
+
+            const supportTop = other.z + other.height;
+            if (supportTop <= placement.z && supportTop > settledZ) {
+                settledZ = supportTop;
+            }
+        }
+
+        const stabilizedPlacement = { ...placement, z: settledZ };
+        stabilized[index] = stabilizedPlacement;
+        settled.push(stabilizedPlacement);
+    }
+
+    return stabilized;
+}
+
+/**
  * Calculates the position for the reference object to avoid overlap.
  * Places the object to the RIGHT of the package (positive X axis in Three.js).
  * 
