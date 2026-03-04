@@ -273,3 +273,37 @@ Restore `docker-compose up --build` startup after backend config hardening intro
 - Verification:
   - `docker-compose up --build` ✅
   - `docker-compose ps` shows both `backend` and `frontend` containers `Up` ✅
+
+---
+
+# 3D Packing Animation Plan Execution
+
+## Goal
+Execute `docs/packing_animation_plan.md`: use 3D in-scene packing animations (new-item drop + existing-item smooth transition), animate shipping box resize, and remove legacy DOM fly-to-cart animation.
+
+## Tasks
+- [x] **1. Scene animation core (`ParcelVisualizer3D.jsx`)**
+  - Replace static `PlacedBox` with spring-based `AnimatedPlacedBox`.
+  - Add placement diffing (`isNew`) based on previous placements.
+  - Use top-drop animation for new items and smooth transition for existing items.
+- [x] **2. Shipping box animation (`ParcelVisualizer3D.jsx`)**
+  - Replace static `ShippingBox` with spring-based `AnimatedShippingBox`.
+  - Animate size/position updates with unit geometry + animated scale.
+- [x] **3. Remove legacy DOM add animation (`ShippingCalculator.jsx`)**
+  - Remove `animateAddToCart` and its call path.
+  - Keep add-to-cart behavior and mode switch unchanged.
+- [x] **4. Dependency update**
+  - Add `@react-spring/three` in frontend dependencies.
+- [x] **5. Verification**
+  - Run `cd frontend && npm run build`.
+
+## Review
+- Implemented `AnimatedPlacedBox` with `@react-spring/three`, using slow spring configs:
+  - new item drop: `mass: 2, tension: 120, friction: 14`
+  - existing item reposition: `mass: 1, tension: 170, friction: 26`
+- Added scene-level placement diffing via previous-placement name counts and stable per-item render keys (`name + occurrence index`) to identify `isNew`.
+- Replaced static shipping box with `AnimatedShippingBox` that animates position/size using unit geometry (`1x1x1`) plus animated group scale.
+- Removed legacy DOM fly-to-cart animation in `ShippingCalculator.jsx`; add-to-cart now relies on 3D scene updates only.
+- Updated frontend dependencies with `@react-spring/three`.
+- Verification:
+  - `cd frontend && npm run build` ✅ (build succeeded)

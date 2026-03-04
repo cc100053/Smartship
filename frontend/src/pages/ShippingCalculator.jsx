@@ -151,73 +151,7 @@ export default function ShippingCalculator({ onDrawerToggle }) {
     loadProducts();
   }, [activeCategory]);
 
-  const animateAddToCart = (sourceEl) => {
-    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      return;
-    }
-
-    const targetEl = cartRef.current;
-    if (!sourceEl || !targetEl) return;
-
-    // Find the icon inside the card (the package icon span)
-    const iconEl = sourceEl.querySelector('span.rounded-lg');
-    if (!iconEl) return;
-
-    const sourceRect = iconEl.getBoundingClientRect();
-    const targetRect = targetEl.getBoundingClientRect();
-    if (!sourceRect.width || !sourceRect.height) return;
-
-    const clone = iconEl.cloneNode(true);
-    clone.setAttribute('aria-hidden', 'true');
-    clone.style.position = 'fixed';
-    clone.style.pointerEvents = 'none';
-    clone.style.margin = '0';
-    clone.style.top = `${sourceRect.top}px`;
-    clone.style.left = `${sourceRect.left}px`;
-    clone.style.width = `${sourceRect.width}px`;
-    clone.style.height = `${sourceRect.height}px`;
-    clone.style.transformOrigin = 'center';
-    clone.style.zIndex = '50';
-    clone.style.borderRadius = '0.5rem';
-
-    document.body.appendChild(clone);
-
-    const endX = targetRect.left + targetRect.width * 0.5 - sourceRect.left - sourceRect.width / 2;
-    const endY = targetRect.top + targetRect.height * 0.5 - sourceRect.top - sourceRect.height / 2;
-
-    const flyAnimation = clone.animate(
-      [
-        { transform: 'translate(0, 0) scale(1)', opacity: 1 },
-        { transform: `translate(${endX}px, ${endY}px) scale(0.8)`, opacity: 0.4 },
-      ],
-      {
-        duration: 500,
-        easing: 'cubic-bezier(0.2, 0.7, 0.2, 1)',
-      },
-    );
-
-    flyAnimation.onfinish = () => clone.remove();
-    window.setTimeout(() => clone.remove(), 1000);
-
-    if (typeof targetEl.animate === 'function') {
-      targetEl.animate(
-        [
-          { transform: 'scale(1)', boxShadow: '0 18px 45px -40px rgba(15,23,42,0.7)' },
-          { transform: 'scale(1.02)', boxShadow: '0 22px 50px -38px rgba(15,23,42,0.45)' },
-          { transform: 'scale(1)', boxShadow: '0 18px 45px -40px rgba(15,23,42,0.7)' },
-        ],
-        {
-          duration: 260,
-          easing: 'ease-out',
-        },
-      );
-    }
-  };
-
-  const handleAddToCart = (product, event) => {
-    const sourceEl = event?.currentTarget?.closest('article');
-    animateAddToCart(sourceEl);
-
+  const handleAddToCart = (product) => {
     resetCalculation();
     addToCart(product);
     if (mode === 'manual') {
@@ -338,7 +272,7 @@ export default function ShippingCalculator({ onDrawerToggle }) {
                         key={product.id}
                         product={product}
                         index={index}
-                        onAdd={(event) => handleAddToCart(product, event)}
+                        onAdd={() => handleAddToCart(product)}
                       />
                     ))
                   )}

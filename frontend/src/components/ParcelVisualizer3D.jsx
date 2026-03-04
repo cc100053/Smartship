@@ -1,6 +1,7 @@
-import { useRef, useMemo, Component } from 'react';
+import { useRef, useMemo, useEffect, Component } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Grid, Environment } from '@react-three/drei';
+import { useSpring, animated } from '@react-spring/three';
 import { Box, Layers, Scale } from 'lucide-react';
 import {
   getReferenceModel,
@@ -34,56 +35,89 @@ function BoxEdges({ width, height, depth, color = 'white', opacity = 0.6 }) {
   );
 }
 
-// ── PlacedBox — same structure as the original working code ───────
-function PlacedBox({ info, scale }) {
+// ── Animated packed item ───────────────────────────────────────────
+function AnimatedPlacedBox({ info, scale, isNew, dropHeight }) {
   const width = info.width * scale;
   const depth = info.depth * scale;
   const height = info.height * scale;
 
-  const x = info.x * scale + width / 2;
-  const z = info.y * scale + depth / 2;
-  const y = info.z * scale + height / 2;
+  const targetX = info.x * scale + width / 2;
+  const targetZ = info.y * scale + depth / 2;
+  const targetY = info.z * scale + height / 2;
+  const springConfig = useMemo(() => (
+    isNew
+      ? { mass: 2, tension: 120, friction: 14 }
+      : { mass: 1, tension: 170, friction: 26 }
+  ), [isNew]);
+  const [springs, api] = useSpring(() => ({
+    position: isNew ? [targetX, dropHeight, targetZ] : [targetX, targetY, targetZ],
+    opacity: isNew ? 0 : 0.7,
+    config: springConfig,
+  }));
+
+  useEffect(() => {
+    api.start({
+      position: [targetX, targetY, targetZ],
+      opacity: 0.7,
+      config: springConfig,
+    });
+  }, [api, targetX, targetY, targetZ, springConfig]);
 
   return (
-    <group position={[x, y, z]}>
+    <animated.group position={springs.position}>
       <mesh>
         <boxGeometry args={[width, height, depth]} />
-        <meshStandardMaterial
+        <animated.meshStandardMaterial
           color={info.color}
           transparent
-          opacity={0.7}
+          opacity={springs.opacity}
           roughness={0.1}
         />
       </mesh>
       <BoxEdges width={width} height={height} depth={depth} />
-    </group>
+    </animated.group>
   );
 }
 
-// ── Transparent shipping box (glass outline) ──────────────────────
-function ShippingBox({ dimensions, scale }) {
+// ── Animated shipping box (glass outline) ──────────────────────────
+function AnimatedShippingBox({ dimensions, scale }) {
   if (!dimensions || !dimensions.lengthCm) return null;
 
   const width = dimensions.lengthCm * 10 * scale;
   const depth = dimensions.widthCm * 10 * scale;
   const height = dimensions.heightCm * 10 * scale;
+  const [springs, api] = useSpring(() => ({
+    size: [Math.max(width, 0.001), Math.max(height, 0.001), Math.max(depth, 0.001)],
+    position: [width / 2, height / 2, depth / 2],
+    config: { mass: 1, tension: 170, friction: 26 },
+  }));
+
+  useEffect(() => {
+    api.start({
+      size: [Math.max(width, 0.001), Math.max(height, 0.001), Math.max(depth, 0.001)],
+      position: [width / 2, height / 2, depth / 2],
+      config: { mass: 1, tension: 170, friction: 26 },
+    });
+  }, [api, width, height, depth]);
 
   return (
-    <group position={[width / 2, height / 2, depth / 2]}>
-      <mesh>
-        <boxGeometry args={[width, height, depth]} />
-        <meshStandardMaterial
-          color="#ffffff"
-          transparent
-          opacity={0.12}
-          roughness={0.1}
-          metalness={0.0}
-          side={THREE.DoubleSide}
-          depthWrite={false}
-        />
-      </mesh>
-      <BoxEdges width={width} height={height} depth={depth} color="#ffffff" opacity={0.35} />
-    </group>
+    <animated.group position={springs.position}>
+      <animated.group scale={springs.size}>
+        <mesh>
+          <boxGeometry args={[1, 1, 1]} />
+          <meshStandardMaterial
+            color="#ffffff"
+            transparent
+            opacity={0.12}
+            roughness={0.1}
+            metalness={0.0}
+            side={THREE.DoubleSide}
+            depthWrite={false}
+          />
+        </mesh>
+        <BoxEdges width={1} height={1} depth={1} color="#ffffff" opacity={0.35} />
+      </animated.group>
+    </animated.group>
   );
 }
 
@@ -128,12 +162,36 @@ function ReferenceObject({ position, size, scale }) {
 
 // ── Scene ─────────────────────────────────────────────────────────
 function Scene({ placements, maxDim, dimensions }) {
+  const prevPlacementsRef = useRef([]);
   const scale = 3 / Math.max(maxDim, 100);
   const aabb = useMemo(() => calculateAABB(placements), [placements]);
   const hasDims = dimensions &&
     dimensions.lengthCm > 0 &&
     dimensions.widthCm > 0 &&
     dimensions.heightCm > 0;
+  const annotatedPlacements = useMemo(() => {
+    const prevNameCounts = {};
+    prevPlacementsRef.current.forEach((item) => {
+      prevNameCounts[item.name] = (prevNameCounts[item.name] || 0) + 1;
+    });
+
+    const usedNameCounts = {};
+    return placements.map((item) => {
+      const indexForName = usedNameCounts[item.name] || 0;
+      usedNameCounts[item.name] = indexForName + 1;
+      const prevCount = prevNameCounts[item.name] || 0;
+
+      return {
+        ...item,
+        isNew: indexForName >= prevCount,
+        renderKey: `${item.name}-${indexForName}`,
+      };
+    });
+  }, [placements]);
+
+  useEffect(() => {
+    prevPlacementsRef.current = placements;
+  }, [placements]);
 
   const referenceModel = useMemo(() => {
     if (!hasDims) return null;
@@ -152,10 +210,14 @@ function Scene({ placements, maxDim, dimensions }) {
       size: { x: maxX, y: maxY, z: maxZ },
     };
     return calculateReferencePosition(boxAABB, referenceModel.realWorldSize, scale, 5);
-  }, [aabb, dimensions, hasDims, referenceModel, scale, placements]);
+  }, [aabb, dimensions, hasDims, referenceModel, scale]);
 
   const centerX = ((hasDims && dimensions.lengthCm ? dimensions.lengthCm * 10 : aabb.max.x) * scale) / 2;
   const centerZ = ((hasDims && dimensions.widthCm ? dimensions.widthCm * 10 : aabb.max.y) * scale) / 2;
+  const boxMaxHeight = hasDims
+    ? dimensions.heightCm * 10 * scale
+    : (aabb.max.z || 0) * scale;
+  const dropHeight = boxMaxHeight + 4;
 
   return (
     <>
@@ -164,11 +226,17 @@ function Scene({ placements, maxDim, dimensions }) {
 
       <group position={[-centerX, 0, -centerZ]}>
         {/* Glass shipping box */}
-        {hasDims && <ShippingBox dimensions={dimensions} scale={scale} />}
+        {hasDims && <AnimatedShippingBox dimensions={dimensions} scale={scale} />}
 
         {/* Packed items */}
-        {placements && placements.map((p, i) => (
-          <PlacedBox key={i} info={p} scale={scale} />
+        {annotatedPlacements && annotatedPlacements.map((p) => (
+          <AnimatedPlacedBox
+            key={p.renderKey}
+            info={p}
+            scale={scale}
+            isNew={p.isNew}
+            dropHeight={dropHeight}
+          />
         ))}
 
         {/* Reference object */}
