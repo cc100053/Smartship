@@ -4,8 +4,8 @@ export const CATEGORY_COLORS = {
         glow: 'rgba(30, 41, 59, 0.15)',
     },
     Books: {
-        bg: 'bg-blue-100 text-blue-600',
-        glow: 'rgba(59, 130, 246, 0.15)',
+        bg: 'bg-orange-100 text-orange-600',
+        glow: 'rgba(249, 115, 22, 0.15)',
     },
     Games: {
         bg: 'bg-purple-100 text-purple-600',
