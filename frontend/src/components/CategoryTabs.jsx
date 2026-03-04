@@ -7,6 +7,7 @@ import { CATEGORY_ICONS } from '../utils/productIcons';
 
 export default function CategoryTabs({ categories, value, onChange }) {
   const scrollRef = useRef(null);
+  const tabRefs = useRef(new Map());
   const [showLeft, setShowLeft] = useState(false);
   const [showRight, setShowRight] = useState(false);
 
@@ -36,6 +37,33 @@ export default function CategoryTabs({ categories, value, onChange }) {
     const amount = direction === 'left' ? -150 : 150;
     el.scrollBy({ left: amount, behavior: 'smooth' });
   };
+
+  const setTabRef = (tabValue) => (node) => {
+    if (node) {
+      tabRefs.current.set(tabValue, node);
+      return;
+    }
+    tabRefs.current.delete(tabValue);
+  };
+
+  useEffect(() => {
+    const container = scrollRef.current;
+    const activeTab = tabRefs.current.get(value);
+    if (!container || !activeTab) return;
+
+    const containerRect = container.getBoundingClientRect();
+    const activeRect = activeTab.getBoundingClientRect();
+    const edgePadding = 56;
+
+    const nudgeRight = activeRect.right - (containerRect.right - edgePadding);
+    const nudgeLeft = (containerRect.left + edgePadding) - activeRect.left;
+
+    if (nudgeRight > 0) {
+      container.scrollBy({ left: nudgeRight, behavior: 'smooth' });
+    } else if (nudgeLeft > 0) {
+      container.scrollBy({ left: -nudgeLeft, behavior: 'smooth' });
+    }
+  }, [value, categories]);
 
   return (
     <div className="relative flex items-center gap-1">
@@ -70,6 +98,7 @@ export default function CategoryTabs({ categories, value, onChange }) {
           return (
             <button
               key={item.value}
+              ref={setTabRef(item.value)}
               type="button"
               onClick={() => onChange(item.value)}
               aria-pressed={isActive}

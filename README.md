@@ -30,6 +30,13 @@ To get automatic refreshing (hot-reloading) while writing code, run the servers 
 **1. Backend** (Auto-recompiles on change):
 
 Use the helper script at the project root — it auto-loads `.env` for you:
+
+**Mac / Linux:**
+```bash
+./run-backend.sh
+```
+
+**Windows:**
 ```powershell
 .\run-backend.ps1
 ```

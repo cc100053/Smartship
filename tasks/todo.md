@@ -1,4 +1,25 @@
+# Category Filter Auto-Nudge UX
+
+## Goal
+When a user selects a filter near the right or left edge, auto-nudge the horizontal tab list so adjacent options become visible without manual drag or arrow clicks.
+
+## Tasks
+- [x] **1. Add Active-Tab Edge Nudge Logic**
+  - Detect active tab position relative to the visible scroll container.
+  - If active tab is near the right edge, scroll slightly right.
+  - If active tab is near the left edge, scroll slightly left.
+- [x] **2. Keep Existing Manual Controls**
+  - Preserve current left/right button behavior and scroll visibility indicators.
+- [x] **3. Verification**
+  - Run frontend build to ensure no regressions.
+
+## Review
+- Implemented active-tab edge nudge in `frontend/src/components/CategoryTabs.jsx` using tab refs and threshold-based smooth scroll.
+- Preserved existing left/right button scroll behavior and visibility indicators.
+- Verified with `cd frontend && npm run build` (pass).
+
 # Supercharge 3D Visualization
+
 
 ## Goal
 Make the 3D packing visualization more impressive for the school expo and presentation by adding a step-by-step packing animation and a transparent outer shipping box (glass effect).
