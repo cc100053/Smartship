@@ -59,3 +59,7 @@
 ## 15. Mobile drawer animations need overlap control and low-trail layers
 - **Mistake**: Used default presence choreography and blur-heavy overlay in a bottom drawer transition, which caused visible ghosting on mobile during open/close.
 - **Rule**: For mobile bottom sheets, prefer deterministic enter/exit sequencing (`AnimatePresence mode=\"wait\"` when swapping states), GPU-friendly transforms, and lighter overlay effects over blur-heavy backdrops.
+
+## 16. Secondary display UI must stay semantically aligned with primary view
+- **Mistake**: Viewer waiting state used a custom spinning loader and did not surface reference-object text clearly, diverging from main-view UI semantics and reducing readability in expo mode.
+- **Rule**: For mirrored/secondary display flows, reuse the same status icon language as the primary screen and ensure essential context labels (e.g., reference object) are always rendered in a high-contrast, prominent overlay.

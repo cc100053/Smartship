@@ -614,3 +614,30 @@ Implement `docs/extended_display_plan.md` so a separate `#/viewer` window can re
   - Renders `PackingViewer` only when hash is `#/viewer`; otherwise keeps existing `App`.
 - Verification:
   - `cd frontend && npm run build` ✅
+
+---
+
+# Viewer UI Consistency Fixes (2026-03-05)
+
+## Goal
+Align viewer waiting state with main-screen visual language and make reference-object text clearly visible in viewer mode.
+
+## Tasks
+- [x] **1. Scope and plan**
+  - Confirm requested UI fixes and target files.
+- [x] **2. Waiting state icon consistency**
+  - Replace rotating loader in `PackingViewer` with the same square `Box` icon style used in main view.
+- [x] **3. Reference label visibility**
+  - Add an always-visible, prominent reference-object text label in viewer mode when dimensions exist.
+- [x] **4. Verification + review**
+  - Run `cd frontend && npm run build`.
+  - Record final behavior in review notes.
+
+## Review
+- Updated `frontend/src/pages/PackingViewer.jsx` waiting state:
+  - Removed rotating spinner.
+  - Replaced with static square `Box` icon to match main-screen empty state language.
+- Added visible reference overlay in viewer render state:
+  - Uses `getReferenceModel(dimensions)` and shows `参照物: {name}` at top-right with high-contrast panel styling.
+- Verification:
+  - `cd frontend && npm run build` ✅

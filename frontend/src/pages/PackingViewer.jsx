@@ -1,7 +1,9 @@
 import { useMemo } from 'react';
 import { Canvas } from '@react-three/fiber';
+import { Box } from 'lucide-react';
 import { Scene, CanvasErrorBoundary } from '../components/ParcelVisualizer3D';
 import { useBroadcastReceiver } from '../hooks/useViewerBroadcast';
+import { getReferenceModel } from '../utils/referenceObjectUtils';
 
 export default function PackingViewer() {
   const { dimensions, placements, connected } = useBroadcastReceiver();
@@ -31,6 +33,7 @@ export default function PackingViewer() {
   const maxDim = hasDimensions
     ? Math.max(dimensions.lengthCm, dimensions.widthCm, dimensions.heightCm) * 10
     : 100;
+  const referenceModel = hasDimensions ? getReferenceModel(dimensions) : null;
 
   if (!connected || displayPlacements.length === 0) {
     return (
@@ -44,24 +47,16 @@ export default function PackingViewer() {
         flexDirection: 'column',
         gap: '1rem',
       }}>
-        <div style={{
-          width: 48,
-          height: 48,
-          border: '3px solid rgba(255,255,255,0.15)',
-          borderTopColor: '#38bdf8',
-          borderRadius: '50%',
-          animation: 'spin 1s linear infinite',
-        }} />
+        <Box style={{ width: 32, height: 32, opacity: 0.5, color: '#ffffff' }} />
         <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14 }}>
           {connected ? 'アイテムを追加してください...' : 'メイン画面に接続中...'}
         </p>
-        <style>{'@keyframes spin { to { transform: rotate(360deg) } }'}</style>
       </div>
     );
   }
 
   return (
-    <div style={{ width: '100vw', height: '100vh', background: '#0f172a' }}>
+    <div style={{ width: '100vw', height: '100vh', background: '#0f172a', position: 'relative' }}>
       <CanvasErrorBoundary>
         <Canvas camera={{ position: [8, 8, 8], fov: 45 }}>
           <Scene
@@ -71,6 +66,26 @@ export default function PackingViewer() {
           />
         </Canvas>
       </CanvasErrorBoundary>
+      {referenceModel && (
+        <div style={{
+          position: 'absolute',
+          top: 20,
+          right: 20,
+          background: 'rgba(2, 6, 23, 0.82)',
+          color: 'rgba(255, 255, 255, 0.95)',
+          border: '1px solid rgba(148, 163, 184, 0.5)',
+          borderRadius: 12,
+          padding: '10px 14px',
+          fontSize: 16,
+          fontWeight: 700,
+          letterSpacing: '0.02em',
+          lineHeight: 1.2,
+          pointerEvents: 'none',
+          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.35)',
+        }}>
+          参照物: {referenceModel.name}
+        </div>
+      )}
     </div>
   );
 }
