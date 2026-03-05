@@ -429,3 +429,38 @@ Remove disruptive loading indicator during add-to-cart updates and keep a contin
 ## Review
 - 3D preview now stays visible continuously during cart updates without loading icon flicker.
 - Existing boxes transition to new positions; newly introduced boxes keep entry animation behavior.
+
+---
+
+# Deploy Frontend + Backend from Current Branch (2026-03-05)
+
+## Goal
+Deploy both frontend and backend using the currently checked out branch (`animation-feature`) as the source of truth.
+
+## Tasks
+- [x] **1. Confirm branch and deployment path**
+  - Confirm current git branch and repository deploy instructions.
+  - Confirm frontend will deploy from current branch (Vercel preview path) and backend from current working tree.
+- [ ] **2. Deploy frontend from current branch**
+  - Push current branch to remote to trigger Vercel branch deployment.
+  - Capture resulting remote update state.
+- [x] **2. Deploy frontend from current branch**
+  - Pushed `animation-feature` and created one empty trigger commit to force a fresh branch deploy.
+  - Verified GitHub commit status `Vercel: success` for commit `b3f0152`.
+- [x] **3. Deploy backend to Azure Container Apps**
+  - Build and push backend container image from current branch code via ACR.
+  - Update Azure Container App to the newly built image.
+- [x] **4. Verify deployment status**
+  - Verify branch push and backend container app provisioning status.
+
+## Review
+- Branch in use: `animation-feature`.
+- Frontend:
+  - Trigger commit: `b3f0152`.
+  - GitHub status: `Vercel` = `success`.
+  - Deploy URL: `https://vercel.com/rexs-projects-6b1bf957/smartship/F18bkgGiQ32PJ4fMGVrj19VQvJW9`.
+- Backend:
+  - ACR builds: `ce1` (latest), `ce2` (latest + `b3f0152` tag).
+  - Deployed image: `smartshipacr.azurecr.io/smartship-backend:b3f0152`.
+  - Container App state: `provisioningState=Succeeded`, `runningStatus=Running`.
+  - Active revisions include new `smartship-backend--0000002` (created `2026-03-05T07:48:00Z`).
