@@ -57,7 +57,7 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.6, delay: 0.4 }}
-            className="flex-none mt-auto pt-6 pb-4 sm:pt-8 sm:pb-4 text-center"
+            className="flex-none pt-3 pb-2 sm:pt-6 sm:pb-4 text-center"
           >
             <p className="text-xs text-slate-500">
               © 2026 SmartShip. All rights reserved.
@@ -70,4 +70,3 @@ export default function App() {
     </div>
   );
 }
-

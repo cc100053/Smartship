@@ -35,7 +35,6 @@ export function useCart() {
 
         setDimensionsLoading(true);
         setDimensionsError('');
-        setPackedDimensions(null);
 
         try {
             const result = await calculateDimensions(payload, {

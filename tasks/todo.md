@@ -219,6 +219,29 @@ Make 3D preview render even when backend returns dimensions but no per-item plac
 
 ---
 
+# Mobile Footer Height Fix
+
+## Goal
+Fix the mobile layout issue where footer appears excessively tall (around one-third of viewport) on small screens.
+
+## Tasks
+- [x] **1. Identify Root Cause**
+  - Inspect footer layout classes and parent flex/scroll container interactions on mobile breakpoints.
+- [x] **2. Apply Minimal Layout Fix**
+  - Remove/adjust the rule causing artificial vertical expansion while keeping desktop layout behavior unchanged.
+- [x] **3. Verification**
+  - Run frontend build to ensure no regressions.
+  - Confirm footer keeps compact natural height on small screens.
+
+## Review
+- Root cause: `mt-auto` on footer inside a mobile flex column created a large auto top margin, which looked like an oversized footer area.
+- Fix: updated `frontend/src/App.jsx` footer classes by removing `mt-auto` and reducing mobile vertical padding (`pt-3 pb-2`, preserving larger spacing on `sm+`).
+- Additional iPad-landscape root cause: spacer below calculator used `min-[1170px]:hidden`, so 1024px (`lg`) still had a forced `h-24` blank block even though drawer is already hidden at `lg`.
+- Additional fix: updated `frontend/src/pages/ShippingCalculator.jsx` spacer to `lg:hidden h-24 shrink-0` so blank space exists only when mobile drawer is actually visible.
+- Verification: `cd frontend && npm run build` passed successfully (Vite production build OK).
+
+---
+
 # 3D Packing Animation Upgrade (Ghost + Settle + Camera Follow)
 
 ## Goal
@@ -383,3 +406,26 @@ Implement all identified high-impact stability fixes across frontend preview syn
   - `cd backend && ./mvnw -q test` ✅
   - `cd frontend && npm run -s build` ✅
   - `cd frontend && npx eslint src/api/shippingApi.js src/hooks/useCart.js src/pages/ShippingCalculator.jsx src/components/ParcelVisualizer3D.jsx` ✅
+
+---
+
+# 3D UX Animation Continuity Update (2026-03-05)
+
+## Goal
+Remove disruptive loading indicator during add-to-cart updates and keep a continuous 3D animation where existing items smoothly reposition and only newly added items play entry motion.
+
+## Tasks
+- [x] **1. Remove spinner-based interruption**
+  - Removed `loading` gate/spinner from `ParcelVisualizer3D`.
+  - Stopped passing loading prop from `ShippingCalculator`.
+- [x] **2. Preserve previous 3D state during refresh**
+  - Removed eager `setPackedDimensions(null)` in `useCart` so canvas state is retained while new packing result is fetched.
+- [x] **3. Improve animation identity matching**
+  - Updated placement matching key to ignore color changes, reducing false "all items are new" animation resets.
+- [x] **4. Verify**
+  - `cd frontend && npx eslint src/hooks/useCart.js src/pages/ShippingCalculator.jsx src/components/ParcelVisualizer3D.jsx` ✅
+  - `cd frontend && npm run -s build` ✅
+
+## Review
+- 3D preview now stays visible continuously during cart updates without loading icon flicker.
+- Existing boxes transition to new positions; newly introduced boxes keep entry animation behavior.

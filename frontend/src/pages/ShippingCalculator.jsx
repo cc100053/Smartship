@@ -48,7 +48,6 @@ export default function ShippingCalculator({ onDrawerToggle }) {
   const {
     cartItems,
     packedDimensions,
-    dimensionsLoading,
     dimensionsError,
     addToCart,
     incrementItem,
@@ -449,27 +448,24 @@ export default function ShippingCalculator({ onDrawerToggle }) {
           </div>
 
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 min-[1350px]:grid-cols-2 items-start">
-            {mode === 'cart' && (dimensionsLoading || dimensionsError) && (
+            {mode === 'cart' && dimensionsError && (
               <div className="sm:col-span-2 lg:col-span-1 min-[1350px]:col-span-2 rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-xs text-slate-600 flex items-center justify-between gap-3">
                 <span>
-                  {dimensionsLoading ? '3Dプレビューを更新中...' : dimensionsError}
+                  {dimensionsError}
                 </span>
-                {!dimensionsLoading && dimensionsError && (
-                  <button
-                    type="button"
-                    onClick={retryPackedDimensions}
-                    className="rounded-md border border-slate-300 px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
-                  >
-                    再試行
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={retryPackedDimensions}
+                  className="rounded-md border border-slate-300 px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  再試行
+                </button>
               </div>
             )}
             <ParcelVisualizer3D
               dimensions={visualDimensions}
               mode={mode}
               placements={mode === 'manual' ? manualPlacements : (packedDimensions?.placements || [])}
-              loading={mode === 'cart' && dimensionsLoading}
             />
             <div ref={resultRef}>
               <ShippingResult calculation={calculation} loading={calcLoading} error={calcError} />
@@ -479,8 +475,8 @@ export default function ShippingCalculator({ onDrawerToggle }) {
 
       </div>
 
-      {/* Spacer to prevent fixed pill from covering content on mobile */}
-      <div className="min-[1170px]:hidden h-24 shrink-0" />
+      {/* Spacer to prevent fixed pill from covering content only when drawer is visible (<lg) */}
+      <div className="lg:hidden h-24 shrink-0" />
 
       <AnimatePresence>
         {mode === 'cart' && (
