@@ -35,3 +35,7 @@
 ## 9. Re-verify Docker startup after JPA property changes
 - **Mistake**: Changed Hibernate startup properties without validating `docker-compose up --build`, which introduced a dialect-resolution startup failure.
 - **Rule**: Any change to datasource/JPA boot properties must be verified with both local Maven run and Docker Compose startup before closing the task.
+
+## 10. Exhibition animation updates should be incremental, not full replay
+- **Mistake**: Implemented a full packing replay flow (`ghost -> sequential playback`) for every placement update, which made add-item interactions feel repetitive and less responsive.
+- **Rule**: For interactive 3D packing UX, preserve existing item continuity and animate only deltas (new items entry + existing items reposition transition); avoid resetting the whole sequence unless the user explicitly requests replay mode.

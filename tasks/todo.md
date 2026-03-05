@@ -217,6 +217,38 @@ Make 3D preview render even when backend returns dimensions but no per-item plac
 
 # Backend Load Stability Cleanup
 
+---
+
+# 3D Packing Animation Upgrade (Ghost + Settle + Camera Follow)
+
+## Goal
+Upgrade the 3D packing animation for exhibition impact with: (1) ghost preview before placement, (2) collision-like settle motion, and (3) subtle camera choreography during placement.
+
+## Tasks
+- [x] **1. Add Sequenced Placement State**
+  - Add a stable sequence loop in `ParcelVisualizer3D` scene (`ghost -> drop -> settle`) per item.
+  - Reset sequence when placements change.
+- [x] **2. Implement Ghost Preview + Settle Motion**
+  - Render a ghost box for the active item before drop.
+  - Add a short settle/bounce effect after each item reaches target position.
+- [x] **3. Implement Camera Follow Choreography**
+  - Add a lightweight camera rig that lerps camera target toward active item during placement.
+  - Preserve `OrbitControls` interaction and resume idle auto-rotate after sequence.
+- [x] **4. Verification**
+  - Run frontend lint/build and confirm no regressions.
+
+## Review
+- Implemented in `frontend/src/components/ParcelVisualizer3D.jsx` only (no backend/API changes).
+- Updated per feedback to remove ghost preview and camera choreography.
+- Changed from full replay to incremental behavior:
+  - Existing items keep identity and smoothly transition to new packed positions.
+  - Only truly new items play a short `drop -> settle` entry motion.
+- Auto-rotate now pauses during new item entry and resumes as slow rotation after entry completes.
+- Verification:
+  - `cd frontend && npx eslint src/components/ParcelVisualizer3D.jsx` ✅
+  - `cd frontend && npm run build` ✅
+  - `cd frontend && npm run lint` still reports pre-existing unrelated lint errors in other files (unchanged by this task).
+
 ## Goal
 Stop first-load failures that force manual page refreshes, and remove stale config/code that contributes to unstable startup behavior.
 
