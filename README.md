@@ -49,6 +49,15 @@ npm install
 npm run dev
 ```
 
+### Extended Viewer (`#/viewer`)
+For exhibition/secondary-display mode, open a second browser window to:
+
+`http://localhost:5173/#/viewer`
+
+- Keep `http://localhost:5173` on the main screen for normal operation.
+- Move the `#/viewer` window to the external display/projector and use fullscreen (F11).
+- The viewer updates in real time from the main screen.
+
 *(Only use `docker-compose up --build` when you want to test the final packaged application.)*
 
 ## Deployment

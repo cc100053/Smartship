@@ -90,6 +90,7 @@ export function useCart() {
         }
     }, []);
 
+    // Broadcast cart data to extended display
     useEffect(() => {
         broadcast({
             type: 'CART_UPDATE',
@@ -146,6 +147,7 @@ export function useCart() {
         setPackedDimensions(null);
         setDimensionsError('');
         setDimensionsLoading(false);
+
         broadcast({
             type: 'CART_UPDATE',
             dimensions: null,

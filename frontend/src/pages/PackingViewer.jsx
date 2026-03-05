@@ -63,6 +63,7 @@ export default function PackingViewer() {
             placements={displayPlacements}
             maxDim={maxDim}
             dimensions={dimensions}
+            showLabel={true}
           />
         </Canvas>
       </CanvasErrorBoundary>

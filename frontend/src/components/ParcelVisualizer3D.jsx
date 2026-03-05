@@ -1,6 +1,6 @@
 import { useEffect, useRef, useMemo, useState, useCallback, Component } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Grid, Environment } from '@react-three/drei';
+import { OrbitControls, Grid, Environment, Html } from '@react-three/drei';
 import { Box, Layers, Scale } from 'lucide-react';
 import {
   getReferenceModel,
@@ -241,7 +241,7 @@ function ShippingBox({ dimensions, scale }) {
 }
 
 // ── Reference Object (hologram ghost) ─────────────────────────────
-function ReferenceObject({ position, size, scale }) {
+function ReferenceObject({ position, size, scale, name, showLabel }) {
   const meshRef = useRef();
 
   useFrame(({ clock }) => {
@@ -275,12 +275,51 @@ function ReferenceObject({ position, size, scale }) {
         <ringGeometry args={[width * 0.3, width * 0.35, 32]} />
         <meshBasicMaterial color="#88CCFF" transparent opacity={0.3} />
       </mesh>
+
+      {/* Floating label */}
+      {showLabel && (
+        <Html
+          position={[0, height / 2 + 0.18, 0]}
+          center
+          occlude={false}
+          style={{ pointerEvents: 'none' }}
+        >
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '2px',
+            transform: 'translateY(-100%)',
+          }}>
+            <div style={{
+              background: 'rgba(0, 180, 255, 0.15)',
+              border: '1px solid rgba(136, 204, 255, 0.5)',
+              backdropFilter: 'blur(6px)',
+              borderRadius: '6px',
+              padding: '3px 8px',
+              whiteSpace: 'nowrap',
+            }}>
+              <span style={{
+                fontSize: '11px',
+                fontWeight: 700,
+                color: '#88CCFF',
+                letterSpacing: '0.03em',
+                fontFamily: 'system-ui, sans-serif',
+              }}>
+                📏 参照: {name}
+              </span>
+            </div>
+            {/* Connector line */}
+            <div style={{ width: '1px', height: '6px', background: 'rgba(136, 204, 255, 0.4)' }} />
+          </div>
+        </Html>
+      )}
     </group>
   );
 }
 
 // ── Scene ─────────────────────────────────────────────────────────
-export function Scene({ placements, maxDim, dimensions }) {
+export function Scene({ placements, maxDim, dimensions, showLabel }) {
   const scale = 3 / Math.max(maxDim, 100);
   const controlsRef = useRef();
   const nextIdRef = useRef(0);
@@ -407,6 +446,8 @@ export function Scene({ placements, maxDim, dimensions }) {
             position={referencePosition}
             size={referenceModel.realWorldSize}
             scale={scale}
+            name={referenceModel.name}
+            showLabel={showLabel}
           />
         )}
       </group>
