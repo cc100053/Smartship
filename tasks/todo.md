@@ -305,3 +305,38 @@ Restore `docker-compose up --build` startup after backend config hardening intro
 - Verification:
   - `docker-compose up --build` ✅
   - `docker-compose ps` shows both `backend` and `frontend` containers `Up` ✅
+
+---
+
+# Stability Audit & Hardening Plan (2026-03-05)
+
+## Goal
+Identify instability root causes across frontend state flow, backend packing APIs, and Supabase connectivity; then define a prioritized hardening plan for production-grade reliability.
+
+## Tasks
+- [x] **1. Reproduce and trace cart/3D mismatch path**
+  - Traced cart quantity source (`CartPanel`) vs 3D data source (`useCart` -> `calculate/dimensions`).
+  - Confirmed stale 3D state can persist when latest dimensions request fails or is overtaken by an older in-flight response.
+- [x] **2. Audit frontend async safety and rendering consistency**
+  - Reviewed request retry/timeout behavior in `shippingApi`.
+  - Reviewed race/cancellation handling in `useCart` and product loading effects in `ShippingCalculator`.
+  - Reviewed 3D scene reconciliation path in `ParcelVisualizer3D`.
+- [x] **3. Audit backend API data integrity and failure semantics**
+  - Compared `/calculate/cart` vs `/calculate/dimensions` validation behavior.
+  - Reviewed packing fallback behavior and response semantics in `PackingService`.
+  - Checked input validation surface on request DTOs/controllers.
+- [x] **4. Audit Supabase/infra resiliency**
+  - Reviewed datasource/Hikari/JPA settings and compose startup behavior.
+  - Verified current test suite behavior under no-network conditions.
+- [x] **5. Verification run**
+  - `cd backend && ./mvnw -q -DskipTests compile` ✅
+  - `cd backend && ./mvnw -q -Dtest=PackingServiceTest test` ✅
+  - `cd frontend && npm run -s build` ✅
+  - `cd frontend && npm run -s lint` ❌ (18 existing lint violations)
+  - `cd backend && ./mvnw -q test` ❌ (`SmartshipApplicationTests` fails when Supabase host cannot resolve)
+
+## Review
+- Primary root cause for the reported mismatch is asynchronous state drift: cart UI is local optimistic state, while 3D preview depends on async backend dimensions with no request sequencing, no cancellation, no timeout, and silent stale-state retention on error.
+- Secondary instability source is backend data-integrity mismatch: `/calculate/dimensions` silently drops unknown product IDs (unlike `/calculate/cart`), allowing item-count drift without explicit error.
+- Current reliability baseline is weak for CI/offline environments: context-load test hard-depends on Supabase DNS/network and fails without connectivity.
+- Hardening plan is prepared with P0/P1/P2 phases covering frontend consistency, API contracts, validation/rate limits, Supabase resilience, and observability.
