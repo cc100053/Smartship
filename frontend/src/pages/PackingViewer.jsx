@@ -58,7 +58,7 @@ export default function PackingViewer() {
   return (
     <div style={{ width: '100vw', height: '100vh', background: '#0f172a', position: 'relative' }}>
       <CanvasErrorBoundary>
-        <Canvas camera={{ position: [8, 8, 8], fov: 45 }}>
+        <Canvas camera={{ position: [5.8, 5.8, 5.8], fov: 36 }}>
           <Scene
             placements={displayPlacements}
             maxDim={maxDim}

@@ -63,3 +63,7 @@
 ## 16. Secondary display UI must stay semantically aligned with primary view
 - **Mistake**: Viewer waiting state used a custom spinning loader and did not surface reference-object text clearly, diverging from main-view UI semantics and reducing readability in expo mode.
 - **Rule**: For mirrored/secondary display flows, reuse the same status icon language as the primary screen and ensure essential context labels (e.g., reference object) are always rendered in a high-contrast, prominent overlay.
+
+## 17. Viewer framing tweaks must preserve scene-level size normalization
+- **Mistake**: Viewer felt too far, but a broad change risked touching shared scene scaling and breaking product-size-based zoom behavior.
+- **Rule**: When tuning viewer composition, adjust only viewer-local camera framing (position/FOV) and keep shared `Scene`/`maxDim` normalization logic untouched.

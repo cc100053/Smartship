@@ -641,3 +641,28 @@ Align viewer waiting state with main-screen visual language and make reference-o
   - Uses `getReferenceModel(dimensions)` and shows `参照物: {name}` at top-right with high-contrast panel styling.
 - Verification:
   - `cd frontend && npm run build` ✅
+
+---
+
+# Viewer Camera Framing Tuning (2026-03-05)
+
+## Goal
+Make viewer framing closer so product appears larger, while preserving existing product-size-based zoom behavior.
+
+## Tasks
+- [x] **1. Scope lock**
+  - Change only `frontend/src/pages/PackingViewer.jsx` camera settings.
+  - Do not modify `Scene` scale/max-dimension logic.
+- [x] **2. Viewer-only framing adjustment**
+  - Tune `Canvas` camera position/FOV to bring model visually closer and larger.
+- [x] **3. Verification + notes**
+  - Run `cd frontend && npm run build`.
+  - Document that size-based zoom behavior remains untouched.
+
+## Review
+- Updated viewer camera only in `frontend/src/pages/PackingViewer.jsx`:
+  - `position`: `[8, 8, 8]` -> `[5.8, 5.8, 5.8]`
+  - `fov`: `45` -> `36`
+- Preserved existing size-based zoom behavior by leaving `Scene` and `maxDim` scaling path unchanged.
+- Verification:
+  - `cd frontend && npm run build` ✅
