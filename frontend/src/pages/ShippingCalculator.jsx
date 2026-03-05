@@ -19,6 +19,7 @@ const parsePositiveNumber = (value) => {
   const numberValue = Number(value);
   return Number.isFinite(numberValue) && numberValue > 0 ? numberValue : null;
 };
+const MotionDiv = motion.div;
 
 export default function ShippingCalculator({ onDrawerToggle }) {
   const [categories, setCategories] = useState([]);
@@ -47,12 +48,13 @@ export default function ShippingCalculator({ onDrawerToggle }) {
   const {
     cartItems,
     packedDimensions,
-    dimensionsLoading,
+    dimensionsError,
     addToCart,
     incrementItem,
     decrementItem,
     removeItem,
     clearCart,
+    retryPackedDimensions,
   } = useCart();
 
   const {
@@ -121,34 +123,54 @@ export default function ShippingCalculator({ onDrawerToggle }) {
   }, [categories]);
 
   useEffect(() => {
+    const controller = new AbortController();
+    let cancelled = false;
+
     const loadCategories = async () => {
       try {
-        const data = await fetchCategories();
+        const data = await fetchCategories({ signal: controller.signal, timeoutMs: 10000 });
+        if (cancelled) return;
         setCategories(data);
-      } catch (err) {
+      } catch {
+        if (controller.signal.aborted) return;
         setError('カテゴリの取得に失敗しました。');
       }
     };
 
     loadCategories();
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
   }, []);
 
   useEffect(() => {
+    const controller = new AbortController();
+    let cancelled = false;
+
     const loadProducts = async () => {
       setLoading(true);
       setError('');
       try {
         const categoryParam = activeCategory === ALL_CATEGORY ? undefined : activeCategory;
-        const data = await fetchProducts(categoryParam);
+        const data = await fetchProducts(categoryParam, { signal: controller.signal, timeoutMs: 10000 });
+        if (cancelled) return;
         setProducts(data);
-      } catch (err) {
+      } catch {
+        if (controller.signal.aborted) return;
         setError('商品の取得に失敗しました。');
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
     loadProducts();
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
   }, [activeCategory]);
 
   const handleAddToCart = (product) => {
@@ -226,7 +248,7 @@ export default function ShippingCalculator({ onDrawerToggle }) {
       <div className="grid gap-6 lg:grid-cols-12 lg:h-full lg:overflow-hidden">
 
         {/* --- Product Library Section (Left Column on Desktop, First on Mobile) --- */}
-        <motion.div
+        <MotionDiv
           className="order-1 lg:col-span-5 flex flex-col gap-4 lg:h-full lg:overflow-hidden min-w-0"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -251,7 +273,7 @@ export default function ShippingCalculator({ onDrawerToggle }) {
               className="flex-1 overflow-y-auto rounded-2xl pb-2 custom-scrollbar lg:max-h-none"
             >
               <AnimatePresence mode="wait">
-                <motion.div
+                <MotionDiv
                   key={loading ? 'loading' : activeCategory}
                   className="grid grid-cols-2 gap-3 lg:grid-cols-1 min-[1350px]:grid-cols-2 content-start"
                   initial={{ opacity: 0 }}
@@ -276,16 +298,15 @@ export default function ShippingCalculator({ onDrawerToggle }) {
                       />
                     ))
                   )}
-                </motion.div>
+                </MotionDiv>
               </AnimatePresence>
             </div>
           </div>
-        </motion.div>
+        </MotionDiv>
 
-        < motion.div
+        <MotionDiv
           className="order-2 lg:col-span-7 flex flex-col gap-4 lg:h-full lg:overflow-y-auto custom-scrollbar min-w-0"
-          initial={{ opacity: 0, y: 20 }
-          }
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.1 }}
         >
@@ -308,7 +329,7 @@ export default function ShippingCalculator({ onDrawerToggle }) {
                   )}
                 >
                   {mode === option.value && (
-                    <motion.div
+                    <MotionDiv
                       layoutId="mode-highlight"
                       className="absolute inset-0 rounded-xl bg-slate-900"
                       transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
@@ -322,7 +343,7 @@ export default function ShippingCalculator({ onDrawerToggle }) {
             <div className="relative">
               <AnimatePresence mode="wait">
                 {mode === 'cart' ? (
-                  <motion.div
+                  <MotionDiv
                     key="cart"
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
@@ -339,9 +360,9 @@ export default function ShippingCalculator({ onDrawerToggle }) {
                       loading={calcLoading}
                       containerRef={cartRef}
                     />
-                  </motion.div>
+                  </MotionDiv>
                 ) : (
-                  <motion.div
+                  <MotionDiv
                     key="manual"
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
@@ -354,13 +375,27 @@ export default function ShippingCalculator({ onDrawerToggle }) {
                       onCalculate={handleManualCalculate}
                       loading={calcLoading}
                     />
-                  </motion.div>
+                  </MotionDiv>
                 )}
               </AnimatePresence>
             </div>
           </div>
 
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 min-[1350px]:grid-cols-2 items-start">
+            {mode === 'cart' && dimensionsError && (
+              <div className="sm:col-span-2 lg:col-span-1 min-[1350px]:col-span-2 rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-xs text-slate-600 flex items-center justify-between gap-3">
+                <span>
+                  {dimensionsError}
+                </span>
+                <button
+                  type="button"
+                  onClick={retryPackedDimensions}
+                  className="rounded-md border border-slate-300 px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  再試行
+                </button>
+              </div>
+            )}
             <ParcelVisualizer3D
               dimensions={visualDimensions}
               mode={mode}
@@ -370,12 +405,12 @@ export default function ShippingCalculator({ onDrawerToggle }) {
               <ShippingResult calculation={calculation} loading={calcLoading} error={calcError} />
             </div>
           </div>
-        </motion.div>
+        </MotionDiv>
 
       </div>
 
-      {/* Spacer to prevent fixed pill from covering content on mobile */}
-      <div className="min-[1170px]:hidden h-24 shrink-0" />
+      {/* Spacer to prevent fixed pill from covering content only when drawer is visible (<lg) */}
+      <div className="lg:hidden h-24 shrink-0" />
 
       <AnimatePresence>
         {mode === 'cart' && (

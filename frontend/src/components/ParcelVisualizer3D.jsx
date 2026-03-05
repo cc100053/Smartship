@@ -1,13 +1,11 @@
-import { useRef, useMemo, useEffect, Component } from 'react';
+import { useEffect, useRef, useMemo, useState, useCallback, Component } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Grid, Environment } from '@react-three/drei';
-import { useSpring, animated } from '@react-spring/three';
 import { Box, Layers, Scale } from 'lucide-react';
 import {
   getReferenceModel,
   calculateAABB,
   calculateReferencePosition,
-  stabilizePlacementsForRendering,
   GHOST_MATERIAL
 } from '../utils/referenceObjectUtils';
 import * as THREE from 'three';
@@ -20,6 +18,22 @@ const formatWeight = (weightG) => {
   }
   return `${weightG} g`;
 };
+
+const DROP_MS = 380;
+const SETTLE_MS = 140;
+const MOVE_MS = 320;
+
+function getPlacementMetrics(info, scale) {
+  const width = info.width * scale;
+  const depth = info.depth * scale;
+  const height = info.height * scale;
+
+  const x = info.x * scale + width / 2;
+  const z = info.y * scale + depth / 2;
+  const y = info.z * scale + height / 2;
+
+  return { width, depth, height, x, y, z };
+}
 
 // ── Edges helper (memoized to avoid GPU leak) ─────────────────────
 function BoxEdges({ width, height, depth, color = 'white', opacity = 0.6 }) {
@@ -36,89 +50,193 @@ function BoxEdges({ width, height, depth, color = 'white', opacity = 0.6 }) {
   );
 }
 
-// ── Animated packed item ───────────────────────────────────────────
-function AnimatedPlacedBox({ info, scale, isNew, dropHeight }) {
-  const width = info.width * scale;
-  const depth = info.depth * scale;
-  const height = info.height * scale;
+const getPlacementMatchKey = (placement) => [
+  placement.name || '',
+  ...[placement.width, placement.depth, placement.height].sort((a, b) => a - b),
+].join('|');
 
-  const targetX = info.x * scale + width / 2;
-  const targetZ = info.y * scale + depth / 2;
-  const targetY = info.z * scale + height / 2;
-  const springConfig = useMemo(() => (
-    isNew
-      ? { mass: 2, tension: 120, friction: 14 }
-      : { mass: 1, tension: 170, friction: 26 }
-  ), [isNew]);
-  const [springs, api] = useSpring(() => ({
-    position: isNew ? [targetX, dropHeight, targetZ] : [targetX, targetY, targetZ],
-    opacity: isNew ? 0 : 0.7,
-    config: springConfig,
-  }));
+const distanceSq = (a, b) => {
+  const dx = a.x - b.x;
+  const dy = a.y - b.y;
+  const dz = a.z - b.z;
+  return dx * dx + dy * dy + dz * dz;
+};
+
+function reconcileTrackedPlacements(previous, nextPlacements, tracker) {
+  const buckets = new Map();
+
+  previous.forEach((item) => {
+    const key = getPlacementMatchKey(item.info);
+    const list = buckets.get(key) || [];
+    list.push(item);
+    buckets.set(key, list);
+  });
+
+  const next = [];
+  const newIds = [];
+
+  nextPlacements.forEach((placement) => {
+    const key = getPlacementMatchKey(placement);
+    const candidates = buckets.get(key) || [];
+
+    let match = null;
+    if (candidates.length > 0) {
+      let bestIndex = 0;
+      let bestDistance = Infinity;
+
+      candidates.forEach((candidate, index) => {
+        const d = distanceSq(candidate.info, placement);
+        if (d < bestDistance) {
+          bestDistance = d;
+          bestIndex = index;
+        }
+      });
+
+      match = candidates.splice(bestIndex, 1)[0];
+    }
+
+    if (match) {
+      next.push({ id: match.id, info: placement });
+      return;
+    }
+
+    const id = `placement-${tracker.nextId++}`;
+    next.push({ id, info: placement });
+    newIds.push(id);
+  });
+
+  return { next, newIds };
+}
+
+function MotionPlacedBox({ id, info, scale, isEntering, reduceMotion, onEntryDone }) {
+  const groupRef = useRef();
+  const materialRef = useRef();
+  const metrics = useMemo(() => getPlacementMetrics(info, scale), [info, scale]);
+
+  const basePositionRef = useRef(new THREE.Vector3(metrics.x, metrics.y, metrics.z));
+  const moveFromRef = useRef(new THREE.Vector3(metrics.x, metrics.y, metrics.z));
+  const moveToRef = useRef(new THREE.Vector3(metrics.x, metrics.y, metrics.z));
+  const moveStartedAtRef = useRef(0);
+
+  const entryPhaseRef = useRef(isEntering && !reduceMotion ? 'drop' : 'idle');
+  const entryStartedAtRef = useRef(0);
+  const entryNotifiedRef = useRef(!isEntering || reduceMotion);
 
   useEffect(() => {
-    api.start({
-      position: [targetX, targetY, targetZ],
-      opacity: 0.7,
-      config: springConfig,
-    });
-  }, [api, targetX, targetY, targetZ, springConfig]);
+    const now = performance.now();
+    moveFromRef.current.copy(basePositionRef.current);
+    moveToRef.current.set(metrics.x, metrics.y, metrics.z);
+    moveStartedAtRef.current = now;
+  }, [metrics.x, metrics.y, metrics.z]);
+
+  useEffect(() => {
+    if (reduceMotion) {
+      entryPhaseRef.current = 'idle';
+      entryNotifiedRef.current = true;
+      return;
+    }
+
+    if (isEntering && entryPhaseRef.current === 'idle') {
+      entryPhaseRef.current = 'drop';
+      entryStartedAtRef.current = performance.now();
+      entryNotifiedRef.current = false;
+    }
+  }, [isEntering, reduceMotion]);
+
+  useFrame(() => {
+    if (!groupRef.current) return;
+
+    const now = performance.now();
+    const moveProgress = Math.min(1, (now - moveStartedAtRef.current) / MOVE_MS);
+    const easedMove = 1 - (1 - moveProgress) ** 3;
+    basePositionRef.current.lerpVectors(moveFromRef.current, moveToRef.current, easedMove);
+
+    const dropOffset = Math.max(metrics.height * 0.72, 0.35);
+    let entryYOffset = 0;
+    let zRotation = 0;
+    let opacity = 0.72;
+
+    if (!reduceMotion && entryPhaseRef.current === 'drop') {
+      const t = Math.min(1, (now - entryStartedAtRef.current) / DROP_MS);
+      const easedDrop = 1 - (1 - t) ** 3;
+      entryYOffset = (1 - easedDrop) * dropOffset;
+      zRotation = (1 - easedDrop) * 0.1;
+      opacity = 0.74;
+
+      if (t >= 1) {
+        entryPhaseRef.current = 'settle';
+        entryStartedAtRef.current = now;
+      }
+    } else if (!reduceMotion && entryPhaseRef.current === 'settle') {
+      const t = Math.min(1, (now - entryStartedAtRef.current) / SETTLE_MS);
+      const damp = Math.exp(-5 * t);
+      const bounce = Math.sin(t * Math.PI * 2.2) * damp;
+      entryYOffset = bounce * Math.max(metrics.height * 0.07, 0.025);
+      zRotation = bounce * 0.04;
+      opacity = 0.74;
+
+      if (t >= 1) {
+        entryPhaseRef.current = 'idle';
+        if (!entryNotifiedRef.current) {
+          entryNotifiedRef.current = true;
+          onEntryDone(id);
+        }
+      }
+    }
+
+    groupRef.current.position.set(
+      basePositionRef.current.x,
+      basePositionRef.current.y + entryYOffset,
+      basePositionRef.current.z,
+    );
+    groupRef.current.rotation.set(0, 0, zRotation);
+
+    if (materialRef.current) {
+      materialRef.current.opacity = opacity;
+    }
+  });
 
   return (
-    <animated.group position={springs.position}>
+    <group ref={groupRef}>
       <mesh>
-        <boxGeometry args={[width, height, depth]} />
-        <animated.meshStandardMaterial
+        <boxGeometry args={[metrics.width, metrics.height, metrics.depth]} />
+        <meshStandardMaterial
+          ref={materialRef}
           color={info.color}
           transparent
-          opacity={springs.opacity}
+          opacity={0.72}
           roughness={0.1}
         />
       </mesh>
-      <BoxEdges width={width} height={height} depth={depth} />
-    </animated.group>
+      <BoxEdges width={metrics.width} height={metrics.height} depth={metrics.depth} opacity={0.66} />
+    </group>
   );
 }
 
-// ── Animated shipping box (glass outline) ──────────────────────────
-function AnimatedShippingBox({ dimensions, scale }) {
+// ── Transparent shipping box (glass outline) ──────────────────────
+function ShippingBox({ dimensions, scale }) {
   if (!dimensions || !dimensions.lengthCm) return null;
 
   const width = dimensions.lengthCm * 10 * scale;
   const depth = dimensions.widthCm * 10 * scale;
   const height = dimensions.heightCm * 10 * scale;
-  const [springs, api] = useSpring(() => ({
-    size: [Math.max(width, 0.001), Math.max(height, 0.001), Math.max(depth, 0.001)],
-    position: [width / 2, height / 2, depth / 2],
-    config: { mass: 1, tension: 170, friction: 26 },
-  }));
-
-  useEffect(() => {
-    api.start({
-      size: [Math.max(width, 0.001), Math.max(height, 0.001), Math.max(depth, 0.001)],
-      position: [width / 2, height / 2, depth / 2],
-      config: { mass: 1, tension: 170, friction: 26 },
-    });
-  }, [api, width, height, depth]);
 
   return (
-    <animated.group position={springs.position}>
-      <animated.group scale={springs.size}>
-        <mesh>
-          <boxGeometry args={[1, 1, 1]} />
-          <meshStandardMaterial
-            color="#ffffff"
-            transparent
-            opacity={0.12}
-            roughness={0.1}
-            metalness={0.0}
-            side={THREE.DoubleSide}
-            depthWrite={false}
-          />
-        </mesh>
-        <BoxEdges width={1} height={1} depth={1} color="#ffffff" opacity={0.35} />
-      </animated.group>
-    </animated.group>
+    <group position={[width / 2, height / 2, depth / 2]}>
+      <mesh>
+        <boxGeometry args={[width, height, depth]} />
+        <meshStandardMaterial
+          color="#ffffff"
+          transparent
+          opacity={0.12}
+          roughness={0.1}
+          metalness={0.0}
+          side={THREE.DoubleSide}
+          depthWrite={false}
+        />
+      </mesh>
+      <BoxEdges width={width} height={height} depth={depth} color="#ffffff" opacity={0.35} />
+    </group>
   );
 }
 
@@ -163,40 +281,71 @@ function ReferenceObject({ position, size, scale }) {
 
 // ── Scene ─────────────────────────────────────────────────────────
 function Scene({ placements, maxDim, dimensions }) {
-  const prevPlacementsRef = useRef([]);
   const scale = 3 / Math.max(maxDim, 100);
-  const stabilizedPlacements = useMemo(
-    () => stabilizePlacementsForRendering(placements),
-    [placements]
+  const controlsRef = useRef();
+  const nextIdRef = useRef(0);
+  const [placementState, setPlacementState] = useState({
+    tracked: [],
+    enteringIds: [],
+  });
+
+  const reduceMotion = useMemo(() => (
+    typeof window !== 'undefined'
+    && typeof window.matchMedia === 'function'
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  ), []);
+
+  const placementSignature = useMemo(
+    () => placements
+      .map((p) => `${p.x}:${p.y}:${p.z}:${p.width}:${p.depth}:${p.height}`)
+      .join('|'),
+    [placements],
   );
-  const aabb = useMemo(() => calculateAABB(stabilizedPlacements), [stabilizedPlacements]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setPlacementState((previous) => {
+        const tracker = { nextId: nextIdRef.current };
+        const { next, newIds } = reconcileTrackedPlacements(previous.tracked, placements, tracker);
+        nextIdRef.current = tracker.nextId;
+
+        const nextIdSet = new Set(next.map((item) => item.id));
+        const persistedEntering = previous.enteringIds.filter((id) => nextIdSet.has(id));
+        const mergedEntering = reduceMotion ? [] : [...persistedEntering];
+
+        if (!reduceMotion) {
+          newIds.forEach((id) => {
+            if (!mergedEntering.includes(id)) {
+              mergedEntering.push(id);
+            }
+          });
+        }
+
+        return {
+          tracked: next,
+          enteringIds: mergedEntering,
+        };
+      });
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [placementSignature, placements, reduceMotion]);
+
+  const trackedPlacements = placementState.tracked;
+  const enteringIds = placementState.enteringIds;
+  const enteringIdSet = useMemo(() => new Set(enteringIds), [enteringIds]);
+  const hasActiveEntryAnimation = !reduceMotion && enteringIds.length > 0;
+
+  const placementInfos = useMemo(
+    () => trackedPlacements.map((item) => item.info),
+    [trackedPlacements],
+  );
+  const aabb = useMemo(() => calculateAABB(placementInfos), [placementInfos]);
+
   const hasDims = dimensions &&
     dimensions.lengthCm > 0 &&
     dimensions.widthCm > 0 &&
     dimensions.heightCm > 0;
-  const annotatedPlacements = useMemo(() => {
-    const prevNameCounts = {};
-    prevPlacementsRef.current.forEach((item) => {
-      prevNameCounts[item.name] = (prevNameCounts[item.name] || 0) + 1;
-    });
-
-    const usedNameCounts = {};
-    return stabilizedPlacements.map((item) => {
-      const indexForName = usedNameCounts[item.name] || 0;
-      usedNameCounts[item.name] = indexForName + 1;
-      const prevCount = prevNameCounts[item.name] || 0;
-
-      return {
-        ...item,
-        isNew: indexForName >= prevCount,
-        renderKey: `${item.name}-${indexForName}`,
-      };
-    });
-  }, [stabilizedPlacements]);
-
-  useEffect(() => {
-    prevPlacementsRef.current = stabilizedPlacements;
-  }, [stabilizedPlacements]);
 
   const referenceModel = useMemo(() => {
     if (!hasDims) return null;
@@ -219,10 +368,16 @@ function Scene({ placements, maxDim, dimensions }) {
 
   const centerX = ((hasDims && dimensions.lengthCm ? dimensions.lengthCm * 10 : aabb.max.x) * scale) / 2;
   const centerZ = ((hasDims && dimensions.widthCm ? dimensions.widthCm * 10 : aabb.max.y) * scale) / 2;
-  const boxMaxHeight = hasDims
-    ? dimensions.heightCm * 10 * scale
-    : (aabb.max.z || 0) * scale;
-  const dropHeight = boxMaxHeight + 4;
+
+  const handleEntryDone = useCallback((id) => {
+    setPlacementState((previous) => {
+      if (!previous.enteringIds.includes(id)) return previous;
+      return {
+        ...previous,
+        enteringIds: previous.enteringIds.filter((value) => value !== id),
+      };
+    });
+  }, []);
 
   return (
     <>
@@ -231,16 +386,18 @@ function Scene({ placements, maxDim, dimensions }) {
 
       <group position={[-centerX, 0, -centerZ]}>
         {/* Glass shipping box */}
-        {hasDims && <AnimatedShippingBox dimensions={dimensions} scale={scale} />}
+        {hasDims && <ShippingBox dimensions={dimensions} scale={scale} />}
 
         {/* Packed items */}
-        {annotatedPlacements && annotatedPlacements.map((p) => (
-          <AnimatedPlacedBox
-            key={p.renderKey}
-            info={p}
+        {trackedPlacements.map((item) => (
+          <MotionPlacedBox
+            key={item.id}
+            id={item.id}
+            info={item.info}
             scale={scale}
-            isNew={p.isNew}
-            dropHeight={dropHeight}
+            isEntering={enteringIdSet.has(item.id)}
+            reduceMotion={reduceMotion}
+            onEntryDone={handleEntryDone}
           />
         ))}
 
@@ -255,7 +412,16 @@ function Scene({ placements, maxDim, dimensions }) {
       </group>
 
       <Grid infiniteGrid fadeDistance={40} fadeStrength={5} />
-      <OrbitControls autoRotate autoRotateSpeed={0.7} makeDefault minPolarAngle={0} maxPolarAngle={Math.PI / 1.75} />
+      <OrbitControls
+        ref={controlsRef}
+        autoRotate={!hasActiveEntryAnimation}
+        autoRotateSpeed={0.35}
+        enableDamping
+        dampingFactor={0.08}
+        makeDefault
+        minPolarAngle={0}
+        maxPolarAngle={Math.PI / 1.75}
+      />
       <Environment preset="city" />
     </>
   );

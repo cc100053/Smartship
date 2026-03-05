@@ -39,3 +39,15 @@
 ## 10. Packer placements are not always gravity-stable for visualization
 - **Mistake**: Assumed native library placements were always visually grounded, so frontend rendered raw coordinates directly.
 - **Rule**: When using backend placements for 3D UI, always run a support/stability pass (or equivalent validation) before rendering so `z > 0` items are not shown floating without support.
+
+## 11. Placement identity must not depend on placement iteration order
+- **Mistake**: Assigned placement names by loop index (`items[colorIndex]`) instead of using the actual packed box identity, causing item-name/geometry mismatch and unstable animation keys.
+- **Rule**: Always attach and return a stable per-item identifier from pack request to pack result (e.g., box ID), then derive UI identity from that identifier, not from result ordering.
+
+## 12. Avoid edge-only top-drop effects in production diagnostic views
+- **Mistake**: New-item drop animation rendered white edges before solid mesh settled, which users correctly interpreted as persistent floating defects.
+- **Rule**: For operational 3D previews, prioritize stable final-coordinate transitions over cinematic top-drop effects unless an explicit playback mode is enabled.
+
+## 13. Exhibition animation updates should be incremental, not full replay
+- **Mistake**: Implemented a full packing replay flow (`ghost -> sequential playback`) for every placement update, which made add-item interactions feel repetitive and less responsive.
+- **Rule**: For interactive 3D packing UX, preserve existing item continuity and animate only deltas (new items entry + existing items reposition transition); avoid resetting the whole sequence unless the user explicitly requests replay mode.

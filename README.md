@@ -11,6 +11,7 @@ cp .env.example .env
 2) Edit `.env` with your actual Supabase credentials.
 - `DB_USER` should match Supabase pooler format (usually `postgres.<project-ref>`).
 - If backend startup logs show `FATAL: Tenant or user not found`, re-check `DB_USER` / `DB_PASSWORD`.
+- Optional stability tuning is available via `DB_*` pool/timeout vars and `RATE_LIMIT_*` vars in `.env.example`.
 
 3) Load the variables before running the backend (bash):
 ```bash
@@ -91,6 +92,9 @@ $env:DB_PASSWORD="your_actual_password"
 ```bash
 VITE_API_URL=http://localhost:8080 npm run dev
 ```
+
+## Health endpoint
+- Readiness: `GET /actuator/health/readiness`
 
 ## IDE run config
 If you run from an IDE, set `DB_USER` and `DB_PASSWORD` in the Run/Debug environment variables.

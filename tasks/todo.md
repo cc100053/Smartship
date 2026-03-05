@@ -217,6 +217,61 @@ Make 3D preview render even when backend returns dimensions but no per-item plac
 
 # Backend Load Stability Cleanup
 
+---
+
+# Mobile Footer Height Fix
+
+## Goal
+Fix the mobile layout issue where footer appears excessively tall (around one-third of viewport) on small screens.
+
+## Tasks
+- [x] **1. Identify Root Cause**
+  - Inspect footer layout classes and parent flex/scroll container interactions on mobile breakpoints.
+- [x] **2. Apply Minimal Layout Fix**
+  - Remove/adjust the rule causing artificial vertical expansion while keeping desktop layout behavior unchanged.
+- [x] **3. Verification**
+  - Run frontend build to ensure no regressions.
+  - Confirm footer keeps compact natural height on small screens.
+
+## Review
+- Root cause: `mt-auto` on footer inside a mobile flex column created a large auto top margin, which looked like an oversized footer area.
+- Fix: updated `frontend/src/App.jsx` footer classes by removing `mt-auto` and reducing mobile vertical padding (`pt-3 pb-2`, preserving larger spacing on `sm+`).
+- Additional iPad-landscape root cause: spacer below calculator used `min-[1170px]:hidden`, so 1024px (`lg`) still had a forced `h-24` blank block even though drawer is already hidden at `lg`.
+- Additional fix: updated `frontend/src/pages/ShippingCalculator.jsx` spacer to `lg:hidden h-24 shrink-0` so blank space exists only when mobile drawer is actually visible.
+- Verification: `cd frontend && npm run build` passed successfully (Vite production build OK).
+
+---
+
+# 3D Packing Animation Upgrade (Ghost + Settle + Camera Follow)
+
+## Goal
+Upgrade the 3D packing animation for exhibition impact with: (1) ghost preview before placement, (2) collision-like settle motion, and (3) subtle camera choreography during placement.
+
+## Tasks
+- [x] **1. Add Sequenced Placement State**
+  - Add a stable sequence loop in `ParcelVisualizer3D` scene (`ghost -> drop -> settle`) per item.
+  - Reset sequence when placements change.
+- [x] **2. Implement Ghost Preview + Settle Motion**
+  - Render a ghost box for the active item before drop.
+  - Add a short settle/bounce effect after each item reaches target position.
+- [x] **3. Implement Camera Follow Choreography**
+  - Add a lightweight camera rig that lerps camera target toward active item during placement.
+  - Preserve `OrbitControls` interaction and resume idle auto-rotate after sequence.
+- [x] **4. Verification**
+  - Run frontend lint/build and confirm no regressions.
+
+## Review
+- Implemented in `frontend/src/components/ParcelVisualizer3D.jsx` only (no backend/API changes).
+- Updated per feedback to remove ghost preview and camera choreography.
+- Changed from full replay to incremental behavior:
+  - Existing items keep identity and smoothly transition to new packed positions.
+  - Only truly new items play a short `drop -> settle` entry motion.
+- Auto-rotate now pauses during new item entry and resumes as slow rotation after entry completes.
+- Verification:
+  - `cd frontend && npx eslint src/components/ParcelVisualizer3D.jsx` ✅
+  - `cd frontend && npm run build` ✅
+  - `cd frontend && npm run lint` still reports pre-existing unrelated lint errors in other files (unchanged by this task).
+
 ## Goal
 Stop first-load failures that force manual page refreshes, and remove stale config/code that contributes to unstable startup behavior.
 
@@ -276,64 +331,136 @@ Restore `docker-compose up --build` startup after backend config hardening intro
 
 ---
 
-# 3D Packing Animation Plan Execution
+# Stability Audit & Hardening Plan (2026-03-05)
 
 ## Goal
-Execute `docs/packing_animation_plan.md`: use 3D in-scene packing animations (new-item drop + existing-item smooth transition), animate shipping box resize, and remove legacy DOM fly-to-cart animation.
+Identify instability root causes across frontend state flow, backend packing APIs, and Supabase connectivity; then define a prioritized hardening plan for production-grade reliability.
 
 ## Tasks
-- [x] **1. Scene animation core (`ParcelVisualizer3D.jsx`)**
-  - Replace static `PlacedBox` with spring-based `AnimatedPlacedBox`.
-  - Add placement diffing (`isNew`) based on previous placements.
-  - Use top-drop animation for new items and smooth transition for existing items.
-- [x] **2. Shipping box animation (`ParcelVisualizer3D.jsx`)**
-  - Replace static `ShippingBox` with spring-based `AnimatedShippingBox`.
-  - Animate size/position updates with unit geometry + animated scale.
-- [x] **3. Remove legacy DOM add animation (`ShippingCalculator.jsx`)**
-  - Remove `animateAddToCart` and its call path.
-  - Keep add-to-cart behavior and mode switch unchanged.
-- [x] **4. Dependency update**
-  - Add `@react-spring/three` in frontend dependencies.
-- [x] **5. Verification**
-  - Run `cd frontend && npm run build`.
+- [x] **1. Reproduce and trace cart/3D mismatch path**
+  - Traced cart quantity source (`CartPanel`) vs 3D data source (`useCart` -> `calculate/dimensions`).
+  - Confirmed stale 3D state can persist when latest dimensions request fails or is overtaken by an older in-flight response.
+- [x] **2. Audit frontend async safety and rendering consistency**
+  - Reviewed request retry/timeout behavior in `shippingApi`.
+  - Reviewed race/cancellation handling in `useCart` and product loading effects in `ShippingCalculator`.
+  - Reviewed 3D scene reconciliation path in `ParcelVisualizer3D`.
+- [x] **3. Audit backend API data integrity and failure semantics**
+  - Compared `/calculate/cart` vs `/calculate/dimensions` validation behavior.
+  - Reviewed packing fallback behavior and response semantics in `PackingService`.
+  - Checked input validation surface on request DTOs/controllers.
+- [x] **4. Audit Supabase/infra resiliency**
+  - Reviewed datasource/Hikari/JPA settings and compose startup behavior.
+  - Verified current test suite behavior under no-network conditions.
+- [x] **5. Verification run**
+  - `cd backend && ./mvnw -q -DskipTests compile` ✅
+  - `cd backend && ./mvnw -q -Dtest=PackingServiceTest test` ✅
+  - `cd frontend && npm run -s build` ✅
+  - `cd frontend && npm run -s lint` ❌ (18 existing lint violations)
+  - `cd backend && ./mvnw -q test` ❌ (`SmartshipApplicationTests` fails when Supabase host cannot resolve)
 
 ## Review
-- Implemented `AnimatedPlacedBox` with `@react-spring/three`, using slow spring configs:
-  - new item drop: `mass: 2, tension: 120, friction: 14`
-  - existing item reposition: `mass: 1, tension: 170, friction: 26`
-- Added scene-level placement diffing via previous-placement name counts and stable per-item render keys (`name + occurrence index`) to identify `isNew`.
-- Replaced static shipping box with `AnimatedShippingBox` that animates position/size using unit geometry (`1x1x1`) plus animated group scale.
-- Removed legacy DOM fly-to-cart animation in `ShippingCalculator.jsx`; add-to-cart now relies on 3D scene updates only.
-- Updated frontend dependencies with `@react-spring/three`.
-- Verification:
-  - `cd frontend && npm run build` ✅ (build succeeded)
+- Primary root cause for the reported mismatch is asynchronous state drift: cart UI is local optimistic state, while 3D preview depends on async backend dimensions with no request sequencing, no cancellation, no timeout, and silent stale-state retention on error.
+- Secondary instability source is backend data-integrity mismatch: `/calculate/dimensions` silently drops unknown product IDs (unlike `/calculate/cart`), allowing item-count drift without explicit error.
+- Current reliability baseline is weak for CI/offline environments: context-load test hard-depends on Supabase DNS/network and fails without connectivity.
+- Hardening plan is prepared with P0/P1/P2 phases covering frontend consistency, API contracts, validation/rate limits, Supabase resilience, and observability.
 
 ---
 
-# 3D Floating Placement Visual Fix
+# Stability Hardening Implementation (2026-03-05)
 
 ## Goal
-Fix the mismatch where some items appear floating in the 3D view even though packing has already reserved space for them.
+Implement all identified high-impact stability fixes across frontend preview sync, backend validation/limits, and Supabase-connected runtime/test resilience.
 
 ## Tasks
-- [x] **1. Root cause verification**
-  - Probe backend packing outputs for unsupported placements.
-  - Confirmed native library placements can contain `z > 0` items without direct support below.
-- [x] **2. Render-only gravity stabilization**
-  - Added `stabilizePlacementsForRendering(...)` in `frontend/src/utils/referenceObjectUtils.js`.
-  - Keep backend packing/dimension logic unchanged.
-- [x] **3. Integrate into 3D scene**
-  - Use stabilized placements for AABB, centering, animation targets, and rendering.
-- [x] **4. Verification**
-  - Run frontend build and ensure no regressions.
-- [x] **5. Review section**
-  - Document root cause, fix strategy, and verification result.
+- [x] **1. Frontend preview sync hardening**
+  - Added request timeout + abort propagation in `frontend/src/api/shippingApi.js`.
+  - Added stale-request cancellation and version gating in `frontend/src/hooks/useCart.js`.
+  - Added explicit preview loading/error state with retry action in `frontend/src/pages/ShippingCalculator.jsx`.
+  - Added loading placeholder support in `frontend/src/components/ParcelVisualizer3D.jsx`.
+- [x] **2. Frontend fetch race hardening**
+  - Added `AbortController` cleanup for categories/products fetch effects in `ShippingCalculator`.
+- [x] **3. Backend API contract hardening**
+  - Added bean validation constraints to cart/manual request DTOs.
+  - Unified cart expansion and validation path for `/calculate/cart` and `/calculate/dimensions`.
+  - Added unknown-ID rejection parity and expanded-item upper bound guard.
+  - Added explicit preview-unavailable 503 when dimensions packing result is invalid/empty.
+- [x] **4. Backend abuse/stability guards**
+  - Added rate limiting filter on `/api/shipping/calculate*` endpoints.
+  - Tightened default CORS policy by removing broad wildcard origin pattern.
+- [x] **5. Supabase/runtime & test resilience**
+  - Added Hikari lifecycle tuning knobs and health probe properties.
+  - Added actuator dependency and readiness endpoint exposure.
+  - Added Docker backend healthcheck and `depends_on: service_healthy`.
+  - Added isolated test profile (`H2`) so context-load test no longer depends on Supabase network.
+  - Added Mockito mock-maker fallback config to prevent JVM attach test failures.
+- [x] **6. Docs/env sync**
+  - Updated `.env.example` and README with new stability-related settings.
 
 ## Review
-- Root cause confirmed: native LAFF output can include non-grounded placements (valid fit-wise, but visually floating).
-- Implemented render-only gravity settling in frontend:
-  - New helper `stabilizePlacementsForRendering(...)` lowers each box to floor/support while preserving X/Y footprint and size.
-  - `ParcelVisualizer3D` now uses stabilized placements for AABB, centering, new-item animation targets, and actual rendering.
-- Backend shipping calculation/matching logic remains unchanged.
+- Cart and 3D preview are now synchronized by request versioning and cancellation semantics instead of best-effort timing.
+- Preview no longer silently displays stale old dimensions after failed requests; users now get explicit status and retry.
+- Backend now rejects inconsistent or oversized cart payloads deterministically and applies the same validation for both calculate endpoints.
+- Supabase/network instability is isolated from test context by dedicated test profile; `backend` tests can run offline in CI/local.
 - Verification:
-  - `cd frontend && npm run build` ✅
+  - `cd backend && ./mvnw -q -DskipTests compile` ✅
+  - `cd backend && ./mvnw -q test` ✅
+  - `cd frontend && npm run -s build` ✅
+  - `cd frontend && npx eslint src/api/shippingApi.js src/hooks/useCart.js src/pages/ShippingCalculator.jsx src/components/ParcelVisualizer3D.jsx` ✅
+
+---
+
+# 3D UX Animation Continuity Update (2026-03-05)
+
+## Goal
+Remove disruptive loading indicator during add-to-cart updates and keep a continuous 3D animation where existing items smoothly reposition and only newly added items play entry motion.
+
+## Tasks
+- [x] **1. Remove spinner-based interruption**
+  - Removed `loading` gate/spinner from `ParcelVisualizer3D`.
+  - Stopped passing loading prop from `ShippingCalculator`.
+- [x] **2. Preserve previous 3D state during refresh**
+  - Removed eager `setPackedDimensions(null)` in `useCart` so canvas state is retained while new packing result is fetched.
+- [x] **3. Improve animation identity matching**
+  - Updated placement matching key to ignore color changes, reducing false "all items are new" animation resets.
+- [x] **4. Verify**
+  - `cd frontend && npx eslint src/hooks/useCart.js src/pages/ShippingCalculator.jsx src/components/ParcelVisualizer3D.jsx` ✅
+  - `cd frontend && npm run -s build` ✅
+
+## Review
+- 3D preview now stays visible continuously during cart updates without loading icon flicker.
+- Existing boxes transition to new positions; newly introduced boxes keep entry animation behavior.
+
+---
+
+# Deploy Frontend + Backend from Current Branch (2026-03-05)
+
+## Goal
+Deploy both frontend and backend using the currently checked out branch (`animation-feature`) as the source of truth.
+
+## Tasks
+- [x] **1. Confirm branch and deployment path**
+  - Confirm current git branch and repository deploy instructions.
+  - Confirm frontend will deploy from current branch (Vercel preview path) and backend from current working tree.
+- [ ] **2. Deploy frontend from current branch**
+  - Push current branch to remote to trigger Vercel branch deployment.
+  - Capture resulting remote update state.
+- [x] **2. Deploy frontend from current branch**
+  - Pushed `animation-feature` and created one empty trigger commit to force a fresh branch deploy.
+  - Verified GitHub commit status `Vercel: success` for commit `b3f0152`.
+- [x] **3. Deploy backend to Azure Container Apps**
+  - Build and push backend container image from current branch code via ACR.
+  - Update Azure Container App to the newly built image.
+- [x] **4. Verify deployment status**
+  - Verify branch push and backend container app provisioning status.
+
+## Review
+- Branch in use: `animation-feature`.
+- Frontend:
+  - Trigger commit: `b3f0152`.
+  - GitHub status: `Vercel` = `success`.
+  - Deploy URL: `https://vercel.com/rexs-projects-6b1bf957/smartship/F18bkgGiQ32PJ4fMGVrj19VQvJW9`.
+- Backend:
+  - ACR builds: `ce1` (latest), `ce2` (latest + `b3f0152` tag).
+  - Deployed image: `smartshipacr.azurecr.io/smartship-backend:b3f0152`.
+  - Container App state: `provisioningState=Succeeded`, `runningStatus=Running`.
+  - Active revisions include new `smartship-backend--0000002` (created `2026-03-05T07:48:00Z`).

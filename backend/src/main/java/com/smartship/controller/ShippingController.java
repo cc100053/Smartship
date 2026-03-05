@@ -13,6 +13,7 @@ import com.smartship.service.DimensionCalculator;
 import com.smartship.service.PackingService;
 import com.smartship.service.ShippingMatcher;
 import com.smartship.service.ShippingMatcher.ShippingMatch;
+import jakarta.validation.Valid;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -29,6 +30,7 @@ import org.springframework.web.server.ResponseStatusException;
 @RestController
 @RequestMapping("/api/shipping")
 public class ShippingController {
+    private static final int MAX_EXPANDED_ITEMS = 120;
 
     private final ProductRepository productRepository;
     private final DimensionCalculator dimensionCalculator;
@@ -46,7 +48,7 @@ public class ShippingController {
     }
 
     @PostMapping("/calculate/manual")
-    public CalculationResponse calculateManual(@RequestBody ManualDimensionRequest request) {
+    public CalculationResponse calculateManual(@Valid @RequestBody ManualDimensionRequest request) {
         Dimensions dims = dimensionCalculator.calculateFromManualInputGrams(
                 request.lengthCm(),
                 request.widthCm(),
@@ -64,23 +66,53 @@ public class ShippingController {
     // New endpoint: Returns packed dimensions AND placements (for real-time 3D
     // preview)
     @PostMapping("/calculate/dimensions")
-    public PackingResult calculateDimensions(@RequestBody CartCalculationRequest request) {
-        if (request == null || request.items() == null || request.items().isEmpty()) {
-            return new PackingResult(new Dimensions(0, 0, 0, 0, 0), List.of());
+    public PackingResult calculateDimensions(@Valid @RequestBody CartCalculationRequest request) {
+        List<ProductReference> expandedItems = validateAndExpandCartItems(request);
+        PackingResult result = packingService.calculatePackedResult(expandedItems);
+
+        if (result == null || result.dimensions() == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                    "3D packing preview is temporarily unavailable.");
+        }
+        if (result.dimensions().getItemCount() != expandedItems.size()) {
+            throw new ResponseStatusException(
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                    "Packed item count mismatch detected.");
+        }
+        if (!expandedItems.isEmpty() && (result.placements() == null || result.placements().isEmpty())) {
+            throw new ResponseStatusException(
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                    "3D packing preview is temporarily unavailable.");
         }
 
-        List<ProductReference> expandedItems = expandCartItems(request);
-        return packingService.calculatePackedResult(expandedItems);
+        return result;
     }
 
     @PostMapping("/calculate/cart")
-    public CalculationResponse calculateCart(@RequestBody CartCalculationRequest request) {
+    public CalculationResponse calculateCart(@Valid @RequestBody CartCalculationRequest request) {
+        List<ProductReference> expandedItems = validateAndExpandCartItems(request);
+        // Use PackingService to get REAL packed dimensions to show the user
+        Dimensions dims = packingService.calculatePackedDimensions(expandedItems);
+
+        return buildResponse(expandedItems, dims);
+    }
+
+    private CalculationResponse buildResponse(List<ProductReference> items, Dimensions dims) {
+        List<ShippingMatch> matches = shippingMatcher.findBestOptions(items, dims);
+        List<ShippingResultResponse> options = matches.stream()
+                .map(this::toResponse)
+                .toList();
+        ShippingResultResponse recommended = options.isEmpty() ? null : options.get(0);
+        return new CalculationResponse(dims, recommended, options);
+    }
+
+    private List<ProductReference> validateAndExpandCartItems(CartCalculationRequest request) {
         if (request == null || request.items() == null || request.items().isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cart items are required.");
         }
 
         Set<Integer> productIds = request.items().stream()
-                .filter(item -> item != null)
                 .map(CartItemDto::productId)
                 .collect(Collectors.toCollection(HashSet::new));
 
@@ -100,51 +132,29 @@ public class ShippingController {
                     "Unknown product IDs: " + missing);
         }
 
-        // Expand items first
         List<ProductReference> expandedItems = new ArrayList<>();
         for (CartItemDto item : request.items()) {
             ProductReference product = productMap.get(item.productId());
-            if (product != null && item.quantity() > 0) {
-                for (int i = 0; i < item.quantity(); i++) {
-                    expandedItems.add(product);
+            if (product == null) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Unknown product ID: " + item.productId());
+            }
+
+            for (int i = 0; i < item.quantity(); i++) {
+                expandedItems.add(product);
+                if (expandedItems.size() > MAX_EXPANDED_ITEMS) {
+                    throw new ResponseStatusException(
+                            HttpStatus.PAYLOAD_TOO_LARGE,
+                            "Too many items for real-time packing. Please reduce quantity.");
                 }
             }
         }
 
-        // Use PackingService to get REAL packed dimensions to show the user
-        Dimensions dims = packingService.calculatePackedDimensions(expandedItems);
-
-        return buildResponse(expandedItems, dims);
-    }
-
-    private CalculationResponse buildResponse(List<ProductReference> items, Dimensions dims) {
-        List<ShippingMatch> matches = shippingMatcher.findBestOptions(items, dims);
-        List<ShippingResultResponse> options = matches.stream()
-                .map(this::toResponse)
-                .toList();
-        ShippingResultResponse recommended = options.isEmpty() ? null : options.get(0);
-        return new CalculationResponse(dims, recommended, options);
-    }
-
-    private List<ProductReference> expandCartItems(CartCalculationRequest request) {
-        Set<Integer> productIds = request.items().stream()
-                .filter(item -> item != null)
-                .map(CartItemDto::productId)
-                .collect(Collectors.toCollection(HashSet::new));
-
-        List<ProductReference> products = productRepository.findAllById(productIds);
-        Map<Integer, ProductReference> productMap = products.stream()
-                .collect(Collectors.toMap(ProductReference::getId, product -> product));
-
-        List<ProductReference> expandedItems = new ArrayList<>();
-        for (CartItemDto item : request.items()) {
-            ProductReference product = productMap.get(item.productId());
-            if (product != null && item.quantity() > 0) {
-                for (int i = 0; i < item.quantity(); i++) {
-                    expandedItems.add(product);
-                }
-            }
+        if (expandedItems.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cart items are required.");
         }
+
         return expandedItems;
     }
 
