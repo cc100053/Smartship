@@ -7,7 +7,7 @@ export default function ScrollToTopButton({
     scrollContainerRef,
     threshold = 300,
     hidden = false,
-    className = "fixed bottom-20 right-3 sm:bottom-4 sm:right-4"
+    className = "fixed bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] right-3 sm:bottom-4 sm:right-4"
 }) {
     const [isVisible, setIsVisible] = useState(false);
 

@@ -16,6 +16,7 @@ export default function MobileCartDrawer({
 }) {
     const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
     const scrollRef = useRef(null);
+    const touchCleanupRef = useRef(null);
     const y = useMotionValue(typeof window !== 'undefined' ? window.innerHeight : 800);
     // Keep onToggle stable across re-renders inside the callback ref closure
     const onToggleRef = useRef(onToggle);
@@ -29,7 +30,11 @@ export default function MobileCartDrawer({
 
     // ─── Callback ref: attach native touch handlers the moment the node mounts ───
     const drawerCallbackRef = useCallback((node) => {
-        if (!node) return;   // node is null on unmount — listeners auto-clean up
+        if (touchCleanupRef.current) {
+            touchCleanupRef.current();
+            touchCleanupRef.current = null;
+        }
+        if (!node) return;
 
         let startY = 0;
         let isDraggingDrawer = false;
@@ -88,13 +93,19 @@ export default function MobileCartDrawer({
         node.addEventListener('touchmove', onTouchMove, { passive: false }); // passive:false needed to call preventDefault
         node.addEventListener('touchend', onTouchEnd, { passive: true });
 
-        // Returned cleanup runs when the node is removed from the DOM
-        return () => {
+        touchCleanupRef.current = () => {
             node.removeEventListener('touchstart', onTouchStart);
             node.removeEventListener('touchmove', onTouchMove);
             node.removeEventListener('touchend', onTouchEnd);
         };
     }, [y]); // y is stable (useMotionValue ref), so this runs only once per mount
+
+    useEffect(() => () => {
+        if (touchCleanupRef.current) {
+            touchCleanupRef.current();
+            touchCleanupRef.current = null;
+        }
+    }, []);
 
     return (
         <>
@@ -112,7 +123,10 @@ export default function MobileCartDrawer({
             </AnimatePresence>
 
             {/* Floating Card & Drawer Container */}
-            <div className="fixed bottom-0 left-0 right-0 z-50 pointer-events-none pb-safe lg:hidden">
+            <div
+                className="fixed bottom-0 left-0 right-0 z-50 pointer-events-none lg:hidden"
+                style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+            >
                 <AnimatePresence>
                     {!isExpanded ? (
                         /* ── COLLAPSED PILL ── */
@@ -177,12 +191,12 @@ export default function MobileCartDrawer({
                         <motion.div
                             ref={drawerCallbackRef}
                             key="expanded-drawer"
-                            style={{ y }}
+                            style={{ y, maxHeight: 'min(85dvh, 85svh)' }}
                             initial={{ y: window.innerHeight }}
                             animate={{ y: 0 }}
                             exit={{ y: window.innerHeight }}
                             transition={{ type: 'spring', damping: 28, stiffness: 320 }}
-                            className="pointer-events-auto bg-white rounded-t-3xl shadow-[0_-10px_40px_-10px_rgba(0,0,0,0.25)] flex flex-col max-h-[85vh]"
+                            className="pointer-events-auto bg-white rounded-t-3xl shadow-[0_-10px_40px_-10px_rgba(0,0,0,0.25)] flex flex-col"
                         >
                             {/* Drag handle bar */}
                             <div className="flex justify-center pt-3 pb-1 select-none">

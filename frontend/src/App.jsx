@@ -9,14 +9,17 @@ export default function App() {
   const mainRef = useRef(null);
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   return (
-    <div className="h-[100dvh] bg-neutral-50 text-neutral-900 selection:bg-rose-500/30 overflow-hidden flex flex-col">
+    <div className="h-[100dvh] min-h-[100svh] bg-neutral-50 text-neutral-900 selection:bg-rose-500/30 overflow-hidden flex flex-col">
       <div className="fixed inset-0 z-0 pointer-events-none opacity-40 overflow-hidden">
         <div className="absolute top-[-20%] left-[-10%] h-[70vh] w-[70vw] rounded-full bg-blue-400 mix-blend-multiply blur-[128px] animate-blob" />
         <div className="absolute top-[-20%] right-[-10%] h-[70vh] w-[70vw] rounded-full bg-purple-400 mix-blend-multiply blur-[128px] animate-blob animation-delay-2000" />
         <div className="absolute bottom-[-20%] left-[20%] h-[70vh] w-[70vw] rounded-full bg-pink-400 mix-blend-multiply blur-[128px] animate-blob animation-delay-4000" />
       </div>
 
-      <div className="relative z-10 mx-auto max-w-[1400px] px-3 py-3 sm:px-6 sm:py-4 lg:px-8 h-full flex flex-col w-full">
+      <div
+        className="relative z-10 mx-auto max-w-[1400px] px-3 pb-3 pt-3 sm:px-6 sm:pb-4 sm:pt-4 lg:px-8 h-full flex flex-col w-full"
+        style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top, 0px))' }}
+      >
         <motion.header
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -61,8 +64,8 @@ export default function App() {
         <motion.main
           ref={mainRef}
           className="flex-1 min-h-0 overflow-y-auto lg:overflow-visible flex flex-col"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
           transition={{ duration: 0.6, delay: 0.2 }}
         >
           <div className="flex-1 min-h-0">

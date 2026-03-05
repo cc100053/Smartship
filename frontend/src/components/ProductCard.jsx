@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Plus } from 'lucide-react';
 import { getCategoryLabel } from '../utils/labels';
@@ -25,8 +25,23 @@ export default function ProductCard({ product, onAdd, index = 0 }) {
   const [tilt, setTilt] = useState({ rotateX: 0, rotateY: 0 });
   const [glowPos, setGlowPos] = useState({ x: 50, y: 50 });
   const [isHovering, setIsHovering] = useState(false);
+  const [supportsHover, setSupportsHover] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const media = window.matchMedia('(hover: hover) and (pointer: fine)');
+    const update = () => setSupportsHover(media.matches);
+    update();
+    if (typeof media.addEventListener === 'function') {
+      media.addEventListener('change', update);
+      return () => media.removeEventListener('change', update);
+    }
+    media.addListener(update);
+    return () => media.removeListener(update);
+  }, []);
 
   const handleMouseMove = useCallback((e) => {
+    if (!supportsHover) return;
     const el = cardRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
@@ -38,9 +53,12 @@ export default function ProductCard({ product, onAdd, index = 0 }) {
       rotateX: (0.5 - y) * 16,
     });
     setGlowPos({ x: x * 100, y: y * 100 });
-  }, []);
+  }, [supportsHover]);
 
-  const handleMouseEnter = useCallback(() => setIsHovering(true), []);
+  const handleMouseEnter = useCallback(() => {
+    if (!supportsHover) return;
+    setIsHovering(true);
+  }, [supportsHover]);
   const handleMouseLeave = useCallback(() => {
     setIsHovering(false);
     setTilt({ rotateX: 0, rotateY: 0 });
@@ -53,9 +71,9 @@ export default function ProductCard({ product, onAdd, index = 0 }) {
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       animate={{
-        rotateX: tilt.rotateX,
-        rotateY: tilt.rotateY,
-        scale: isHovering ? 1.04 : 1,
+        rotateX: supportsHover ? tilt.rotateX : 0,
+        rotateY: supportsHover ? tilt.rotateY : 0,
+        scale: supportsHover && isHovering ? 1.04 : 1,
       }}
       transition={{ type: 'spring', stiffness: 300, damping: 20 }}
       style={{ transformStyle: 'preserve-3d', perspective: 800 }}

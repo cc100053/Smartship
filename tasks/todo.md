@@ -1,5 +1,40 @@
 # Category Filter Auto-Nudge UX
 
+# Mobile Responsive Stability Audit (Header/Footer/Cart)
+
+## Goal
+Identify and fix intermittent mobile responsive layout glitches:
+- Header/icon row occasionally shifts to an incorrect height.
+- Footer occasionally shifts upward and overlaps/competes with the bottom cart bar.
+- Audit for additional frontend stability/safety risks related to viewport, fixed positioning, and touch interactions.
+
+## Tasks
+- [x] **1. Reproduce and locate layout fault lines**
+  - Inspect `App.jsx`, `ShippingCalculator.jsx`, `MobileCartDrawer.jsx`, `ProductCard.jsx`.
+  - Trace interactions between `dvh`, nested scroll containers, fixed overlays, and transforms.
+- [x] **2. Apply minimal targeted fixes**
+  - Correct safe-area padding behavior for mobile fixed cart container.
+  - Increase/compute bottom spacer so fixed cart pill does not overlap content/footer.
+  - Reduce mobile touch-induced transform/hitbox instability in product cards.
+  - Remove/limit mobile nested overflow behavior that can cause mid-page footer artifacts.
+- [x] **3. Verify and report**
+  - Run frontend production build.
+  - Document all responsive optimization points with file/line references.
+  - Document remaining stability/safety risks and suggested follow-up.
+
+## Review
+- Updated viewport/fixed behavior:
+  - `frontend/src/App.jsx`: removed `y` transform animation on `motion.main` and added safe-area-aware top padding + `min-h-[100svh]`.
+  - `frontend/src/pages/ShippingCalculator.jsx`: disabled mobile nested inner scroll for product list; added safe-area-aware spacer under content for fixed cart pill.
+  - `frontend/src/components/MobileCartDrawer.jsx`: replaced non-existent `pb-safe` utility with real `env(safe-area-inset-bottom)` style and added deterministic touch listener cleanup.
+  - `frontend/src/components/ProductCard.jsx`: gated hover/3D tilt effects to pointer-fine hover devices to avoid mobile touch hitbox/visual drift.
+- Follow-up responsive pass:
+  - `frontend/src/components/ScrollToTopButton.jsx`: made mobile bottom offset safe-area-aware.
+  - `frontend/src/components/MobileCartDrawer.jsx`: changed drawer cap from `85vh` to `min(85dvh, 85svh)` for viewport-toolbar stability.
+  - `frontend/src/components/CategoryTabs.jsx`: increased left/right arrow touch targets to 44px-equivalent on mobile.
+- Verification:
+  - `cd frontend && npm run build` ✅ (Vite build successful)
+
 ## Goal
 When a user selects a filter near the right or left edge, auto-nudge the horizontal tab list so adjacent options become visible without manual drag or arrow clicks.
 

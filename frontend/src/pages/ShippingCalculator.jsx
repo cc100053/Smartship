@@ -268,9 +268,9 @@ export default function ShippingCalculator({ onDrawerToggle }) {
             )}
           </div>
 
-          <div className="relative flex-1 overflow-hidden min-w-0 flex flex-col">
+          <div className="relative min-w-0 flex flex-col lg:flex-1 lg:overflow-hidden">
             <div
-              className="flex-1 overflow-y-auto rounded-2xl pb-2 custom-scrollbar lg:max-h-none"
+              className="rounded-2xl pb-2 custom-scrollbar lg:flex-1 lg:overflow-y-auto lg:max-h-none"
             >
               <AnimatePresence mode="wait">
                 <MotionDiv
@@ -409,8 +409,11 @@ export default function ShippingCalculator({ onDrawerToggle }) {
 
       </div>
 
-      {/* Spacer to prevent fixed pill from covering content only when drawer is visible (<lg) */}
-      <div className="lg:hidden h-24 shrink-0" />
+      {/* Spacer to prevent the fixed mobile cart pill from covering content/footer */}
+      <div
+        className="lg:hidden shrink-0"
+        style={{ height: 'calc(7.5rem + env(safe-area-inset-bottom, 0px))' }}
+      />
 
       <AnimatePresence>
         {mode === 'cart' && (

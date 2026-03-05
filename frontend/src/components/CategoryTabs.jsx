@@ -72,7 +72,7 @@ export default function CategoryTabs({ categories, value, onChange }) {
         type="button"
         onClick={() => scroll('left')}
         className={cn(
-          "shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition-opacity",
+          "shrink-0 flex items-center justify-center w-11 h-11 sm:w-8 sm:h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition-opacity touch-manipulation",
           showLeft ? "opacity-100" : "opacity-30 pointer-events-none"
         )}
         aria-label="Scroll left"
@@ -129,7 +129,7 @@ export default function CategoryTabs({ categories, value, onChange }) {
         type="button"
         onClick={() => scroll('right')}
         className={cn(
-          "shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition-opacity",
+          "shrink-0 flex items-center justify-center w-11 h-11 sm:w-8 sm:h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition-opacity touch-manipulation",
           showRight ? "opacity-100" : "opacity-30 pointer-events-none"
         )}
         aria-label="Scroll right"
