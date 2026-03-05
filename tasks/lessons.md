@@ -51,3 +51,7 @@
 ## 13. Exhibition animation updates should be incremental, not full replay
 - **Mistake**: Implemented a full packing replay flow (`ghost -> sequential playback`) for every placement update, which made add-item interactions feel repetitive and less responsive.
 - **Rule**: For interactive 3D packing UX, preserve existing item continuity and animate only deltas (new items entry + existing items reposition transition); avoid resetting the whole sequence unless the user explicitly requests replay mode.
+
+## 14. Scroll target must match the actual scrolling container
+- **Mistake**: Wired auto-scroll and "Back to top" to only one container (`mainRef`), while desktop used a different nested scroll container and mobile had post-calc scroll timing differences.
+- **Rule**: For mixed layouts (main scroll + nested panel scroll), always resolve and control the actual active scroll container(s) for both auto-navigation and "back to top". Verify behavior separately on mobile and desktop after action-triggered rerenders.

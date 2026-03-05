@@ -43,6 +43,7 @@ export default function ShippingCalculator({ onDrawerToggle }) {
 
   const cartRef = useRef(null);
   const resultRef = useRef(null);
+  const rightPanelRef = useRef(null);
 
   // Custom Hooks
   const {
@@ -207,15 +208,19 @@ export default function ShippingCalculator({ onDrawerToggle }) {
   };
 
   const scrollResultIntoView = () => {
-    if (typeof window === 'undefined' || window.innerWidth >= 1024) {
-      return;
-    }
+    if (typeof window === 'undefined') return;
 
     const target = resultRef.current;
     if (!target) return;
 
+    const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+    const behavior = prefersReducedMotion ? 'auto' : 'smooth';
+
     window.requestAnimationFrame(() => {
-      let scrollParent = target.parentElement;
+      let scrollParent =
+        rightPanelRef.current && rightPanelRef.current.scrollHeight > rightPanelRef.current.clientHeight
+          ? rightPanelRef.current
+          : target.parentElement;
       while (scrollParent) {
         const overflowY = window.getComputedStyle(scrollParent).overflowY;
         const isScrollable = /(auto|scroll|overlay)/.test(overflowY) && scrollParent.scrollHeight > scrollParent.clientHeight;
@@ -224,14 +229,14 @@ export default function ShippingCalculator({ onDrawerToggle }) {
       }
 
       if (!scrollParent) {
-        target.scrollIntoView({ behavior: 'auto', block: 'start' });
+        target.scrollIntoView({ behavior, block: 'start' });
         return;
       }
 
       const parentRect = scrollParent.getBoundingClientRect();
       const targetRect = target.getBoundingClientRect();
       const nextTop = scrollParent.scrollTop + (targetRect.top - parentRect.top) - 12;
-      scrollParent.scrollTo({ top: Math.max(0, nextTop), behavior: 'auto' });
+      scrollParent.scrollTo({ top: Math.max(0, nextTop), behavior });
     });
   };
 
@@ -328,6 +333,8 @@ export default function ShippingCalculator({ onDrawerToggle }) {
         </MotionDiv>
 
         <MotionDiv
+          ref={rightPanelRef}
+          data-scroll-container="true"
           className="order-2 lg:col-span-7 flex flex-col gap-4 lg:h-full lg:overflow-y-auto custom-scrollbar min-w-0"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

@@ -63,6 +63,7 @@ export default function App() {
 
         <motion.main
           ref={mainRef}
+          data-scroll-container="true"
           className="flex-1 min-h-0 overflow-y-auto lg:overflow-visible flex flex-col"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

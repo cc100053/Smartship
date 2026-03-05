@@ -33,8 +33,9 @@ Identify and fix intermittent mobile responsive layout glitches:
   - `frontend/src/components/MobileCartDrawer.jsx`: changed drawer cap from `85vh` to `min(85dvh, 85svh)` for viewport-toolbar stability.
   - `frontend/src/components/CategoryTabs.jsx`: increased left/right arrow touch targets to 44px-equivalent on mobile.
 - Post-calculate stability pass:
-  - `frontend/src/pages/ShippingCalculator.jsx`: replaced mobile `scrollIntoView({ behavior: "smooth" })` with direct scroll-parent targeting + `behavior: "auto"` to avoid iOS fixed-layer jitter after pressing calculate.
+  - `frontend/src/pages/ShippingCalculator.jsx`: switched to resolved scroll-parent targeting with `behavior: "smooth"` and desktop right-panel support, so "計算" now auto-scrolls to result on both mobile and desktop.
   - `frontend/src/components/ScrollToTopButton.jsx`: removed scale-in animation (kept fade/slide only), so button no longer appears as "small then large".
+  - `frontend/src/components/ScrollToTopButton.jsx` + `App.jsx` + `ShippingCalculator.jsx`: unified multi-container scroll target detection (`data-scroll-container`) so "Return to top" works even with nested desktop panel scrolling.
 - Verification:
   - `cd frontend && npm run build` ✅ (Vite build successful)
 

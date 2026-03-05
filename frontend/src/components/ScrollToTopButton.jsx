@@ -11,26 +11,73 @@ export default function ScrollToTopButton({
 }) {
     const [isVisible, setIsVisible] = useState(false);
 
-    useEffect(() => {
-        const container = scrollContainerRef.current;
-        if (!container) return;
+    const collectScrollTargets = () => {
+        if (typeof window === 'undefined') return [];
+        const unique = new Set();
+        const targets = [];
 
-        const toggleVisibility = () => {
-            if (container.scrollTop > threshold) {
-                setIsVisible(true);
-            } else {
-                setIsVisible(false);
-            }
+        const pushTarget = (target) => {
+            if (!target || unique.has(target)) return;
+            unique.add(target);
+            targets.push(target);
         };
 
-        container.addEventListener('scroll', toggleVisibility);
-        return () => container.removeEventListener('scroll', toggleVisibility);
-    }, [scrollContainerRef, threshold]);
+        pushTarget(scrollContainerRef.current);
+        document.querySelectorAll('[data-scroll-container="true"]').forEach((node) => pushTarget(node));
+        pushTarget(window);
+
+        return targets;
+    };
+
+    const getScrollTop = (target) => {
+        if (target === window) return window.scrollY || document.documentElement.scrollTop || 0;
+        return target?.scrollTop || 0;
+    };
+
+    useEffect(() => {
+        const toggleVisibility = () => {
+            const visible = collectScrollTargets().some((target) => getScrollTop(target) > threshold);
+            setIsVisible(visible);
+        };
+
+        const targets = collectScrollTargets();
+        if (!targets.length) return;
+
+        targets.forEach((target) => {
+            if (target === window) {
+                window.addEventListener('scroll', toggleVisibility);
+                return;
+            }
+            target.addEventListener('scroll', toggleVisibility);
+        });
+        window.addEventListener('resize', toggleVisibility);
+        toggleVisibility();
+
+        return () => {
+            targets.forEach((target) => {
+                if (target === window) {
+                    window.removeEventListener('scroll', toggleVisibility);
+                    return;
+                }
+                target.removeEventListener('scroll', toggleVisibility);
+            });
+            window.removeEventListener('resize', toggleVisibility);
+        };
+    }, [scrollContainerRef, threshold, hidden]);
 
     const scrollToTop = () => {
-        scrollContainerRef.current?.scrollTo({
-            top: 0,
-            behavior: 'smooth',
+        const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+        const behavior = prefersReducedMotion ? 'auto' : 'smooth';
+
+        collectScrollTargets().forEach((target) => {
+            if (target === window) {
+                window.scrollTo({ top: 0, behavior });
+                return;
+            }
+            target.scrollTo({
+                top: 0,
+                behavior,
+            });
         });
     };
 
