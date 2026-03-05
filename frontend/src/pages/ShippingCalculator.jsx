@@ -206,21 +206,44 @@ export default function ShippingCalculator({ onDrawerToggle }) {
     setManualInput(next);
   };
 
+  const scrollResultIntoView = () => {
+    if (typeof window === 'undefined' || window.innerWidth >= 1024) {
+      return;
+    }
+
+    const target = resultRef.current;
+    if (!target) return;
+
+    window.requestAnimationFrame(() => {
+      let scrollParent = target.parentElement;
+      while (scrollParent) {
+        const overflowY = window.getComputedStyle(scrollParent).overflowY;
+        const isScrollable = /(auto|scroll|overlay)/.test(overflowY) && scrollParent.scrollHeight > scrollParent.clientHeight;
+        if (isScrollable) break;
+        scrollParent = scrollParent.parentElement;
+      }
+
+      if (!scrollParent) {
+        target.scrollIntoView({ behavior: 'auto', block: 'start' });
+        return;
+      }
+
+      const parentRect = scrollParent.getBoundingClientRect();
+      const targetRect = target.getBoundingClientRect();
+      const nextTop = scrollParent.scrollTop + (targetRect.top - parentRect.top) - 12;
+      scrollParent.scrollTo({ top: Math.max(0, nextTop), behavior: 'auto' });
+    });
+  };
+
   // Wrapped handlers to support scrolling to result
   const handleCartCalculate = async () => {
     await calculateCart(cartItems);
-    // Scroll to result on mobile
-    setTimeout(() => {
-      resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }, 100);
+    scrollResultIntoView();
   };
 
   const handleManualCalculate = async (payload) => {
     await calculateManual(payload);
-    // Scroll to result on mobile
-    setTimeout(() => {
-      resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }, 100);
+    scrollResultIntoView();
   };
 
   // On mobile, force cart mode since mode switcher is hidden

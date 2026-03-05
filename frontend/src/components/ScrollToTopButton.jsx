@@ -35,12 +35,12 @@ export default function ScrollToTopButton({
     };
 
     return (
-        <AnimatePresence>
+        <AnimatePresence initial={false}>
             {isVisible && !hidden && (
                 <motion.button
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 8 }}
                     onClick={scrollToTop}
                     className={cn(
                         "z-50 flex items-center justify-center rounded-full border border-white/50 bg-slate-900/80 text-white shadow-lg backdrop-blur-md transition-all opacity-50 hover:opacity-100 hover:bg-slate-800",
