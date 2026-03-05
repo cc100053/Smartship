@@ -280,7 +280,7 @@ function ReferenceObject({ position, size, scale }) {
 }
 
 // ── Scene ─────────────────────────────────────────────────────────
-function Scene({ placements, maxDim, dimensions }) {
+export function Scene({ placements, maxDim, dimensions }) {
   const scale = 3 / Math.max(maxDim, 100);
   const controlsRef = useRef();
   const nextIdRef = useRef(0);
@@ -428,7 +428,7 @@ function Scene({ placements, maxDim, dimensions }) {
 }
 
 // ── Error Boundary ────────────────────────────────────────────────
-class CanvasErrorBoundary extends Component {
+export class CanvasErrorBoundary extends Component {
   constructor(props) {
     super(props);
     this.state = { hasError: false };

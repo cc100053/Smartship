@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { calculateDimensions } from '../api/shippingApi';
+import { useBroadcastSender } from './useViewerBroadcast';
 
 export function useCart() {
     const [cartItems, setCartItems] = useState([]);
@@ -9,6 +10,7 @@ export function useCart() {
     const debounceRef = useRef(null);
     const requestVersionRef = useRef(0);
     const inFlightControllerRef = useRef(null);
+    const broadcast = useBroadcastSender();
 
     // Fetch packed dimensions from backend when cart changes
     const fetchPackedDimensions = useCallback(async (items) => {
@@ -88,6 +90,15 @@ export function useCart() {
         }
     }, []);
 
+    useEffect(() => {
+        broadcast({
+            type: 'CART_UPDATE',
+            dimensions: packedDimensions?.dimensions || null,
+            placements: packedDimensions?.placements || [],
+            mode: 'cart',
+        });
+    }, [packedDimensions, broadcast]);
+
     const addToCart = (product) => {
         setCartItems((prev) => {
             const existing = prev.find((item) => item.product.id === product.id);
@@ -135,6 +146,12 @@ export function useCart() {
         setPackedDimensions(null);
         setDimensionsError('');
         setDimensionsLoading(false);
+        broadcast({
+            type: 'CART_UPDATE',
+            dimensions: null,
+            placements: [],
+            mode: 'cart',
+        });
     };
 
     const retryPackedDimensions = useCallback(() => {

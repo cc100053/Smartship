@@ -570,3 +570,47 @@ Document the fastest repeatable deployment flow for frontend (Vercel) and backen
 ## Review
 - Added `docs/deployment_runbook.md`.
 - Added runbook link under `README.md` Deployment section.
+
+---
+
+# Extended Display Viewer Implementation
+
+## Goal
+Implement `docs/extended_display_plan.md` so a separate `#/viewer` window can render the 3D packing animation in real time via `BroadcastChannel`, while the main app remains unchanged.
+
+## Tasks
+- [x] **1. Plan + scope check**
+  - Read `docs/extended_display_plan.md` and map required files/changes.
+- [x] **2. Broadcast channel hook + cart sender**
+  - Add `frontend/src/hooks/useViewerBroadcast.js`.
+  - Integrate sender broadcasts in `frontend/src/hooks/useCart.js`.
+- [x] **3. Export reusable 3D scene primitives**
+  - Export `Scene` and `CanvasErrorBoundary` from `frontend/src/components/ParcelVisualizer3D.jsx`.
+- [x] **4. Add viewer page + hash route**
+  - Add `frontend/src/pages/PackingViewer.jsx`.
+  - Update `frontend/src/main.jsx` to render viewer only on `#/viewer`.
+- [x] **5. Verification + review note**
+  - Run `cd frontend && npm run build`.
+  - Document implementation results in this section.
+
+## Review
+- Added `frontend/src/hooks/useViewerBroadcast.js` with:
+  - `useBroadcastSender()` for posting `CART_UPDATE` events on `smartship-viewer`.
+  - `useBroadcastReceiver()` for viewer-side state sync (`dimensions`, `placements`, `mode`, `connected`).
+  - BroadcastChannel support guard for safe no-op behavior when unsupported.
+- Updated `frontend/src/hooks/useCart.js`:
+  - Wired `useBroadcastSender()`.
+  - Broadcasts latest packed payload whenever `packedDimensions` changes.
+  - Sends explicit clear payload in `clearCart()`.
+- Updated `frontend/src/components/ParcelVisualizer3D.jsx`:
+  - Exported `Scene`.
+  - Exported `CanvasErrorBoundary`.
+- Added `frontend/src/pages/PackingViewer.jsx`:
+  - Fullscreen dark viewer with loading/connection state.
+  - Reuses shared `Scene`/`CanvasErrorBoundary`.
+  - Includes fallback single box rendering when only dimensions exist.
+- Updated `frontend/src/main.jsx`:
+  - Added lightweight hash route switch.
+  - Renders `PackingViewer` only when hash is `#/viewer`; otherwise keeps existing `App`.
+- Verification:
+  - `cd frontend && npm run build` ✅
