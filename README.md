@@ -52,6 +52,7 @@ npm run dev
 *(Only use `docker-compose up --build` when you want to test the final packaged application.)*
 
 ## Deployment
+Detailed step-by-step runbook: `docs/deployment_runbook.md`
 
 ### Frontend (Vercel)
 The frontend is hosted on Vercel and connected to GitHub.

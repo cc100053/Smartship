@@ -432,6 +432,28 @@ Remove disruptive loading indicator during add-to-cart updates and keep a contin
 
 ---
 
+# Header Vote Badge Visual Upgrade
+
+## Goal
+Make the `IT21-219 に投票してね！🙌` badge more eye-catching with a stronger animated border treatment.
+
+## Tasks
+- [x] **1. Redesign Badge Container**
+  - Replace current flat animated strip with a more dynamic moving border effect.
+- [x] **2. Keep Readability**
+  - Ensure text contrast and layout remain clear across mobile and desktop.
+- [x] **3. Verification**
+  - Run frontend build and confirm no style/runtime regressions.
+
+## Review
+- Replaced vote badge border with rotating `conic-gradient` ring and subtle glow using `.vote-badge` styles in `frontend/src/index.css`.
+- Kept content readability by using a semi-opaque white inner capsule (`.vote-badge-core`) and high-contrast text.
+- Added a light waving animation to `🙌` (`.vote-badge-wave`) and disabled motion under `prefers-reduced-motion`.
+- Verified with `cd frontend && npm run build` (pass).
+- Follow-up (Option 1 / Champagne Ring): slowed ring animation to `12s`, switched palette to champagne-gold metallic tones, softened glow/shadow, and removed waving emoji motion for a more premium and calm style.
+
+---
+
 # Deploy Frontend + Backend from Current Branch (2026-03-05)
 
 ## Goal
@@ -464,3 +486,24 @@ Deploy both frontend and backend using the currently checked out branch (`animat
   - Deployed image: `smartshipacr.azurecr.io/smartship-backend:b3f0152`.
   - Container App state: `provisioningState=Succeeded`, `runningStatus=Running`.
   - Active revisions include new `smartship-backend--0000002` (created `2026-03-05T07:48:00Z`).
+
+---
+
+# Deployment Runbook Documentation (2026-03-05)
+
+## Goal
+Document the fastest repeatable deployment flow for frontend (Vercel) and backend (Azure Container Apps).
+
+## Tasks
+- [x] **1. Capture production flow**
+  - Feature branch merge path to production branch (`master`) for Vercel production URL.
+- [x] **2. Capture backend release flow**
+  - ACR build and container app update using commit-tagged image.
+- [x] **3. Capture verification flow**
+  - Vercel status check, Azure revision/image check, and API/CORS smoke checks.
+- [x] **4. Link from README**
+  - Add direct pointer so next deployment follows same runbook.
+
+## Review
+- Added `docs/deployment_runbook.md`.
+- Added runbook link under `README.md` Deployment section.

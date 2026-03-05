@@ -23,23 +23,39 @@ export default function App() {
           transition={{ duration: 0.6 }}
           className="flex-none mb-3 sm:mb-4 flex items-center justify-between rounded-xl sm:rounded-2xl border border-white/40 bg-white/60 px-3 py-2 sm:px-4 sm:py-3 shadow-md backdrop-blur-md"
         >
-          <a href="/" className="flex items-center gap-2 transition-transform hover:scale-[1.02]">
-            <div className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-gradient-to-tr from-slate-900 to-slate-800 text-white shadow-md">
-              <Package className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            </div>
-            <div>
-              <p className="font-display text-sm sm:text-base font-bold leading-none tracking-tight text-shimmer">
-                SmartShip
-              </p>
-              <p className="text-[0.56rem] sm:text-[0.625rem] font-medium text-slate-500">
-                メルカリ特化型配送アシスタント
-              </p>
-            </div>
-          </a>
+          <div className="flex items-center gap-3 sm:gap-6">
+            <a href="/" className="flex items-center gap-2 transition-transform hover:scale-[1.02]">
+              <div className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-gradient-to-tr from-slate-900 to-slate-800 text-white shadow-md">
+                <Package className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              </div>
+              <div>
+                <p className="font-display text-sm sm:text-base font-bold leading-none tracking-tight text-shimmer">
+                  SmartShip
+                </p>
+                <p className="text-[0.56rem] sm:text-[0.625rem] font-medium text-slate-500">
+                  メルカリ特化型配送アシスタント
+                </p>
+              </div>
+            </a>
 
-          <h1 className="hidden sm:block text-sm font-medium text-slate-500">
-            メルカリ便・郵便の送料比較を、もっとスマートに。
-          </h1>
+            <div className="vote-badge">
+              <div className="vote-badge-core text-[0.65rem] sm:text-xs font-semibold">
+                <span className="flex items-center gap-1 drop-shadow-sm">
+                  <span className="bg-gradient-to-r from-rose-600 via-fuchsia-600 to-indigo-600 bg-clip-text text-transparent font-black tracking-wider">
+                    IT21-219
+                  </span>
+                  <span className="text-slate-700 font-bold">に投票してね！</span>
+                  <span className="text-xs ml-0.5">🙌</span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 sm:gap-4 shrink-0">
+            <h1 className="hidden lg:block text-sm font-medium text-slate-500">
+              メルカリ便・郵便の送料比較を、もっとスマートに。
+            </h1>
+          </div>
         </motion.header>
 
         <motion.main
