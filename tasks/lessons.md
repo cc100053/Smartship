@@ -55,3 +55,7 @@
 ## 14. Scroll target must match the actual scrolling container
 - **Mistake**: Wired auto-scroll and "Back to top" to only one container (`mainRef`), while desktop used a different nested scroll container and mobile had post-calc scroll timing differences.
 - **Rule**: For mixed layouts (main scroll + nested panel scroll), always resolve and control the actual active scroll container(s) for both auto-navigation and "back to top". Verify behavior separately on mobile and desktop after action-triggered rerenders.
+
+## 15. Mobile drawer animations need overlap control and low-trail layers
+- **Mistake**: Used default presence choreography and blur-heavy overlay in a bottom drawer transition, which caused visible ghosting on mobile during open/close.
+- **Rule**: For mobile bottom sheets, prefer deterministic enter/exit sequencing (`AnimatePresence mode=\"wait\"` when swapping states), GPU-friendly transforms, and lighter overlay effects over blur-heavy backdrops.

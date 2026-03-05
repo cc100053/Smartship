@@ -39,6 +39,30 @@ Identify and fix intermittent mobile responsive layout glitches:
 - Verification:
   - `cd frontend && npm run build` ✅ (Vite build successful)
 
+# Mobile Cart Drawer Animation Polish
+
+## Goal
+Improve mobile cart drawer open/close animation quality to remove visible ghosting and make transitions feel smooth and comfortable.
+
+## Tasks
+- [x] **1. Refine drawer transition choreography**
+  - Tune open/close easing and duration for both collapsed pill and expanded drawer.
+  - Reduce overlap artifacts between entering/exiting states.
+- [x] **2. Reduce visual ghosting sources**
+  - Adjust motion/render classes (`transform-gpu`, opacity strategy, backdrop treatment) to minimize trails on mobile browsers.
+- [x] **3. Verify**
+  - Run frontend production build and confirm no regressions.
+
+## Review
+- Updated `frontend/src/components/MobileCartDrawer.jsx`:
+  - Added tuned non-bouncy tween transitions for drawer and collapsed pill.
+  - Set `AnimatePresence` to `initial={false}` and `mode="wait"` for the drawer/pill switch, preventing overlap-induced ghosting.
+  - Reworked drawer enter/exit from viewport-relative values (`y: "100%" -> 0`) with opacity support.
+  - Added `transform-gpu`/`will-change` hints to animated layers.
+  - Reduced backdrop intensity and removed blur from overlay to cut residual trails on mobile GPUs.
+- Verification:
+  - `cd frontend && npm run build` ✅
+
 ## Goal
 When a user selects a filter near the right or left edge, auto-nudge the horizontal tab list so adjacent options become visible without manual drag or arrow clicks.
 

@@ -3,6 +3,18 @@ import { ShoppingBag, Trash2, Truck } from 'lucide-react';
 import CartPanel from './CartPanel';
 import { useEffect, useRef, useCallback } from 'react';
 
+const DRAWER_TRANSITION = {
+    type: 'tween',
+    duration: 0.3,
+    ease: [0.22, 1, 0.36, 1],
+};
+
+const PILL_TRANSITION = {
+    type: 'tween',
+    duration: 0.24,
+    ease: [0.22, 1, 0.36, 1],
+};
+
 export default function MobileCartDrawer({
     isExpanded,
     onToggle,
@@ -110,14 +122,15 @@ export default function MobileCartDrawer({
     return (
         <>
             {/* Backdrop */}
-            <AnimatePresence>
+            <AnimatePresence initial={false}>
                 {isExpanded && (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
+                        transition={DRAWER_TRANSITION}
                         onClick={() => onToggle(false)}
-                        className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-sm lg:hidden"
+                        className="fixed inset-0 z-40 bg-slate-900/32 lg:hidden"
                     />
                 )}
             </AnimatePresence>
@@ -127,16 +140,17 @@ export default function MobileCartDrawer({
                 className="fixed bottom-0 left-0 right-0 z-50 pointer-events-none lg:hidden"
                 style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
             >
-                <AnimatePresence>
+                <AnimatePresence initial={false} mode="wait">
                     {!isExpanded ? (
                         /* ── COLLAPSED PILL ── */
                         <motion.div
                             key="collapsed-pill"
-                            initial={{ y: 50, opacity: 0 }}
+                            initial={{ y: 28, opacity: 0 }}
                             animate={{ y: 0, opacity: 1 }}
-                            exit={{ y: 20, opacity: 0 }}
-                            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                            className="mx-4 mb-4 md:mb-6 pointer-events-auto cursor-pointer rounded-2xl bg-gradient-to-r from-slate-800 to-slate-900 shadow-2xl p-3 flex items-center justify-between gap-2"
+                            exit={{ y: 18, opacity: 0 }}
+                            transition={PILL_TRANSITION}
+                            className="mx-4 mb-4 md:mb-6 pointer-events-auto cursor-pointer rounded-2xl bg-gradient-to-r from-slate-800 to-slate-900 shadow-2xl p-3 flex items-center justify-between gap-2 transform-gpu will-change-transform"
+                            style={{ willChange: 'transform, opacity' }}
                             onClick={() => {
                                 y.set(window.innerHeight); // Start at the bottom
                                 onToggle(true);
@@ -191,12 +205,12 @@ export default function MobileCartDrawer({
                         <motion.div
                             ref={drawerCallbackRef}
                             key="expanded-drawer"
-                            style={{ y, maxHeight: 'min(85dvh, 85svh)' }}
-                            initial={{ y: window.innerHeight }}
-                            animate={{ y: 0 }}
-                            exit={{ y: window.innerHeight }}
-                            transition={{ type: 'spring', damping: 28, stiffness: 320 }}
-                            className="pointer-events-auto bg-white rounded-t-3xl shadow-[0_-10px_40px_-10px_rgba(0,0,0,0.25)] flex flex-col"
+                            style={{ y, maxHeight: 'min(85dvh, 85svh)', willChange: 'transform, opacity' }}
+                            initial={{ y: '100%', opacity: 0.98 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            exit={{ y: '100%', opacity: 0.98 }}
+                            transition={DRAWER_TRANSITION}
+                            className="pointer-events-auto bg-white rounded-t-3xl shadow-[0_-10px_40px_-10px_rgba(0,0,0,0.25)] flex flex-col transform-gpu will-change-transform"
                         >
                             {/* Drag handle bar */}
                             <div className="flex justify-center pt-3 pb-1 select-none">
