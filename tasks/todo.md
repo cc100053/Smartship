@@ -340,3 +340,46 @@ Identify instability root causes across frontend state flow, backend packing API
 - Secondary instability source is backend data-integrity mismatch: `/calculate/dimensions` silently drops unknown product IDs (unlike `/calculate/cart`), allowing item-count drift without explicit error.
 - Current reliability baseline is weak for CI/offline environments: context-load test hard-depends on Supabase DNS/network and fails without connectivity.
 - Hardening plan is prepared with P0/P1/P2 phases covering frontend consistency, API contracts, validation/rate limits, Supabase resilience, and observability.
+
+---
+
+# Stability Hardening Implementation (2026-03-05)
+
+## Goal
+Implement all identified high-impact stability fixes across frontend preview sync, backend validation/limits, and Supabase-connected runtime/test resilience.
+
+## Tasks
+- [x] **1. Frontend preview sync hardening**
+  - Added request timeout + abort propagation in `frontend/src/api/shippingApi.js`.
+  - Added stale-request cancellation and version gating in `frontend/src/hooks/useCart.js`.
+  - Added explicit preview loading/error state with retry action in `frontend/src/pages/ShippingCalculator.jsx`.
+  - Added loading placeholder support in `frontend/src/components/ParcelVisualizer3D.jsx`.
+- [x] **2. Frontend fetch race hardening**
+  - Added `AbortController` cleanup for categories/products fetch effects in `ShippingCalculator`.
+- [x] **3. Backend API contract hardening**
+  - Added bean validation constraints to cart/manual request DTOs.
+  - Unified cart expansion and validation path for `/calculate/cart` and `/calculate/dimensions`.
+  - Added unknown-ID rejection parity and expanded-item upper bound guard.
+  - Added explicit preview-unavailable 503 when dimensions packing result is invalid/empty.
+- [x] **4. Backend abuse/stability guards**
+  - Added rate limiting filter on `/api/shipping/calculate*` endpoints.
+  - Tightened default CORS policy by removing broad wildcard origin pattern.
+- [x] **5. Supabase/runtime & test resilience**
+  - Added Hikari lifecycle tuning knobs and health probe properties.
+  - Added actuator dependency and readiness endpoint exposure.
+  - Added Docker backend healthcheck and `depends_on: service_healthy`.
+  - Added isolated test profile (`H2`) so context-load test no longer depends on Supabase network.
+  - Added Mockito mock-maker fallback config to prevent JVM attach test failures.
+- [x] **6. Docs/env sync**
+  - Updated `.env.example` and README with new stability-related settings.
+
+## Review
+- Cart and 3D preview are now synchronized by request versioning and cancellation semantics instead of best-effort timing.
+- Preview no longer silently displays stale old dimensions after failed requests; users now get explicit status and retry.
+- Backend now rejects inconsistent or oversized cart payloads deterministically and applies the same validation for both calculate endpoints.
+- Supabase/network instability is isolated from test context by dedicated test profile; `backend` tests can run offline in CI/local.
+- Verification:
+  - `cd backend && ./mvnw -q -DskipTests compile` ✅
+  - `cd backend && ./mvnw -q test` ✅
+  - `cd frontend && npm run -s build` ✅
+  - `cd frontend && npx eslint src/api/shippingApi.js src/hooks/useCart.js src/pages/ShippingCalculator.jsx src/components/ParcelVisualizer3D.jsx` ✅

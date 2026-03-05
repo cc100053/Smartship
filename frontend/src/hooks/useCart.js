@@ -5,12 +5,22 @@ export function useCart() {
     const [cartItems, setCartItems] = useState([]);
     const [packedDimensions, setPackedDimensions] = useState(null);
     const [dimensionsLoading, setDimensionsLoading] = useState(false);
+    const [dimensionsError, setDimensionsError] = useState('');
     const debounceRef = useRef(null);
+    const requestVersionRef = useRef(0);
+    const inFlightControllerRef = useRef(null);
 
     // Fetch packed dimensions from backend when cart changes
     const fetchPackedDimensions = useCallback(async (items) => {
+        if (inFlightControllerRef.current) {
+            inFlightControllerRef.current.abort();
+            inFlightControllerRef.current = null;
+        }
+
         if (!items.length) {
             setPackedDimensions(null);
+            setDimensionsLoading(false);
+            setDimensionsError('');
             return;
         }
 
@@ -19,15 +29,39 @@ export function useCart() {
             quantity: item.quantity,
         }));
 
+        const controller = new AbortController();
+        inFlightControllerRef.current = controller;
+        const requestVersion = ++requestVersionRef.current;
+
         setDimensionsLoading(true);
+        setDimensionsError('');
+        setPackedDimensions(null);
+
         try {
-            const result = await calculateDimensions(payload);
+            const result = await calculateDimensions(payload, {
+                signal: controller.signal,
+                timeoutMs: 10000,
+            });
+            if (requestVersion !== requestVersionRef.current) {
+                return;
+            }
             setPackedDimensions(result); // result contains { dimensions, placements }
         } catch (err) {
+            if (controller.signal.aborted) {
+                return;
+            }
+            if (requestVersion !== requestVersionRef.current) {
+                return;
+            }
             console.error('[useCart] Failed to fetch packed dimensions:', err);
-            // Keep previous dimensions on error
+            setDimensionsError('3Dプレビューの更新に失敗しました。再試行してください。');
         } finally {
-            setDimensionsLoading(false);
+            if (requestVersion === requestVersionRef.current) {
+                setDimensionsLoading(false);
+            }
+            if (inFlightControllerRef.current === controller) {
+                inFlightControllerRef.current = null;
+            }
         }
     }, []);
 
@@ -47,6 +81,13 @@ export function useCart() {
             }
         };
     }, [cartItems, fetchPackedDimensions]);
+
+    useEffect(() => () => {
+        if (inFlightControllerRef.current) {
+            inFlightControllerRef.current.abort();
+            inFlightControllerRef.current = null;
+        }
+    }, []);
 
     const addToCart = (product) => {
         setCartItems((prev) => {
@@ -87,18 +128,30 @@ export function useCart() {
     };
 
     const clearCart = () => {
+        if (inFlightControllerRef.current) {
+            inFlightControllerRef.current.abort();
+            inFlightControllerRef.current = null;
+        }
         setCartItems([]);
         setPackedDimensions(null);
+        setDimensionsError('');
+        setDimensionsLoading(false);
     };
+
+    const retryPackedDimensions = useCallback(() => {
+        fetchPackedDimensions(cartItems);
+    }, [cartItems, fetchPackedDimensions]);
 
     return {
         cartItems,
         packedDimensions,
         dimensionsLoading,
+        dimensionsError,
         addToCart,
         incrementItem,
         decrementItem,
         removeItem,
         clearCart,
+        retryPackedDimensions,
     };
 }

@@ -463,7 +463,7 @@ class CanvasErrorBoundary extends Component {
 }
 
 // ── Main Component ────────────────────────────────────────────────
-export default function ParcelVisualizer3D({ dimensions, mode, placements = [] }) {
+export default function ParcelVisualizer3D({ dimensions, mode, placements = [], loading = false }) {
   const hasDimensions = dimensions &&
     dimensions.lengthCm > 0 &&
     dimensions.widthCm > 0 &&
@@ -523,7 +523,12 @@ export default function ParcelVisualizer3D({ dimensions, mode, placements = [] }
 
       <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-[1.5fr_1fr]">
         <div className="relative h-64 sm:h-80 min-h-[16rem] rounded-xl sm:rounded-2xl border border-white/50 bg-slate-900/90 shadow-inner overflow-hidden group">
-          {displayPlacements.length > 0 ? (
+          {loading ? (
+            <div className="flex flex-col items-center justify-center h-full text-white/60">
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/30 border-t-white mb-2" />
+              <p className="text-xs">3Dプレビューを更新中...</p>
+            </div>
+          ) : displayPlacements.length > 0 ? (
             <CanvasErrorBoundary>
               <Canvas camera={{ position: [8, 8, 8], fov: 45 }}>
                 <Scene

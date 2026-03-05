@@ -21,7 +21,6 @@ public class CorsConfig implements WebMvcConfigurer {
         List<String> originPatterns = new ArrayList<>();
         originPatterns.add(frontendUrl);
         originPatterns.add("http://localhost:3000");
-        originPatterns.add("https://*.vercel.app");
 
         if (frontendExtraOrigins != null && !frontendExtraOrigins.isBlank()) {
             for (String origin : frontendExtraOrigins.split(",")) {
