@@ -27,6 +27,7 @@ import org.springframework.stereotype.Service;
 public class PackingService {
 
     private final ShippingCarrierRepository carrierRepository;
+    private static final String LIB_BOX_ID_PREFIX = "lib#";
 
     private static final boolean USE_LIBRARY_ONLY = true;
     private static final int BRUTE_FORCE_ITEM_LIMIT = 8;
@@ -1260,17 +1261,17 @@ public class PackingService {
             int depth = p.getAbsoluteEndY() - p.getAbsoluteY() + 1;
             int height = p.getAbsoluteEndZ() - p.getAbsoluteZ() + 1;
 
-            String itemName = colorIndex < items.size() ? items.get(colorIndex).getName() : "Item " + colorIndex;
+            PlacementLabel label = resolvePlacementLabel(p, items, colorIndex);
 
             placements.add(new PlacementInfo(
-                    itemName,
+                    label.name(),
                     p.getAbsoluteX() - minX,
                     p.getAbsoluteY() - minY,
                     p.getAbsoluteZ() - minZ,
                     width,
                     depth,
                     height,
-                    colors[colorIndex % colors.length]));
+                    colors[label.colorIndex() % colors.length]));
             colorIndex++;
         }
 
@@ -1284,6 +1285,42 @@ public class PackingService {
                 items.size());
 
         return new PackingResult(dims, placements);
+    }
+
+    private record PlacementLabel(String name, int colorIndex) {
+    }
+
+    private PlacementLabel resolvePlacementLabel(Placement placement, List<ProductReference> items, int fallbackIndex) {
+        int originalIndex = parseLibraryBoxIndex(placement);
+        if (originalIndex >= 0 && originalIndex < items.size()) {
+            return new PlacementLabel(items.get(originalIndex).getName(), originalIndex);
+        }
+
+        String boxId = placement.getBox() != null ? placement.getBox().getId() : null;
+        if (boxId != null && !boxId.isBlank()) {
+            return new PlacementLabel(boxId, fallbackIndex);
+        }
+
+        if (fallbackIndex >= 0 && fallbackIndex < items.size()) {
+            return new PlacementLabel(items.get(fallbackIndex).getName(), fallbackIndex);
+        }
+
+        return new PlacementLabel("Item " + fallbackIndex, fallbackIndex);
+    }
+
+    private int parseLibraryBoxIndex(Placement placement) {
+        if (placement == null || placement.getBox() == null) {
+            return -1;
+        }
+        String boxId = placement.getBox().getId();
+        if (boxId == null || !boxId.startsWith(LIB_BOX_ID_PREFIX)) {
+            return -1;
+        }
+        try {
+            return Integer.parseInt(boxId.substring(LIB_BOX_ID_PREFIX.length()));
+        } catch (NumberFormatException ex) {
+            return -1;
+        }
     }
 
     private PackingResult compactThinPlacements(PackingResult packed) {
@@ -1582,9 +1619,10 @@ public class PackingService {
 
     private List<BoxItem> createBoxItemsLibraryNative(List<ProductReference> items) {
         List<BoxItem> boxItems = new ArrayList<>();
-        for (ProductReference item : items) {
+        for (int i = 0; i < items.size(); i++) {
+            ProductReference item = items.get(i);
             Box box = Box.newBuilder()
-                    .withId(item.getName())
+                    .withId(LIB_BOX_ID_PREFIX + i)
                     .withSize(toMm(item.getLengthCm()), toMm(item.getWidthCm()), toMm(item.getHeightCm()))
                     .withWeight(item.getWeightG())
                     .withRotate3D()

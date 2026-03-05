@@ -9,7 +9,11 @@ import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -291,5 +295,105 @@ public class PackingServiceTest {
 
         assertTrue(Math.abs(plushSum - jpSum) <= 1.0,
                 "Japanese plush names should be compressed similarly to English 'plush' names.");
+    }
+
+    @Test
+    public void testUserReportedCartHasNo3DOverlapAndDetectUnsupportedPlacements() {
+        List<ProductReference> items = new ArrayList<>();
+        items.add(new ProductReference(null, "Electronics", "Smartphone Box", "スマートフォン (箱入)", 16, 9, 5, 400, null));
+        items.add(new ProductReference(null, "Electronics", "Wireless Earbuds", "ワイヤレスイヤホン", 10, 10, 4, 150, null));
+        items.add(new ProductReference(null, "Fashion", "Hoodie", "パーカー/スウェット", 35, 28, 8, 600, null));
+        items.add(new ProductReference(null, "Fashion", "Kids Clothes", "子供服 (セット)", 20, 15, 3, 150, null));
+
+        PackingResult result = packingService.calculatePackedResult(items);
+
+        List<PlacementInfo> placements = result.placements();
+        System.out.println("[repro] dims = " + result.dimensions().getLengthCm() + " x "
+                + result.dimensions().getWidthCm() + " x " + result.dimensions().getHeightCm());
+        placements.forEach(p -> System.out.println(
+                "[repro] " + p.name() + " @ (" + p.x() + "," + p.y() + "," + p.z() + ") size "
+                        + p.width() + "x" + p.depth() + "x" + p.height()));
+
+        List<String> overlapPairs = new ArrayList<>();
+        for (int i = 0; i < placements.size(); i++) {
+            for (int j = i + 1; j < placements.size(); j++) {
+                if (intersects(placements.get(i), placements.get(j))) {
+                    overlapPairs.add(placements.get(i).name() + " <-> " + placements.get(j).name());
+                }
+            }
+        }
+
+        List<String> unsupported = placements.stream()
+                .filter(p -> p.z() > 0)
+                .filter(p -> !hasSupport(p, placements))
+                .map(PlacementInfo::name)
+                .collect(Collectors.toList());
+
+        System.out.println("[repro] overlapPairs=" + overlapPairs);
+        System.out.println("[repro] unsupported=" + unsupported);
+
+        assertTrue(overlapPairs.isEmpty(), "3D overlap detected: " + overlapPairs);
+    }
+
+    @Test
+    public void testPlacementNameMatchesActualPlacedBoxDimensions() {
+        List<ProductReference> items = new ArrayList<>();
+        items.add(new ProductReference(null, "T", "A", "A", 31, 7, 5, 100, null));
+        items.add(new ProductReference(null, "T", "B", "B", 13, 11, 3, 100, null));
+        items.add(new ProductReference(null, "T", "C", "C", 19, 8, 6, 100, null));
+        items.add(new ProductReference(null, "T", "D", "D", 17, 9, 4, 100, null));
+
+        PackingResult result = packingService.calculatePackedResult(items);
+        Map<String, int[]> expectedDimsByName = new HashMap<>();
+        for (ProductReference item : items) {
+            expectedDimsByName.put(item.getName(), sortedDimsMm(item.getLengthCm(), item.getWidthCm(), item.getHeightCm()));
+        }
+
+        for (PlacementInfo p : result.placements()) {
+            int[] expected = expectedDimsByName.get(p.name());
+            assertTrue(expected != null, "Unknown placement name returned: " + p.name());
+
+            int[] actual = sortedDimsMm(p.width() / 10.0, p.depth() / 10.0, p.height() / 10.0);
+            assertTrue(Arrays.equals(expected, actual),
+                    "Placement dimensions do not match product name '" + p.name()
+                            + "'. expected=" + Arrays.toString(expected)
+                            + " actual=" + Arrays.toString(actual));
+        }
+    }
+
+    private boolean intersects(PlacementInfo a, PlacementInfo b) {
+        boolean overlapX = a.x() < b.x() + b.width() && b.x() < a.x() + a.width();
+        boolean overlapY = a.y() < b.y() + b.depth() && b.y() < a.y() + a.depth();
+        boolean overlapZ = a.z() < b.z() + b.height() && b.z() < a.z() + a.height();
+        return overlapX && overlapY && overlapZ;
+    }
+
+    private boolean hasSupport(PlacementInfo target, List<PlacementInfo> placements) {
+        int targetBottom = target.z();
+        for (PlacementInfo other : placements) {
+            if (other == target) {
+                continue;
+            }
+            int top = other.z() + other.height();
+            if (top != targetBottom) {
+                continue;
+            }
+            boolean overlapX = target.x() < other.x() + other.width() && other.x() < target.x() + target.width();
+            boolean overlapY = target.y() < other.y() + other.depth() && other.y() < target.y() + target.depth();
+            if (overlapX && overlapY) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private int[] sortedDimsMm(double lCm, double wCm, double hCm) {
+        int[] dims = new int[] {
+                (int) Math.round(lCm * 10),
+                (int) Math.round(wCm * 10),
+                (int) Math.round(hCm * 10)
+        };
+        Arrays.sort(dims);
+        return dims;
     }
 }

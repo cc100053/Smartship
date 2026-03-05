@@ -52,6 +52,9 @@ For the active native library path (`calculatePackedResultLibrary`, `canFit`, `c
 - Dimensions are raw item dimensions (no plush/fashion compression in this path).
 - Boxes are created with `withRotate3D()`.
 - Units are converted cm -> mm (`toMm`) and output mm -> cm (`toCm`).
+- Each box is assigned a stable internal ID (`lib#<index>`) in `createBoxItemsLibraryNative(...)`.
+- `buildPackingResult(...)` resolves placement label from the packed box ID, not placement iteration order.
+  - This keeps item identity stable for frontend animation keys even when library placement order changes.
 
 ## 5. ShippingMatcher Interaction
 
