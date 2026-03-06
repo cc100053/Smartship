@@ -38,6 +38,9 @@ curl -sS "https://api.github.com/repos/cc100053/Smartship/commits/$(git rev-pars
 ```bash
 COMMIT_SHA="$(git rev-parse --short HEAD)"
 ```
+2. Ensure production cookie mode is active:
+- Do **not** set `SPRING_PROFILES_ACTIVE=local` on Azure.
+- Production/default backend config now expects cross-site HTTPS and emits session cookies as `SameSite=None; Secure`.
 2. Build and push image:
 ```bash
 cd backend
@@ -79,10 +82,25 @@ curl -i "https://smartship-backend.agreeablemeadow-deb59e6e.japaneast.azureconta
 ```
 - Expect `HTTP/2 200` with JSON body.
 
+3. Auth cookie attributes:
+```bash
+curl -i "https://smartship-backend.agreeablemeadow-deb59e6e.japaneast.azurecontainerapps.io/api/auth/login-or-register" \
+  -X POST \
+  -H "Origin: https://smartship.vercel.app" \
+  -H "Content-Type: application/json" \
+  --data '{"loginId":"cookie-check","password":"cookie-check"}'
+```
+- Expect `set-cookie` to include both `SameSite=None` and `Secure`.
+
 ## D. Known pitfalls and fixes
 1. Frontend works locally but not in deployed site:
 - Check frontend build-time `VITE_API_URL`.
 - Preview deployments and production deployments can point to different backend URLs.
+
+1.5. Login succeeds but `/api/me/products` returns `401` immediately after:
+- Root cause is usually a session cookie mismatch for cross-site deployment.
+- Production backend must **not** run with `SPRING_PROFILES_ACTIVE=local`.
+- Confirm the login response `Set-Cookie` includes `SameSite=None; Secure`.
 
 2. CORS blocked on production:
 - Ensure backend env contains:
@@ -100,4 +118,3 @@ jdbc:postgresql://aws-1-ap-northeast-1.pooler.supabase.com:6543/postgres?sslmode
 ```text
 VITE_API_URL=http://localhost:8080
 ```
-

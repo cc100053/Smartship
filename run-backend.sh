@@ -20,4 +20,4 @@ echo ""
 echo "Starting backend..."
 
 cd backend || exit 1
-./mvnw spring-boot:run
+SPRING_PROFILES_ACTIVE="${SPRING_PROFILES_ACTIVE:-local}" ./mvnw spring-boot:run

@@ -115,7 +115,7 @@ const getResetErrorMessage = (error) => {
   return '統計データを初期化できませんでした。';
 };
 
-const DIGIT_CELL_EM = 1;
+const DIGIT_CELL_HEIGHT = 1.25; // Increase height to prevent clipping of descenders like commas
 
 const buildDigitFrames = (previousDigit, nextDigit) => {
   if (!Number.isInteger(previousDigit) || !Number.isInteger(nextDigit)) {
@@ -137,12 +137,12 @@ function RollingDigit({ previousChar, nextChar, place, depth }) {
   const previousDigit = previousChar != null && /\d/.test(previousChar) ? Number(previousChar) : 0;
   const nextDigit = nextChar != null && /\d/.test(nextChar) ? Number(nextChar) : 0;
   const frames = buildDigitFrames(previousDigit, nextDigit);
-  const offset = -((frames.length - 1) * DIGIT_CELL_EM);
+  const offset = -((frames.length - 1) * DIGIT_CELL_HEIGHT);
   const duration = Math.min(2.66, Math.max(0.9, frames.length * 0.27));
 
   return (
     <span
-      className="relative inline-flex h-[1em] overflow-hidden align-baseline"
+      className="relative inline-flex h-[1.25em] overflow-hidden align-baseline mt-[-0.125em]"
       style={{ width: `${place === 0 ? 0.72 : 0.66}em` }}
     >
       <motion.span
@@ -155,7 +155,7 @@ function RollingDigit({ previousChar, nextChar, place, depth }) {
         {frames.map((digit, index) => (
           <span
             key={`${place}-${digit}-${index}`}
-            className="flex h-[1em] items-center justify-center leading-none"
+            className="flex h-[1.25em] items-center justify-center leading-none"
           >
             {digit}
           </span>
@@ -167,7 +167,7 @@ function RollingDigit({ previousChar, nextChar, place, depth }) {
 
 function RollingGlyph({ char }) {
   return (
-    <span className="inline-flex h-[1em] items-center leading-none align-baseline">
+    <span className="inline-flex h-[1.25em] items-center leading-none align-baseline mt-[-0.125em]">
       {char}
     </span>
   );
@@ -193,7 +193,7 @@ function RollingValue({ text, className, loading }) {
   const maxLength = Math.max(nextChars.length, prevChars.length);
 
   return (
-    <span className={cn('inline-flex flex-nowrap items-baseline overflow-hidden leading-none', className)}>
+    <span className={cn('inline-flex flex-nowrap items-baseline overflow-visible leading-none', className)}>
       {Array.from({ length: maxLength }).map((_, index) => {
         const nextChar = nextChars[maxLength - 1 - index];
         const previousChar = prevChars[maxLength - 1 - index];
@@ -207,7 +207,7 @@ function RollingValue({ text, className, loading }) {
         const isDigitPair = /\d/.test(nextChar ?? '') || /\d/.test(previousChar ?? '');
 
         return (
-          <span key={`${place}-${nextChar ?? 'empty'}-${previousChar ?? 'empty'}`} className="inline-flex">
+          <span key={`${place}-${nextChar ?? 'empty'}-${previousChar ?? 'empty'}`} className="inline-flex h-[1em] overflow-visible">
             {isDigitPair && /\d/.test(nextChar ?? '') ? (
               <RollingDigit previousChar={previousChar} nextChar={nextChar} place={place} depth={depth} />
             ) : (
@@ -218,7 +218,7 @@ function RollingValue({ text, className, loading }) {
                   animate={{ y: 0, opacity: 1 }}
                   exit={{ y: '-45%', opacity: 0 }}
                   transition={{ duration: 0.72, delay: depth * 0.045 }}
-                  className="inline-flex"
+                  className="inline-flex h-[1em] overflow-visible"
                 >
                   <RollingGlyph char={nextChar ?? ''} />
                 </motion.span>
@@ -476,9 +476,9 @@ export default function StatsDashboard() {
                     </div>
 
                     <div className="mt-8 flex flex-col">
-                      <div className="mt-2 inline-flex items-baseline gap-1.5 font-kpi leading-[0.9] text-slate-950">
+                      <div className="mt-2 flex items-baseline gap-1.5 font-kpi leading-none text-slate-950">
                         {!loading && parts.prefix ? (
-                          <span className="text-[2.15rem] font-semibold tracking-[-0.04em] sm:text-[2.6rem]">
+                          <span className="text-[2rem] font-semibold tracking-[-0.04em] opacity-80 sm:text-[2.4rem]">
                             {parts.prefix}
                           </span>
                         ) : null}
@@ -488,7 +488,7 @@ export default function StatsDashboard() {
                           className="text-[2.75rem] font-semibold tracking-[-0.06em] sm:text-[3.3rem]"
                         />
                         {!loading && (parts.unit || card.suffix) ? (
-                          <span className="text-[2.15rem] font-semibold tracking-[-0.04em] sm:text-[2.6rem]">
+                          <span className="text-[1.8rem] font-semibold tracking-[-0.02em] opacity-80 sm:text-[2.2rem]">
                             {parts.unit || card.suffix}
                           </span>
                         ) : null}

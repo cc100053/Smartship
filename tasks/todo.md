@@ -141,6 +141,41 @@ Keep the header frozen at the top without introducing horizontal drift relative 
 
 # Login / Saved Products Design Discussion
 
+# Azure Session Cookie Debug
+
+## Goal
+Fix the production-only `401 Unauthorized` on `GET /api/me/products` after a successful login against the Azure backend.
+
+## Tasks
+- [x] **1. Trace auth/session flow**
+  - Confirm how the frontend performs login and personalized product fetches.
+  - Confirm which backend auth mechanism `/api/me/products` requires and how the session cookie is configured.
+- [x] **2. Identify Azure-only failure mode**
+  - Compare local-friendly cookie defaults against the deployed cross-site frontend/backend topology.
+  - Verify whether current defaults would prevent the browser from persisting or sending the session cookie.
+- [x] **3. Implement minimal durable fix**
+  - Make production session handling work for cross-site HTTPS deployments without breaking local development.
+  - Update deployment documentation so Azure env is configured consistently.
+- [x] **4. Verify**
+  - Run backend tests/builds covering the touched code.
+  - Add a review note documenting root cause, fix, and any remaining deployment requirement.
+
+## Review
+- Root cause:
+  - The backend auth flow uses `HttpSession`, and the frontend already sends `credentials: 'include'`.
+  - Production/default cookie settings were still local-dev oriented: `SameSite=Lax` and `Secure=false`.
+  - With the frontend on `smartship.vercel.app` and the backend on `azurecontainerapps.io`, the browser treats the session cookie as cross-site, so it will not persist/send that cookie for authenticated API fetches unless it is `SameSite=None; Secure`.
+- Implemented fix:
+  - Switched default backend cookie behavior to production-safe cross-site HTTPS mode in `backend/src/main/resources/application.properties`.
+  - Added `backend/src/main/resources/application-local.properties` so local HTTP development still uses `Lax` + non-secure cookies.
+  - Updated `run-backend.sh`, `docker-compose.yml`, and `.env.example` so local runs default to the `local` profile instead of accidentally using production cookie rules on `http://localhost`.
+  - Hardened frontend login UX in `frontend/src/App.jsx` by verifying `/api/auth/session` immediately after login before treating the user as authenticated, which prevents false-success UI when the cookie is blocked.
+  - Updated `docs/deployment_runbook.md` with an auth-cookie smoke check and an explicit warning not to run Azure with `SPRING_PROFILES_ACTIVE=local`.
+- Verification:
+  - `cd backend && ./mvnw test` ✅
+  - `cd frontend && npm run build` ✅
+  - Residual requirement: the Azure container app must not override the new production-safe defaults with `SPRING_PROFILES_ACTIVE=local` or legacy cookie env vars.
+
 ## Goal
 Define a minimal login system and saved-products UX that matches the requested behavior:
 - Single in-page modal, no redirect to another site.
