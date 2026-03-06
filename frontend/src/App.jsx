@@ -9,7 +9,6 @@ import { fetchAuthSession, loginOrRegister, logout } from './api/shippingApi';
 
 const MotionHeader = motion.header;
 const MotionMain = motion.main;
-const MotionFooter = motion.footer;
 
 export default function App() {
   const mainRef = useRef(null);
@@ -73,17 +72,21 @@ export default function App() {
       setAuthToast(
         session?.justRegistered
           ? {
-            title: 'アカウントを作成しました',
+            title: null,
             message: session?.message || 'ID が見つからなかったため、そのままアカウントを作成しました。',
           }
           : {
-            title: 'ログインしました',
+            title: null,
             message: `${session?.loginId || 'アカウント'}でログインしました。`,
           },
       );
       setAuthModalOpen(false);
     } catch (error) {
-      setAuthError(error?.message || 'ログインに失敗しました。');
+      if (error?.status === 401) {
+        setAuthError('このユーザーIDは既に使用されているか、パスワードが正しくありません。');
+      } else {
+        setAuthError(error?.message || 'ログインに失敗しました。');
+      }
     } finally {
       setAuthSubmitting(false);
     }
@@ -100,7 +103,10 @@ export default function App() {
         accountId: null,
         loginId: null,
       });
-      setAuthToast(null);
+      setAuthToast({
+        title: null,
+        message: 'アカウントからログアウトしました。',
+      });
     }
   };
 
@@ -204,17 +210,6 @@ export default function App() {
               }}
             />
           </div>
-
-          <MotionFooter
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
-            className="flex-none pt-3 pb-2 sm:pt-6 sm:pb-4 text-center"
-          >
-            <p className="text-xs text-slate-500">
-              © 2026 SmartShip. All rights reserved.
-            </p>
-          </MotionFooter>
         </MotionMain>
 
         <ScrollToTopButton scrollContainerRef={mainRef} hidden={cartDrawerOpen} />

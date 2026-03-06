@@ -21,6 +21,24 @@ const createTimeoutError = () => {
   return error;
 };
 
+const extractErrorMessage = (text, status) => {
+  if (!text) return `リクエストに失敗しました (${status})`;
+
+  try {
+    const parsed = JSON.parse(text);
+    if (typeof parsed?.message === 'string' && parsed.message.trim()) {
+      return parsed.message.trim();
+    }
+    if (typeof parsed?.error === 'string' && parsed.error.trim()) {
+      return parsed.error.trim();
+    }
+  } catch {
+    // Keep raw text fallback when response is not JSON.
+  }
+
+  return text;
+};
+
 const withTimeoutSignal = (externalSignal, timeoutMs) => {
   const controller = new AbortController();
 
@@ -79,7 +97,7 @@ const requestJson = async (path, options = {}) => {
 
       if (!res.ok) {
         const text = await res.text();
-        const error = new Error(text || `リクエストに失敗しました (${res.status})`);
+        const error = new Error(extractErrorMessage(text, res.status));
         error.status = res.status;
 
         const canRetry = attempt < retry && isRetriableStatus(res.status);

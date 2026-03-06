@@ -98,6 +98,12 @@ Ship the agreed single-modal login flow plus user-owned product storage and like
 - [x] **7. Replace auth success banner with toast prompt**
   - Show a compact bottom-right prompt for normal login success.
   - Show a redesigned bottom-right prompt for auto-register success instead of the old top banner.
+- [x] **8. Premium-glass polish for toast and personalized detail panels**
+  - Upgrade the bottom-right prompt to match the premium glass language.
+  - Add stronger visual separation for saved-products and liked-products detail groups.
+- [x] **9. Friendly auth failure and logout feedback**
+  - Replace raw auth JSON errors with a user-facing message for wrong-password / existing-account cases.
+  - Show a logout-complete toast prompt.
 
 # Room Invite Code Request Failure Investigation
 

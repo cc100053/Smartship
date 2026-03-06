@@ -67,3 +67,7 @@
 ## 17. Viewer framing tweaks must preserve scene-level size normalization
 - **Mistake**: Viewer felt too far, but a broad change risked touching shared scene scaling and breaking product-size-based zoom behavior.
 - **Rule**: When tuning viewer composition, adjust only viewer-local camera framing (position/FOV) and keep shared `Scene`/`maxDim` normalization logic untouched.
+
+## 18. UI language must stay consistent across the whole project
+- **Mistake**: Mixed Cantonese copy into a project flow that had already been standardized to Japanese, causing inconsistent runtime UI.
+- **Rule**: Once the user sets a project-wide UI language, treat every visible runtime string, toast, modal, and error message as part of that contract and keep them all in the same language unless the user explicitly requests mixed-language copy.
