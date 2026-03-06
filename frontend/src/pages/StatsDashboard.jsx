@@ -274,7 +274,7 @@ const cards = [
   },
   {
     key: 'cumulativeVolumeSavedCm3',
-    label: '包装容積削減',
+    label: '包装体積削減',
     eyebrow: 'Saved Packaging Volume',
     group: 'Volume',
     accent: 'from-violet-200 via-indigo-100 to-white',
@@ -564,8 +564,8 @@ export default function StatsDashboard() {
                   <p className="mt-1 leading-6">各配送候補の `長さ × 幅 × 高さ` を比較し、推奨案が小さくなったぶんを累積します。</p>
                 </div>
                 <div className="rounded-2xl border border-slate-200/70 bg-slate-50/80 px-4 py-3">
-                  <p className="font-semibold text-slate-700">ゼロ表示</p>
-                  <p className="mt-1 leading-6">記録がまだない場合でも、4 指標はすべて 0 で安定表示します。</p>
+                  <p className="font-semibold text-slate-700">碳排放計算說明</p>
+                  <p className="mt-1 leading-6">推定 CO2e 削減量 (g) = 最大寸法差 (cm) × 12 × clamp(梱包重量 (kg), 0.8, 2.0)</p>
                 </div>
               </div>
             </div>
