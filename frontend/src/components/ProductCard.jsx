@@ -1,8 +1,9 @@
-import { useRef, useState, useCallback, useEffect } from 'react';
+import { createElement, useRef, useState, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Plus } from 'lucide-react';
+import { Heart, Plus, Trash2 } from 'lucide-react';
 import { getCategoryLabel } from '../utils/labels';
 import { getIconForProduct } from '../utils/productIcons';
+import { CATEGORY_COLORS } from '../utils/colors';
 
 const formatDimension = (value) => Number(value).toFixed(1);
 
@@ -12,13 +13,20 @@ const formatWeight = (weightG) => {
   }
   return `${weightG} g`;
 };
-import { CATEGORY_COLORS } from '../utils/colors';
 
-export default function ProductCard({ product, onAdd, index = 0 }) {
+const MotionArticle = motion.article;
+
+export default function ProductCard({
+  product,
+  onAdd,
+  onToggleLike,
+  liked = false,
+  onDelete,
+  deleteLabel = '削除',
+  index = 0,
+}) {
   const sizeLabel = `${formatDimension(product.lengthCm)} x ${formatDimension(product.widthCm)} x ${formatDimension(product.heightCm)} cm`;
   const weightLabel = formatWeight(product.weightG);
-  const Icon = getIconForProduct(product);
-
   const categoryColor = CATEGORY_COLORS[product.category] || CATEGORY_COLORS.Other;
 
   const cardRef = useRef(null);
@@ -47,7 +55,6 @@ export default function ProductCard({ product, onAdd, index = 0 }) {
     const rect = el.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width;
     const y = (e.clientY - rect.top) / rect.height;
-    // Tilt: max ±8 degrees
     setTilt({
       rotateY: (x - 0.5) * 16,
       rotateX: (0.5 - y) * 16,
@@ -59,13 +66,16 @@ export default function ProductCard({ product, onAdd, index = 0 }) {
     if (!supportsHover) return;
     setIsHovering(true);
   }, [supportsHover]);
+
   const handleMouseLeave = useCallback(() => {
     setIsHovering(false);
     setTilt({ rotateX: 0, rotateY: 0 });
   }, []);
 
+  const sourceLabel = product.source === 'saved' ? 'マイ商品' : null;
+
   return (
-    <motion.article
+    <MotionArticle
       ref={cardRef}
       onMouseMove={handleMouseMove}
       onMouseEnter={handleMouseEnter}
@@ -75,11 +85,10 @@ export default function ProductCard({ product, onAdd, index = 0 }) {
         rotateY: supportsHover ? tilt.rotateY : 0,
         scale: supportsHover && isHovering ? 1.04 : 1,
       }}
-      transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 20, delay: index * 0.01 }}
       style={{ transformStyle: 'preserve-3d', perspective: 800 }}
       className="group relative flex w-full items-center justify-between gap-2 sm:gap-3 rounded-xl border border-white/60 bg-white/40 p-1.5 sm:p-3 shadow-sm backdrop-blur-md overflow-hidden"
     >
-      {/* Glow overlay that follows cursor */}
       <div
         className="pointer-events-none absolute inset-0 rounded-xl transition-opacity duration-300"
         style={{
@@ -91,11 +100,18 @@ export default function ProductCard({ product, onAdd, index = 0 }) {
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5 sm:gap-2">
           <span className={`flex h-5 w-5 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-lg ${categoryColor.bg}`}>
-            <Icon className="h-2.5 w-2.5 sm:h-4 sm:w-4" />
+            {createElement(getIconForProduct(product), { className: 'h-2.5 w-2.5 sm:h-4 sm:w-4' })}
           </span>
           <div className="min-w-0">
-            <div className="text-[0.5rem] sm:text-[0.625rem] font-bold uppercase tracking-wider text-slate-400">
-              {getCategoryLabel(product.category)}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="text-[0.5rem] sm:text-[0.625rem] font-bold uppercase tracking-wider text-slate-400">
+                {getCategoryLabel(product.category)}
+              </div>
+              {sourceLabel ? (
+                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[0.55rem] font-semibold uppercase tracking-[0.2em] text-amber-700">
+                  {sourceLabel}
+                </span>
+              ) : null}
             </div>
             <h3
               className="line-clamp-2 text-xs sm:text-sm font-bold text-slate-900 leading-tight"
@@ -115,15 +131,44 @@ export default function ProductCard({ product, onAdd, index = 0 }) {
         </div>
       </div>
 
-      {onAdd ? (
-        <button
-          type="button"
-          onClick={onAdd}
-          className="flex h-11 w-11 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white shadow-sm transition-all hover:bg-slate-800 hover:scale-105 active:scale-95"
-        >
-          <Plus className="h-4 w-4" />
-        </button>
-      ) : null}
-    </motion.article>
+      <div className="relative z-10 flex shrink-0 items-center gap-2">
+        {onToggleLike ? (
+          <button
+            type="button"
+            onClick={onToggleLike}
+            className={`flex h-11 w-11 sm:h-8 sm:w-8 items-center justify-center rounded-full border transition ${
+              liked
+                ? 'border-rose-200 bg-rose-50 text-rose-500'
+                : 'border-slate-200 bg-white text-slate-500 hover:border-rose-200 hover:text-rose-500'
+            }`}
+            aria-label={liked ? 'お気に入りを解除' : 'お気に入りに追加'}
+          >
+            <Heart className={`h-4 w-4 ${liked ? 'fill-current' : ''}`} />
+          </button>
+        ) : null}
+
+        {onDelete ? (
+          <button
+            type="button"
+            onClick={onDelete}
+            className="flex h-11 w-11 sm:h-8 sm:w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-rose-200 hover:text-rose-500"
+            aria-label={deleteLabel}
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        ) : null}
+
+        {onAdd ? (
+          <button
+            type="button"
+            onClick={onAdd}
+            className="flex h-11 w-11 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white shadow-sm transition-all hover:bg-slate-800 hover:scale-105 active:scale-95"
+            aria-label="カートに追加"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+        ) : null}
+      </div>
+    </MotionArticle>
   );
 }

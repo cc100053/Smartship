@@ -1,11 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { fetchCategories, fetchProducts } from '../api/shippingApi';
+import {
+  createSavedProduct,
+  deleteSavedProduct,
+  fetchCategories,
+  fetchPersonalizedProducts,
+  fetchProducts,
+  likeProduct,
+  unlikeProduct,
+} from '../api/shippingApi';
 import CartPanel from '../components/CartPanel';
 import CategoryTabs from '../components/CategoryTabs';
 import ManualInputForm from '../components/ManualInputForm';
 import MobileCartDrawer from '../components/MobileCartDrawer';
 import ParcelVisualizer3D from '../components/ParcelVisualizer3D';
+import PersonalizedProductsSection from '../components/PersonalizedProductsSection';
 import ProductCard from '../components/ProductCard';
 import ShippingResult from '../components/ShippingResult';
 import { getCategoryLabel } from '../utils/labels';
@@ -21,12 +30,17 @@ const parsePositiveNumber = (value) => {
 };
 const MotionDiv = motion.div;
 
-export default function ShippingCalculator({ onDrawerToggle }) {
+export default function ShippingCalculator({ onDrawerToggle, authSession, onOpenLogin }) {
   const [categories, setCategories] = useState([]);
   const [activeCategory, setActiveCategory] = useState(ALL_CATEGORY);
   const [products, setProducts] = useState([]);
+  const [savedProducts, setSavedProducts] = useState([]);
+  const [likedProducts, setLikedProducts] = useState([]);
+  const [likedProductIds, setLikedProductIds] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [personalizedLoading, setPersonalizedLoading] = useState(false);
   const [error, setError] = useState('');
+  const [personalizedError, setPersonalizedError] = useState('');
   const [mode, setMode] = useState('cart');
   const [cartExpanded, setCartExpanded] = useState(false);
 
@@ -123,6 +137,11 @@ export default function ShippingCalculator({ onDrawerToggle }) {
     ];
   }, [categories]);
 
+  const likedProductIdSet = useMemo(
+    () => new Set(likedProductIds.map((id) => Number(id))),
+    [likedProductIds],
+  );
+
   useEffect(() => {
     const controller = new AbortController();
     let cancelled = false;
@@ -174,6 +193,46 @@ export default function ShippingCalculator({ onDrawerToggle }) {
     };
   }, [activeCategory]);
 
+  useEffect(() => {
+    if (!authSession?.authenticated) {
+      setSavedProducts([]);
+      setLikedProducts([]);
+      setLikedProductIds([]);
+      setPersonalizedError('');
+      return;
+    }
+
+    const controller = new AbortController();
+    let cancelled = false;
+
+    const loadPersonalizedProducts = async () => {
+      setPersonalizedLoading(true);
+      setPersonalizedError('');
+
+      try {
+        const data = await fetchPersonalizedProducts({ signal: controller.signal, timeoutMs: 10000 });
+        if (cancelled) return;
+        setSavedProducts(data?.savedProducts || []);
+        setLikedProducts(data?.likedProducts || []);
+        setLikedProductIds(data?.likedProductIds || []);
+      } catch (loadError) {
+        if (controller.signal.aborted) return;
+        console.error('[ShippingCalculator] Failed to load personalized products:', loadError);
+        setPersonalizedError('マイ商品データの取得に失敗しました。');
+      } finally {
+        if (!cancelled) {
+          setPersonalizedLoading(false);
+        }
+      }
+    };
+
+    loadPersonalizedProducts();
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [authSession?.authenticated, authSession?.accountId]);
+
   const handleAddToCart = (product) => {
     resetCalculation();
     addToCart(product);
@@ -195,6 +254,38 @@ export default function ShippingCalculator({ onDrawerToggle }) {
   const handleRemove = (id) => {
     resetCalculation();
     removeItem(id);
+  };
+
+  const handleCreateSavedProduct = async (payload) => {
+    const created = await createSavedProduct(payload);
+    setSavedProducts((prev) => [created, ...prev]);
+    return created;
+  };
+
+  const handleDeleteSavedProduct = async (savedProductId) => {
+    await deleteSavedProduct(savedProductId);
+    setSavedProducts((prev) => prev.filter((product) => Number(product.id) !== Number(savedProductId)));
+  };
+
+  const handleToggleLike = async (product) => {
+    if (!authSession?.authenticated) {
+      onOpenLogin?.();
+      return;
+    }
+
+    const productId = Number(product.id);
+    const isLiked = likedProductIdSet.has(productId);
+
+    if (isLiked) {
+      await unlikeProduct(productId);
+      setLikedProductIds((prev) => prev.filter((id) => Number(id) !== productId));
+      setLikedProducts((prev) => prev.filter((item) => Number(item.id) !== productId));
+      return;
+    }
+
+    await likeProduct(productId);
+    setLikedProductIds((prev) => [productId, ...prev.filter((id) => Number(id) !== productId)]);
+    setLikedProducts((prev) => [product, ...prev.filter((item) => Number(item.id) !== productId)]);
   };
 
   const handleClear = () => {
@@ -273,6 +364,27 @@ export default function ShippingCalculator({ onDrawerToggle }) {
 
   return (
     <section id="shipping-calculator" className="flex flex-col gap-4 lg:h-full overflow-x-hidden">
+      <div>
+        <PersonalizedProductsSection
+          authenticated={Boolean(authSession?.authenticated)}
+          categories={tabItems}
+          savedProducts={savedProducts}
+          likedProducts={likedProducts}
+          likedProductIds={likedProductIdSet}
+          onAddProduct={handleAddToCart}
+          onToggleLike={handleToggleLike}
+          onCreateSavedProduct={handleCreateSavedProduct}
+          onDeleteSavedProduct={handleDeleteSavedProduct}
+          onOpenLogin={onOpenLogin}
+          loading={personalizedLoading}
+        />
+        {personalizedError ? (
+          <div className="mt-3 rounded-xl border border-rose-100 bg-rose-50 px-3 py-2 text-xs text-rose-600">
+            {personalizedError}
+          </div>
+        ) : null}
+      </div>
+
       <div className="grid gap-6 lg:grid-cols-12 lg:h-full lg:overflow-hidden">
 
         {/* --- Product Library Section (Left Column on Desktop, First on Mobile) --- */}
@@ -323,6 +435,8 @@ export default function ShippingCalculator({ onDrawerToggle }) {
                         product={product}
                         index={index}
                         onAdd={() => handleAddToCart(product)}
+                        onToggleLike={() => handleToggleLike(product)}
+                        liked={likedProductIdSet.has(Number(product.id))}
                       />
                     ))
                   )}

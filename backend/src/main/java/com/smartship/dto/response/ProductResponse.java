@@ -1,7 +1,7 @@
 package com.smartship.dto.response;
 
 public record ProductResponse(
-    Integer id,
+    Long id,
     String category,
     String name,
     String nameJp,
@@ -9,5 +9,6 @@ public record ProductResponse(
     double widthCm,
     double heightCm,
     int weightG,
-    String imageIcon
+    String imageIcon,
+    String source
 ) {}

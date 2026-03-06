@@ -38,7 +38,7 @@ public class ProductController {
 
     private ProductResponse toResponse(ProductReference product) {
         return new ProductResponse(
-            product.getId(),
+            product.getId().longValue(),
             product.getCategory(),
             product.getName(),
             product.getNameJp(),
@@ -46,7 +46,8 @@ public class ProductController {
             product.getWidthCm(),
             product.getHeightCm(),
             product.getWeightG(),
-            product.getImageIcon()
+            product.getImageIcon(),
+            "reference"
         );
     }
 }

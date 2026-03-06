@@ -1,5 +1,131 @@
 # Category Filter Auto-Nudge UX
 
+# Login / Saved Products Design Discussion
+
+## Goal
+Define a minimal login system and saved-products UX that matches the requested behavior:
+- Single in-page modal, no redirect to another site.
+- One form with only `ID` and `PASSWORD`.
+- If `ID` exists, sign in; if not, create the account immediately.
+- After login, users can save their own reusable products and like existing products.
+- Saved items and liked products appear in a new collapsible section above the current product list.
+
+## Tasks
+- [x] **1. Inspect current architecture constraints**
+  - Confirm current frontend stack and where a modal login can be inserted.
+  - Confirm current backend/API/data model does not yet contain user auth or saved-product tables.
+- [x] **2. Compare auth approaches**
+  - Evaluate Supabase Auth against the requested `ID + PASSWORD` flow.
+  - Evaluate Firebase Auth for the same flow and free-tier fit.
+  - Check whether hosted auth products can support unrestricted one-field IDs and effectively unrestricted password rules without hacks.
+- [x] **3. Recommend implementation direction**
+  - Define the preferred auth/session approach.
+  - Outline the minimum database tables and API endpoints needed.
+  - Call out UX/security tradeoffs of auto-register-on-missing-ID behavior.
+
+## Review
+- Current repo fit:
+  - Frontend is React/Vite (`frontend/src/App.jsx`, `frontend/src/pages/ShippingCalculator.jsx`) and can support an in-page modal login cleanly.
+  - Current backend/data model exposes public shipping/product APIs only; schema contains `product_reference` and `shipping_carrier` only, with no `users`, `favorites`, or `saved_products` tables yet.
+- Auth provider conclusion:
+  - The requested flow is **not a natural fit** for Supabase Auth or Firebase Auth because both are optimized around managed identities (email/phone/OAuth/custom token flows) and password policies, not arbitrary reusable `ID` strings with effectively unrestricted password rules.
+  - The cleanest fit is a **custom username/password auth layer in the existing backend**, while keeping Supabase as the Postgres database.
+- Recommended implementation shape:
+  - Store `accounts` in Postgres with `login_id`, `password_hash`, timestamps.
+  - Store `user_saved_products` for custom reusable items.
+  - Store `user_liked_products` as a join table to existing `product_reference`.
+  - Use server-side session cookies (HTTP-only, secure in production) so the frontend modal can log in without redirects and subsequent API calls can identify the user.
+- Product risk explicitly noted:
+  - “If ID does not exist, auto-register immediately” matches the requested UX, but it also means a typo in `ID` silently creates a brand-new account. This should be treated as an intentional product tradeoff, not an implementation bug.
+
+## Implementation
+
+### Goal
+Ship the agreed single-modal login flow plus user-owned product storage and liked-product grouping.
+
+### Tasks
+- [x] **1. Backend auth/session foundation**
+  - Add `accounts`, `user_saved_products`, `user_liked_products` schema objects.
+  - Add password hashing and session-cookie login/register endpoint.
+  - Add current-session and logout endpoints.
+- [x] **2. Backend product personalization APIs**
+  - Return current user context plus saved products/liked products.
+  - Add create/delete saved product endpoints.
+  - Add like/unlike existing product endpoints.
+- [x] **3. Frontend auth UX**
+  - Add in-page login modal with `ID` + `PASSWORD` only.
+  - Show “ID not found, account created” success hint after auto-register.
+  - Persist session via cookie-backed API calls.
+- [x] **4. Frontend personalized product section**
+  - Add collapsible section above current product list.
+  - Render saved custom products and liked products there.
+  - Add like controls to existing product cards and create-product flow for logged-in users.
+- [x] **5. Verification**
+  - Run backend tests / compile.
+  - Run frontend build.
+  - Document final behavior and limitations.
+
+### Review
+- Backend:
+  - Added session-cookie auth (`/api/auth/login-or-register`, `/api/auth/session`, `/api/auth/logout`) using backend-managed accounts and bcrypt hashes.
+  - Added user personalization tables/entities/repos for saved products and liked reference products.
+  - Expanded shipping cart payload to support both normal library products and authenticated saved products in the same cart flow.
+  - Updated CORS to allow credentials and configured session-cookie defaults in Spring Boot properties.
+- Frontend:
+  - Added header login/logout controls and in-page `AuthModal` with the agreed single-form `ID + PASSWORD` UX.
+  - Added success notice after auto-register: `查唔到 ID，已經幫你建立好帳號。`
+  - Added collapsible personalized section above the main product list for:
+    - user-saved custom products
+    - liked existing products
+  - Added like/unlike controls on existing product cards and save/delete flow for custom products.
+  - Updated cart identity handling so saved products and reference products can coexist without key collisions.
+- Verification:
+  - `cd backend && ./mvnw test` ✅
+  - `cd frontend && npm run build` ✅
+  - Targeted lint for touched frontend files:
+    - `cd frontend && npx eslint src/App.jsx src/components/AuthModal.jsx src/components/PersonalizedProductsSection.jsx src/components/ProductCard.jsx src/pages/ShippingCalculator.jsx` ✅
+  - Supabase MCP migrations applied:
+    - `20260306094200 add_accounts_and_user_product_tables` ✅
+    - `20260306094219 add_user_liked_products_reference_index` ✅
+- Remaining limitation:
+  - Full-project frontend lint still has pre-existing unrelated errors in untouched files; those were not expanded into this auth/product feature change.
+  - Supabase advisors still report project-wide `RLS Disabled in Public` findings on public tables. This was left unchanged because enabling RLS blindly could break the existing backend DB role; it should be handled as a separate security pass.
+
+### Follow-up
+- [x] **6. Reposition personalized section**
+  - Move `マイ商品 / お気に入り商品` above both the product-selection and cart/result columns.
+  - Keep it as a full-width horizontal section on desktop while preserving mobile stacking.
+- [x] **7. Replace auth success banner with toast prompt**
+  - Show a compact bottom-right prompt for normal login success.
+  - Show a redesigned bottom-right prompt for auto-register success instead of the old top banner.
+
+# Room Invite Code Request Failure Investigation
+
+## Goal
+Investigate why invite-code requests fail across all existing rooms (including after switching rooms), identify root cause, and ship a verified fix.
+
+## Tasks
+- [x] **1. Reproduce and map the failure path**
+  - Locate frontend action that requests room invite codes and capture request payload/endpoint usage.
+  - Trace backend invite-code apply/request API path and enumerate all failure branches.
+  - Confirm whether failure is room-specific or account/global-state-specific from code and local run logs.
+- [ ] **2. Implement minimal root-cause fix**
+  - Patch the failing branch with the smallest safe change.
+  - Ensure room-switch behavior does not reuse stale request state/ids/tokens.
+  - Add/adjust guardrails and user-facing error mapping if needed.
+- [ ] **3. Verify before closure**
+  - Run targeted backend/frontend tests (or focused local verification) for invite-code requests.
+  - Validate success across multiple rooms and ensure no regression for retry flow.
+  - Document root cause, fix, and verification evidence in Review.
+
+## Review
+- Investigation blocked by repository mismatch:
+  - Frontend API layer contains shipping-only endpoints (`/api/products`, `/api/shipping/calculate/*`) with no room/invite APIs.
+  - Backend controllers expose shipping/product endpoints only, no room/invite controller path.
+  - Full-repo keyword search (`room/invite/房間/邀請`) returns no feature code references besides task notes.
+- Root cause for current investigation failure:
+  - The reported bug cannot be traced in this codebase because the relevant feature is not present here.
+
 # Mobile Responsive Stability Audit (Header/Footer/Cart)
 
 ## Goal

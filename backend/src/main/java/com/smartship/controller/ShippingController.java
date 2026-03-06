@@ -7,12 +7,16 @@ import com.smartship.dto.request.CartItemDto;
 import com.smartship.dto.request.ManualDimensionRequest;
 import com.smartship.dto.response.CalculationResponse;
 import com.smartship.dto.response.ShippingResultResponse;
+import com.smartship.entity.Account;
 import com.smartship.entity.ProductReference;
 import com.smartship.repository.ProductRepository;
+import com.smartship.service.AuthService;
 import com.smartship.service.DimensionCalculator;
 import com.smartship.service.PackingService;
 import com.smartship.service.ShippingMatcher;
 import com.smartship.service.ShippingMatcher.ShippingMatch;
+import com.smartship.service.UserProductService;
+import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -36,15 +40,21 @@ public class ShippingController {
     private final DimensionCalculator dimensionCalculator;
     private final ShippingMatcher shippingMatcher;
     private final PackingService packingService;
+    private final AuthService authService;
+    private final UserProductService userProductService;
 
     public ShippingController(ProductRepository productRepository,
             DimensionCalculator dimensionCalculator,
             ShippingMatcher shippingMatcher,
-            PackingService packingService) {
+            PackingService packingService,
+            AuthService authService,
+            UserProductService userProductService) {
         this.productRepository = productRepository;
         this.dimensionCalculator = dimensionCalculator;
         this.shippingMatcher = shippingMatcher;
         this.packingService = packingService;
+        this.authService = authService;
+        this.userProductService = userProductService;
     }
 
     @PostMapping("/calculate/manual")
@@ -66,8 +76,8 @@ public class ShippingController {
     // New endpoint: Returns packed dimensions AND placements (for real-time 3D
     // preview)
     @PostMapping("/calculate/dimensions")
-    public PackingResult calculateDimensions(@Valid @RequestBody CartCalculationRequest request) {
-        List<ProductReference> expandedItems = validateAndExpandCartItems(request);
+    public PackingResult calculateDimensions(@Valid @RequestBody CartCalculationRequest request, HttpSession session) {
+        List<ProductReference> expandedItems = validateAndExpandCartItems(request, session);
         PackingResult result = packingService.calculatePackedResult(expandedItems);
 
         if (result == null || result.dimensions() == null) {
@@ -90,8 +100,8 @@ public class ShippingController {
     }
 
     @PostMapping("/calculate/cart")
-    public CalculationResponse calculateCart(@Valid @RequestBody CartCalculationRequest request) {
-        List<ProductReference> expandedItems = validateAndExpandCartItems(request);
+    public CalculationResponse calculateCart(@Valid @RequestBody CartCalculationRequest request, HttpSession session) {
+        List<ProductReference> expandedItems = validateAndExpandCartItems(request, session);
         // Use PackingService to get REAL packed dimensions to show the user
         Dimensions dims = packingService.calculatePackedDimensions(expandedItems);
 
@@ -107,16 +117,21 @@ public class ShippingController {
         return new CalculationResponse(dims, recommended, options);
     }
 
-    private List<ProductReference> validateAndExpandCartItems(CartCalculationRequest request) {
+    private List<ProductReference> validateAndExpandCartItems(CartCalculationRequest request, HttpSession session) {
         if (request == null || request.items() == null || request.items().isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cart items are required.");
         }
 
         Set<Integer> productIds = request.items().stream()
                 .map(CartItemDto::productId)
+                .filter(id -> id != null)
+                .collect(Collectors.toCollection(HashSet::new));
+        Set<Long> savedProductIds = request.items().stream()
+                .map(CartItemDto::savedProductId)
+                .filter(id -> id != null)
                 .collect(Collectors.toCollection(HashSet::new));
 
-        if (productIds.isEmpty()) {
+        if (productIds.isEmpty() && savedProductIds.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cart items are required.");
         }
 
@@ -132,13 +147,32 @@ public class ShippingController {
                     "Unknown product IDs: " + missing);
         }
 
+        Account account = null;
+        if (!savedProductIds.isEmpty()) {
+            account = authService.requireCurrentAccount(session);
+        }
+
         List<ProductReference> expandedItems = new ArrayList<>();
         for (CartItemDto item : request.items()) {
-            ProductReference product = productMap.get(item.productId());
+            Integer productId = item.productId();
+            Long savedProductId = item.savedProductId();
+            boolean hasReferenceProduct = productId != null;
+            boolean hasSavedProduct = savedProductId != null;
+
+            if (hasReferenceProduct == hasSavedProduct) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Each cart item must specify exactly one product source.");
+            }
+
+            ProductReference product = hasReferenceProduct
+                    ? productMap.get(productId)
+                    : userProductService.requireSavedProductAsReference(account, savedProductId);
+
             if (product == null) {
                 throw new ResponseStatusException(
                         HttpStatus.BAD_REQUEST,
-                        "Unknown product ID: " + item.productId());
+                        hasReferenceProduct ? "Unknown product ID: " + productId : "Unknown saved product ID: " + savedProductId);
             }
 
             for (int i = 0; i < item.quantity(); i++) {

@@ -62,7 +62,7 @@ export default function CartPanel({
         <div className="mt-4 space-y-3">
           {items.map((item) => (
             <div
-              key={item.product.id}
+              key={item.productKey}
               className="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50/80 px-3 py-3 text-sm"
             >
               <div className="flex items-center gap-3">
@@ -77,7 +77,10 @@ export default function CartPanel({
                 })()}
                 <div>
                   <p className="font-semibold text-slate-900">{item.product.nameJp || item.product.name}</p>
-                  <p className="text-xs text-slate-500">{getCategoryLabel(item.product.category)}</p>
+                  <p className="text-xs text-slate-500">
+                    {getCategoryLabel(item.product.category)}
+                    {item.product.source === 'saved' ? ' · マイ商品' : ''}
+                  </p>
                   <p className="text-xs text-slate-400 mt-0.5 font-mono">
                     {item.product.lengthCm}x{item.product.widthCm}x{item.product.heightCm}cm / {item.product.weightG}g
                   </p>
@@ -86,7 +89,7 @@ export default function CartPanel({
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => onDecrement(item.product.id)}
+                  onClick={() => onDecrement(item.productKey)}
                   className="h-8 w-8 rounded-full border border-slate-200 bg-white text-slate-600 transition hover:border-slate-300"
                 >
                   -
@@ -94,14 +97,14 @@ export default function CartPanel({
                 <span className="w-6 text-center font-semibold text-slate-800">{item.quantity}</span>
                 <button
                   type="button"
-                  onClick={() => onIncrement(item.product.id)}
+                  onClick={() => onIncrement(item.productKey)}
                   className="h-8 w-8 rounded-full border border-slate-200 bg-white text-slate-600 transition hover:border-slate-300"
                 >
                   +
                 </button>
                 <button
                   type="button"
-                  onClick={() => onRemove(item.product.id)}
+                  onClick={() => onRemove(item.productKey)}
                   className="ml-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-400 hover:text-slate-600"
                 >
                   削除

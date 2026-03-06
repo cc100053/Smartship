@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { calculateDimensions } from '../api/shippingApi';
 import { useBroadcastSender } from './useViewerBroadcast';
+import { getProductKey, getProductSource } from '../utils/products';
 
 export function useCart() {
     const [cartItems, setCartItems] = useState([]);
@@ -27,7 +28,8 @@ export function useCart() {
         }
 
         const payload = items.map((item) => ({
-            productId: item.product.id,
+            productId: getProductSource(item.product) === 'reference' ? Number(item.product.id) : null,
+            savedProductId: getProductSource(item.product) === 'saved' ? Number(item.product.id) : null,
             quantity: item.quantity,
         }));
 
@@ -101,32 +103,33 @@ export function useCart() {
     }, [packedDimensions, broadcast]);
 
     const addToCart = (product) => {
+        const productKey = getProductKey(product);
         setCartItems((prev) => {
-            const existing = prev.find((item) => item.product.id === product.id);
+            const existing = prev.find((item) => item.productKey === productKey);
             if (existing) {
                 return prev.map((item) =>
-                    item.product.id === product.id
+                    item.productKey === productKey
                         ? { ...item, quantity: item.quantity + 1 }
                         : item
                 );
             }
-            return [...prev, { product, quantity: 1 }];
+            return [...prev, { product, productKey, quantity: 1 }];
         });
     };
 
-    const incrementItem = (id) => {
+    const incrementItem = (productKey) => {
         setCartItems((prev) =>
             prev.map((item) =>
-                item.product.id === id ? { ...item, quantity: item.quantity + 1 } : item
+                item.productKey === productKey ? { ...item, quantity: item.quantity + 1 } : item
             )
         );
     };
 
-    const decrementItem = (id) => {
+    const decrementItem = (productKey) => {
         setCartItems((prev) =>
             prev
                 .map((item) =>
-                    item.product.id === id
+                    item.productKey === productKey
                         ? { ...item, quantity: Math.max(0, item.quantity - 1) }
                         : item
                 )
@@ -134,8 +137,8 @@ export function useCart() {
         );
     };
 
-    const removeItem = (id) => {
-        setCartItems((prev) => prev.filter((item) => item.product.id !== id));
+    const removeItem = (productKey) => {
+        setCartItems((prev) => prev.filter((item) => item.productKey !== productKey));
     };
 
     const clearCart = () => {

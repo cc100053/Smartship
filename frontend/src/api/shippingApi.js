@@ -72,6 +72,7 @@ const requestJson = async (path, options = {}) => {
     try {
       const res = await fetch(`${API_BASE}${path}`, {
         headers: { 'Content-Type': 'application/json', ...(fetchOptions.headers || {}) },
+        credentials: 'include',
         ...fetchOptions,
         signal,
       });
@@ -91,7 +92,12 @@ const requestJson = async (path, options = {}) => {
         throw error;
       }
 
-      return res.json();
+      if (res.status === 204) {
+        return null;
+      }
+
+      const text = await res.text();
+      return text ? JSON.parse(text) : null;
     } catch (error) {
       const callerAborted = externalSignal?.aborted;
       const isNetworkError = error instanceof TypeError;
@@ -116,6 +122,62 @@ export const fetchProducts = (category, options = {}) => {
 
 export const fetchCategories = (options = {}) =>
   requestJson('/api/products/categories', { retry: 3, timeoutMs: 10000, ...options });
+
+export const fetchAuthSession = (options = {}) =>
+  requestJson('/api/auth/session', { retry: 1, timeoutMs: 8000, ...options });
+
+export const loginOrRegister = (payload, options = {}) =>
+  requestJson('/api/auth/login-or-register', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+    retry: 0,
+    timeoutMs: 10000,
+    ...options,
+  });
+
+export const logout = (options = {}) =>
+  requestJson('/api/auth/logout', {
+    method: 'POST',
+    retry: 0,
+    timeoutMs: 8000,
+    ...options,
+  });
+
+export const fetchPersonalizedProducts = (options = {}) =>
+  requestJson('/api/me/products', { retry: 1, timeoutMs: 10000, ...options });
+
+export const createSavedProduct = (payload, options = {}) =>
+  requestJson('/api/me/saved-products', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+    retry: 0,
+    timeoutMs: 10000,
+    ...options,
+  });
+
+export const deleteSavedProduct = (savedProductId, options = {}) =>
+  requestJson(`/api/me/saved-products/${savedProductId}`, {
+    method: 'DELETE',
+    retry: 0,
+    timeoutMs: 8000,
+    ...options,
+  });
+
+export const likeProduct = (productId, options = {}) =>
+  requestJson(`/api/me/liked-products/${productId}`, {
+    method: 'POST',
+    retry: 0,
+    timeoutMs: 8000,
+    ...options,
+  });
+
+export const unlikeProduct = (productId, options = {}) =>
+  requestJson(`/api/me/liked-products/${productId}`, {
+    method: 'DELETE',
+    retry: 0,
+    timeoutMs: 8000,
+    ...options,
+  });
 
 export const calculateFromCart = (items, options = {}) =>
   requestJson('/api/shipping/calculate/cart', {
