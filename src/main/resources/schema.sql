@@ -91,8 +91,11 @@ CREATE TABLE calculation_events (
     second_option_price_yen INTEGER,
     saving_yen INTEGER NOT NULL,
     recommended_max_dimension_cm DOUBLE PRECISION NOT NULL,
+    recommended_volume_cm3 DOUBLE PRECISION NOT NULL,
     second_max_dimension_cm DOUBLE PRECISION,
+    second_option_volume_cm3 DOUBLE PRECISION,
     size_gap_cm DOUBLE PRECISION NOT NULL,
+    volume_saved_cm3 DOUBLE PRECISION NOT NULL,
     estimated_co2e_saved_g INTEGER NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

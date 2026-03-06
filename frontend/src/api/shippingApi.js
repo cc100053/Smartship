@@ -144,6 +144,17 @@ export const fetchCategories = (options = {}) =>
 export const fetchStatsSummary = (options = {}) =>
   requestJson('/api/stats/summary', { retry: 1, timeoutMs: 8000, ...options });
 
+export const fetchStatsVolumeTrend = (options = {}) =>
+  requestJson('/api/stats/volume-trend', { retry: 1, timeoutMs: 8000, ...options });
+
+export const resetStatsData = (options = {}) =>
+  requestJson('/api/stats/reset', {
+    method: 'POST',
+    retry: 0,
+    timeoutMs: 10000,
+    ...options,
+  });
+
 export const fetchAuthSession = (options = {}) =>
   requestJson('/api/auth/session', { retry: 1, timeoutMs: 8000, ...options });
 

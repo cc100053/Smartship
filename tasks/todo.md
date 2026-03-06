@@ -354,6 +354,91 @@ Make the stats dashboard error state actionable by distinguishing backend-connec
 - Residual note:
   - The underlying backend still needs to be running for live stats to load; this change makes that state explicit instead of ambiguous.
 
+# Stats Dashboard Volume Metric + Polish (2026-03-06)
+
+## Goal
+Refine the active React stats dashboard so the fourth KPI no longer shows packed-item count:
+- Replace `Items packed` with `累積節省包裝體積`.
+- Ensure the metric is backed by real backend aggregation, not label-only copy.
+- Polish the dashboard hierarchy and card balance so the page feels more intentional as a live exhibition board.
+
+## Tasks
+- [x] **1. Update stats data model**
+  - Add a cumulative packaging-volume-saved metric to stats event persistence and summary aggregation.
+  - Keep existing totals backward-safe with zero defaults.
+- [x] **2. Refine dashboard presentation**
+  - Replace the fourth KPI copy/value formatting to emphasize saved packaging volume.
+  - Tighten hero/meta/card/status hierarchy and visual rhythm without drifting away from the current live-board language.
+- [x] **3. Verify and document**
+  - Run targeted backend tests for stats math/API payload.
+  - Run the frontend production build.
+  - Document the final UI/data changes and any follow-up recommendations in Review.
+
+## Review
+- Backend:
+  - Replaced the summary's fourth KPI source with `cumulativeVolumeSavedCm3`.
+  - `StatsService` now stores per-event recommended volume, second-option volume, and `volume_saved_cm3` using each carrier candidate's `length * width * height`.
+  - Applied Supabase migration: `add_volume_saved_metrics_to_calculation_events` ✅
+  - Older `calculation_events` rows are backfilled with `0` for the new volume fields, so the new KPI starts accumulating accurately from newly recorded events.
+- Frontend:
+  - Updated `frontend/src/pages/StatsDashboard.jsx` so the fourth KPI is now `累積節省包裝體積`.
+  - Formatted the new metric in `L` / `m3` for exhibition readability instead of raw `cm3`.
+  - Polished the dashboard hierarchy:
+    - richer hero summary copy
+    - stronger metadata cards with icons
+    - denser KPI card rhythm with small aggregate subtitles
+    - clearer bottom explainer split into `Impact Story` and `Metric Notes`
+- Docs / schema:
+  - Updated `src/main/resources/schema.sql` with the new volume columns.
+  - Updated `docs/stats_dashboard_execution_plan.md` to reflect the new KPI and storage fields.
+- Verification:
+  - `cd backend && ./mvnw test -Dtest=StatsServiceTest,StatsControllerTest` ✅
+  - `cd frontend && npm run build` ✅
+- Residual note:
+  - Existing historical events before this migration do not contribute real saved-volume values because the original event model did not store enough dimensions to reconstruct them exactly.
+
+# Stats Dashboard Sparkline + Reset Control (2026-03-06)
+
+## Goal
+Extend the active stats dashboard with richer live monitoring controls:
+- Add a small real-data sparkline to the `累積節省包裝體積` card.
+- Group the 4 KPI cards into clearer Activity / Cost / Carbon / Volume color lanes with consistent icon treatment.
+- Add a bottom-right one-click reset control that clears stats data safely.
+
+## Tasks
+- [x] **1. Extend stats API surface**
+  - Add a lightweight volume trend endpoint for the dashboard sparkline.
+  - Add a reset endpoint that clears `calculation_events`.
+- [x] **2. Refine dashboard UI**
+  - Render the sparkline from real backend trend data.
+  - Tighten card grouping and unify icon background/contrast treatment.
+  - Add a fixed bottom-right reset button with clear loading/error behavior.
+- [x] **3. Verify and document**
+  - Run targeted backend tests for summary/trend/reset behavior.
+  - Run the frontend production build.
+  - Document the final implementation and any residual risks in Review.
+
+## Review
+- Backend:
+  - Added `GET /api/stats/volume-trend`, returning a compact recent running-total series for the volume sparkline.
+  - Added `POST /api/stats/reset`, which clears `calculation_events` via `deleteAllInBatch()`.
+  - Added targeted tests for:
+    - summary payload
+    - volume trend payload
+    - reset endpoint
+    - service-level running-total trend math
+    - service-level reset behavior
+- Frontend:
+  - Updated `frontend/src/pages/StatsDashboard.jsx` to fetch summary + volume trend together during polling.
+  - Added a real-data sparkline inside the `累積節省包裝體積` KPI card.
+  - Grouped KPI cards into explicit `Activity / Cost / Carbon / Volume` tags and unified icon-shell contrast so the scan path is clearer.
+  - Added a fixed bottom-right `Reset Data` button with confirm prompt, loading state, and inline reset-error feedback.
+- Verification:
+  - `cd backend && ./mvnw test -Dtest=StatsServiceTest,StatsControllerTest` ✅
+  - `cd frontend && npm run build` ✅
+- Residual risk:
+  - The reset endpoint is intentionally open right now for exhibition convenience. If this dashboard will be exposed outside a trusted demo environment, it needs auth/role protection before release.
+
 # Mobile Responsive Stability Audit (Header/Footer/Cart)
 
 ## Goal

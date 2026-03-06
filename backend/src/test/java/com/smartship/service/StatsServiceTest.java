@@ -2,6 +2,7 @@ package com.smartship.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentCaptor.forClass;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -9,6 +10,7 @@ import com.smartship.dto.Dimensions;
 import com.smartship.dto.response.CalculationResponse;
 import com.smartship.dto.response.ShippingResultResponse;
 import com.smartship.dto.response.StatsSummaryResponse;
+import com.smartship.dto.response.StatsVolumeTrendResponse;
 import com.smartship.entity.CalculationEvent;
 import com.smartship.repository.CalculationEventRepository;
 import java.time.Instant;
@@ -19,6 +21,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Pageable;
 
 @ExtendWith(MockitoExtension.class)
 class StatsServiceTest {
@@ -53,8 +56,11 @@ class StatsServiceTest {
         assertThat(saved.getPackedWeightG()).isEqualTo(1200);
         assertThat(saved.getSavingYen()).isEqualTo(250);
         assertThat(saved.getRecommendedMaxDimensionCm()).isEqualTo(25);
+        assertThat(saved.getRecommendedVolumeCm3()).isEqualTo(2500);
         assertThat(saved.getSecondMaxDimensionCm()).isEqualTo(60);
+        assertThat(saved.getSecondOptionVolumeCm3()).isEqualTo(216000);
         assertThat(saved.getSizeGapCm()).isEqualTo(35);
+        assertThat(saved.getVolumeSavedCm3()).isEqualTo(213500);
         assertThat(saved.getEstimatedCo2eSavedG()).isEqualTo(504);
     }
 
@@ -74,17 +80,42 @@ class StatsServiceTest {
         assertThat(saved.getSavingYen()).isZero();
         assertThat(saved.getSecondOptionId()).isNull();
         assertThat(saved.getSecondMaxDimensionCm()).isNull();
+        assertThat(saved.getSecondOptionVolumeCm3()).isNull();
+        assertThat(saved.getVolumeSavedCm3()).isZero();
         assertThat(saved.getEstimatedCo2eSavedG()).isZero();
     }
 
     @Test
     void getSummaryReturnsRepositoryAggregate() {
-        StatsSummaryResponse summary = new StatsSummaryResponse(12, 3450, 678, 44, Instant.parse("2026-03-06T12:34:56Z"));
+        StatsSummaryResponse summary = new StatsSummaryResponse(12, 3450, 678, 285000, Instant.parse("2026-03-06T12:34:56Z"));
         when(calculationEventRepository.getSummary()).thenReturn(summary);
 
         StatsSummaryResponse result = statsService.getSummary();
 
         assertThat(result).isEqualTo(summary);
+    }
+
+    @Test
+    void getRecentVolumeTrendReturnsChronologicalRunningTotals() {
+        CalculationEvent older = new CalculationEvent();
+        older.setVolumeSavedCm3(1200);
+
+        CalculationEvent newer = new CalculationEvent();
+        newer.setVolumeSavedCm3(800);
+
+        when(calculationEventRepository.findAllByOrderByCreatedAtDesc(org.mockito.ArgumentMatchers.any(Pageable.class)))
+                .thenReturn(List.of(newer, older));
+
+        StatsVolumeTrendResponse result = statsService.getRecentVolumeTrend();
+
+        assertThat(result.points()).containsExactly(1200.0, 2000.0);
+    }
+
+    @Test
+    void resetAllStatsDeletesStoredEvents() {
+        statsService.resetAllStats();
+
+        verify(calculationEventRepository, times(1)).deleteAllInBatch();
     }
 
     private ShippingResultResponse option(

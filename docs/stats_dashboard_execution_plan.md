@@ -22,7 +22,7 @@
 - `Total Calculations`
 - `Estimated Yen Saved`
 - `Estimated CO2e Saved`
-- `Items Packed`
+- `Saved Packaging Volume`
 
 ### 慳錢定義
 
@@ -115,7 +115,7 @@ MVP 使用輪詢：
 - `Total Calculations`
 - `Estimated Yen Saved`
 - `Estimated CO2e Saved`
-- `Items Packed`
+- `Saved Packaging Volume`
 
 下方小字說明：
 
@@ -194,8 +194,11 @@ calculation_events
 | `second_option_price_yen` | `INTEGER NULL` | 第二可行方案價格 |
 | `saving_yen` | `INTEGER NOT NULL` | 本次節省金額 |
 | `recommended_max_dimension_cm` | `DOUBLE PRECISION NOT NULL` | 推薦方案最大尺寸 |
+| `recommended_volume_cm3` | `DOUBLE PRECISION NOT NULL` | 推薦方案體積 |
 | `second_max_dimension_cm` | `DOUBLE PRECISION NULL` | 第二方案最大尺寸 |
+| `second_option_volume_cm3` | `DOUBLE PRECISION NULL` | 第二方案體積 |
 | `size_gap_cm` | `DOUBLE PRECISION NOT NULL` | 最大尺寸差 |
+| `volume_saved_cm3` | `DOUBLE PRECISION NOT NULL` | 本次節省包裝體積 |
 | `estimated_co2e_saved_g` | `INTEGER NOT NULL` | 本次估算減碳值 |
 | `session_id` | `VARCHAR(128) NULL` | 若要之後排查重複提交，可保留 session 標記 |
 
@@ -357,7 +360,7 @@ GET /api/stats/summary
 - `Total Calculations`: 千分位
 - `Estimated Yen Saved`: `¥` + 千分位
 - `Estimated CO2e Saved`: `g` 轉 `kg`，保留 `2` 位小數
-- `Items Packed`: 千分位
+- `Saved Packaging Volume`: `cm³ -> L / m3` 轉換顯示
 
 ---
 
@@ -437,7 +440,7 @@ Stats page open (#/stats)
    - `Total Calculations` 遞增
    - `Estimated Yen Saved` 遞增
    - `Estimated CO2e Saved` 遞增
-   - `Items Packed` 遞增
+   - `Saved Packaging Volume` 遞增
 
 ---
 

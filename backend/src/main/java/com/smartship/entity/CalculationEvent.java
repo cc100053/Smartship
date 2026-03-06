@@ -44,11 +44,20 @@ public class CalculationEvent {
     @Column(name = "recommended_max_dimension_cm", nullable = false)
     private double recommendedMaxDimensionCm;
 
+    @Column(name = "recommended_volume_cm3", nullable = false)
+    private double recommendedVolumeCm3;
+
     @Column(name = "second_max_dimension_cm")
     private Double secondMaxDimensionCm;
 
+    @Column(name = "second_option_volume_cm3")
+    private Double secondOptionVolumeCm3;
+
     @Column(name = "size_gap_cm", nullable = false)
     private double sizeGapCm;
+
+    @Column(name = "volume_saved_cm3", nullable = false)
+    private double volumeSavedCm3;
 
     @Column(name = "estimated_co2e_saved_g", nullable = false)
     private int estimatedCo2eSavedG;
@@ -145,12 +154,36 @@ public class CalculationEvent {
         this.secondMaxDimensionCm = secondMaxDimensionCm;
     }
 
+    public double getRecommendedVolumeCm3() {
+        return recommendedVolumeCm3;
+    }
+
+    public void setRecommendedVolumeCm3(double recommendedVolumeCm3) {
+        this.recommendedVolumeCm3 = recommendedVolumeCm3;
+    }
+
+    public Double getSecondOptionVolumeCm3() {
+        return secondOptionVolumeCm3;
+    }
+
+    public void setSecondOptionVolumeCm3(Double secondOptionVolumeCm3) {
+        this.secondOptionVolumeCm3 = secondOptionVolumeCm3;
+    }
+
     public double getSizeGapCm() {
         return sizeGapCm;
     }
 
     public void setSizeGapCm(double sizeGapCm) {
         this.sizeGapCm = sizeGapCm;
+    }
+
+    public double getVolumeSavedCm3() {
+        return volumeSavedCm3;
+    }
+
+    public void setVolumeSavedCm3(double volumeSavedCm3) {
+        this.volumeSavedCm3 = volumeSavedCm3;
     }
 
     public int getEstimatedCo2eSavedG() {

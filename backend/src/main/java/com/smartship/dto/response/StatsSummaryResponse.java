@@ -6,6 +6,6 @@ public record StatsSummaryResponse(
         long totalCalculations,
         long estimatedYenSaved,
         long estimatedCo2eSavedG,
-        long itemsPacked,
+        double cumulativeVolumeSavedCm3,
         Instant updatedAt) {
 }
