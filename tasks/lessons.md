@@ -194,3 +194,15 @@
 ## 49. Decorative display fonts are a bad default for animated KPI numerals
 - **Mistake**: Kept KPI values on a Mincho-style display font even after splitting digits and units, which still left punctuation and unit glyphs with inconsistent metrics and apparent baseline drift.
 - **Rule**: For animated numeric KPIs, use a dedicated numeric-friendly font/style with consistent tabular/lining metrics across digits, punctuation, prefixes, and units. Keep expressive display fonts for headings, not live counters.
+
+## 50. Visual glyph alignment needs rendered proof, not just semantic baseline cleanup
+- **Mistake**: Tried to fix KPI symbol/unit misalignment only by normalizing flex/baseline classes, even after the user-visible issue remained in the rendered UI.
+- **Rule**: When adjacent glyphs still look off after structural alignment cleanup, add explicit per-glyph visual offsets (`translateY`, padding, or measured adjustments) and verify the rendered result instead of assuming baseline semantics are sufficient.
+
+## 51. Rolling-number punctuation needs its own optical alignment pass
+- **Mistake**: Fixed unit/prefix offsets but left `,` and `.` inside the rolling number track using the default glyph alignment, even though punctuation has different optical height from digits.
+- **Rule**: In animated KPI numbers, treat punctuation as a separate glyph class and give it its own configurable offset instead of assuming digit alignment settings will also fit commas and decimal points.
+
+## 52. Large injected numbers are a layout test, not just a data test
+- **Mistake**: Verified the stats pipeline with a huge injected event but did not immediately pressure-test whether the KPI card typography still fit once the formatted value gained multiple extra separators/digits.
+- **Rule**: When injecting outlier data to validate a dashboard, also add or verify a fit strategy for long formatted values (font-size scaling, tighter gaps, or measured fit) before considering the UI safe.

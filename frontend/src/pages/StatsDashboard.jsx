@@ -116,6 +116,42 @@ const getResetErrorMessage = (error) => {
 };
 
 const DIGIT_CELL_HEIGHT = 1.25; // Increase height to prevent clipping of descenders like commas
+const KPI_PREFIX_OFFSET_EM = -0.3;
+const KPI_SUFFIX_OFFSET_EM = -0.22;
+const ROLLING_PUNCTUATION_OFFSETS = {
+  ',': -0.1,
+  '.': -0.1,
+};
+
+const getKpiSizing = (parts, hasAffix) => {
+  const digitLength = Array.from(parts?.digits ?? '').length;
+  const totalLength = digitLength + (hasAffix ? 1 : 0);
+
+  if (totalLength >= 12) {
+    return {
+      rowClassName: 'gap-1',
+      digitsClassName: 'text-[2.02rem] sm:text-[2.45rem]',
+      prefixClassName: 'text-[1.45rem] sm:text-[1.72rem]',
+      suffixClassName: 'text-[1.3rem] sm:text-[1.56rem]',
+    };
+  }
+
+  if (totalLength >= 10) {
+    return {
+      rowClassName: 'gap-1',
+      digitsClassName: 'text-[2.28rem] sm:text-[2.78rem]',
+      prefixClassName: 'text-[1.65rem] sm:text-[1.95rem]',
+      suffixClassName: 'text-[1.45rem] sm:text-[1.75rem]',
+    };
+  }
+
+  return {
+    rowClassName: 'gap-1.5',
+    digitsClassName: 'text-[2.75rem] sm:text-[3.3rem]',
+    prefixClassName: 'text-[2rem] sm:text-[2.4rem]',
+    suffixClassName: 'text-[1.8rem] sm:text-[2.2rem]',
+  };
+};
 
 const buildDigitFrames = (previousDigit, nextDigit) => {
   if (!Number.isInteger(previousDigit) || !Number.isInteger(nextDigit)) {
@@ -142,7 +178,7 @@ function RollingDigit({ previousChar, nextChar, place, depth }) {
 
   return (
     <span
-      className="relative inline-flex h-[1.25em] overflow-hidden align-baseline mt-[-0.125em]"
+      className="relative inline-flex h-[1.25em] overflow-hidden align-bottom"
       style={{ width: `${place === 0 ? 0.72 : 0.66}em` }}
     >
       <motion.span
@@ -166,8 +202,13 @@ function RollingDigit({ previousChar, nextChar, place, depth }) {
 }
 
 function RollingGlyph({ char }) {
+  const punctuationOffset = ROLLING_PUNCTUATION_OFFSETS[char] ?? 0;
+
   return (
-    <span className="inline-flex h-[1.25em] items-center leading-none align-baseline mt-[-0.125em]">
+    <span
+      className="inline-flex h-[1.25em] items-end leading-none align-bottom"
+      style={punctuationOffset ? { transform: `translateY(${punctuationOffset}em)` } : undefined}
+    >
       {char}
     </span>
   );
@@ -193,7 +234,7 @@ function RollingValue({ text, className, loading }) {
   const maxLength = Math.max(nextChars.length, prevChars.length);
 
   return (
-    <span className={cn('inline-flex flex-nowrap items-baseline overflow-visible leading-none', className)}>
+    <span className={cn('inline-flex flex-nowrap items-end overflow-visible leading-none', className)}>
       {Array.from({ length: maxLength }).map((_, index) => {
         const nextChar = nextChars[maxLength - 1 - index];
         const previousChar = prevChars[maxLength - 1 - index];
@@ -207,7 +248,7 @@ function RollingValue({ text, className, loading }) {
         const isDigitPair = /\d/.test(nextChar ?? '') || /\d/.test(previousChar ?? '');
 
         return (
-          <span key={`${place}-${nextChar ?? 'empty'}-${previousChar ?? 'empty'}`} className="inline-flex h-[1em] overflow-visible">
+          <span key={`${place}-${nextChar ?? 'empty'}-${previousChar ?? 'empty'}`} className="inline-flex h-[1.25em] items-end overflow-visible">
             {isDigitPair && /\d/.test(nextChar ?? '') ? (
               <RollingDigit previousChar={previousChar} nextChar={nextChar} place={place} depth={depth} />
             ) : (
@@ -218,7 +259,7 @@ function RollingValue({ text, className, loading }) {
                   animate={{ y: 0, opacity: 1 }}
                   exit={{ y: '-45%', opacity: 0 }}
                   transition={{ duration: 0.72, delay: depth * 0.045 }}
-                  className="inline-flex h-[1em] overflow-visible"
+                  className="inline-flex h-[1.25em] items-end overflow-visible"
                 >
                   <RollingGlyph char={nextChar ?? ''} />
                 </motion.span>
@@ -450,6 +491,8 @@ export default function StatsDashboard() {
               const value = summary[card.key];
               const numericValue = Number(value) || 0;
               const parts = card.formatParts(value);
+              const hasAffix = Boolean(parts.prefix || parts.unit || card.suffix);
+              const kpiSizing = getKpiSizing(parts, hasAffix);
               return (
                 <motion.article
                   key={card.key}
@@ -475,20 +518,26 @@ export default function StatsDashboard() {
                       </div>
                     </div>
 
-                    <div className="mt-8 flex flex-col">
-                      <div className="mt-2 flex items-baseline gap-1.5 font-kpi leading-none text-slate-950">
+                    <div className="mt-8 flex min-w-0 flex-col">
+                      <div className={cn('mt-2 flex min-w-0 items-end font-kpi leading-none text-slate-950', kpiSizing.rowClassName)}>
                         {!loading && parts.prefix ? (
-                          <span className="text-[2rem] font-semibold tracking-[-0.04em] opacity-80 sm:text-[2.4rem]">
+                          <span
+                            className={cn('inline-flex shrink-0 items-end font-semibold tracking-[-0.04em] opacity-80', kpiSizing.prefixClassName)}
+                            style={{ transform: `translateY(${KPI_PREFIX_OFFSET_EM}em)` }}
+                          >
                             {parts.prefix}
                           </span>
                         ) : null}
                         <RollingValue
                           text={parts.digits}
                           loading={loading}
-                          className="text-[2.75rem] font-semibold tracking-[-0.06em] sm:text-[3.3rem]"
+                          className={cn('min-w-0 font-semibold tracking-[-0.06em]', kpiSizing.digitsClassName)}
                         />
                         {!loading && (parts.unit || card.suffix) ? (
-                          <span className="text-[1.8rem] font-semibold tracking-[-0.02em] opacity-80 sm:text-[2.2rem]">
+                          <span
+                            className={cn('inline-flex shrink-0 items-end font-semibold tracking-[-0.02em] opacity-80', kpiSizing.suffixClassName)}
+                            style={{ transform: `translateY(${KPI_SUFFIX_OFFSET_EM}em)` }}
+                          >
                             {parts.unit || card.suffix}
                           </span>
                         ) : null}

@@ -1305,3 +1305,92 @@ Write a detailed implementation plan for a new stats dashboard that records each
     - Estimated CO2e Saved
     - Items Packed
 - The plan also defines the requested lightweight carbon proxy based on the max-dimension gap between the recommended option and the second-best fitting option, scaled by shipment weight.
+
+---
+
+# Stats Dashboard KPI Baseline Alignment (2026-03-06)
+
+## Goal
+Fix the vertical misalignment between KPI digits and adjacent symbols/units on the stats dashboard cards so `¥`, `回`, `kg`, and `m3` sit on the same visual baseline as the number.
+
+## Tasks
+- [x] **1. Inspect the KPI value renderer**
+  - Confirm whether the offset comes from `RollingValue` / `RollingGlyph` internals or the card-level value row layout.
+- [x] **2. Implement the alignment fix**
+  - Remove the ad hoc negative top offset used by the rolling glyph wrappers.
+  - Make the card value row use a single bottom-aligned flex baseline for prefix, digits, and suffix/unit text.
+- [x] **3. Verify + review**
+  - Run `cd frontend && npm run build`.
+  - Record the final result and any residual risk.
+
+## Review
+- Updated `frontend/src/pages/StatsDashboard.jsx` KPI value rendering:
+  - Removed the negative top offset on rolling digits/glyphs that was artificially shifting non-digit characters relative to the animated number cells.
+  - Switched the rolling value wrapper and card value row from mixed baseline alignment to a single `items-end` layout.
+  - Added small bottom padding to card-level prefix/suffix spans so `¥`, `回`, `kg`, and `m3` visually sit with the digit block instead of dropping lower.
+- Follow-up refinement:
+  - Added a dedicated punctuation offset map for rolling glyphs so `,` and `.` can be optically aligned independently from digits and external units/symbols.
+- Verification:
+  - `cd frontend && npm run build` ✅
+- Residual note:
+  - Build still reports the pre-existing Vite large-chunk warning; no new warning or compile failure was introduced by this alignment fix.
+
+---
+
+# Stats Dashboard Large-Number Injection (2026-03-06)
+
+## Goal
+Inject a deliberately large stats event into the backing database so the stats dashboard can be checked against extreme KPI lengths and resulting layout pressure.
+
+## Tasks
+- [x] **1. Trace the backing data path**
+  - Confirm which API and database table the dashboard summary reads from.
+- [x] **2. Insert a controlled large event**
+  - Add one oversized `calculation_events` row that materially stretches `¥`, `kg`, and `m3` aggregates without changing application code.
+- [x] **3. Verify the resulting summary**
+  - Read back the aggregated totals after injection so the frontend can be checked against the exact returned values.
+- [x] **4. Review**
+  - Document the injected magnitude and any cleanup/follow-up considerations.
+
+## Review
+- Confirmed the dashboard reads `GET /api/stats/summary`, which aggregates `public.calculation_events`.
+- Injected one oversized test row into `public.calculation_events` with these identifying values:
+  - `id = 32`
+  - `saving_yen = 1234567890`
+  - `estimated_co2e_saved_g = 987654321`
+  - `volume_saved_cm3 = 1234567890.12`
+- After injection, the aggregate summary became:
+  - `totalCalculations = 9`
+  - `estimatedYenSaved = 1234568985` → dashboard renders `¥1,234,568,985`
+  - `estimatedCo2eSavedG = 987658516` → dashboard renders `987658.52 kg`
+  - `cumulativeVolumeSavedCm3 = 1236596717.52` → dashboard renders `1,236.6 m3`
+- Cleanup note:
+  - This was inserted as a deliberate layout-stress event. If you want to revert it later, remove `public.calculation_events.id = 32`.
+
+---
+
+# Stats Dashboard Long KPI Overflow (2026-03-06)
+
+## Goal
+Prevent oversized KPI values from being visually truncated inside the stats cards when the backing summary contains very large numbers.
+
+## Tasks
+- [x] **1. Confirm the failure mode**
+  - Use the injected large stats row to verify that the cost KPI is being clipped by layout rather than missing data from the API.
+- [x] **2. Implement a fit strategy**
+  - Make KPI digit sizing respond to long formatted strings so the entire value remains visible inside the card.
+- [x] **3. Verify + review**
+  - Run `cd frontend && npm run build`.
+  - Record the fix and any residual limitations.
+
+## Review
+- Updated [StatsDashboard.jsx](/Users/fatboy/smartship/frontend/src/pages/StatsDashboard.jsx) to apply length-aware KPI sizing.
+- The value row now:
+  - switches to tighter gaps for long formatted values,
+  - reduces digit font size for 10+ and 12+ character KPI strings,
+  - scales prefix/suffix sizes down with the digits so the full value remains visible.
+- This specifically covers the injected cost case `¥1,234,568,985`, which previously clipped the trailing digits.
+- Verification:
+  - `cd frontend && npm run build` ✅
+- Residual note:
+  - The build still shows the existing Vite large-chunk warning only.
