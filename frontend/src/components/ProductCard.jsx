@@ -165,17 +165,17 @@ export default function ProductCard({
       </div>
 
       {onAdd ? (
-        <div className="relative z-10 mt-3">
+        <div className="relative z-10 mt-3 -mx-2 -mb-2 sm:-mx-3 sm:-mb-3">
           <button
             type="button"
             onClick={onAdd}
-            className="flex min-h-[3.15rem] w-full items-center justify-center gap-2 rounded-[1.15rem] bg-slate-900 px-3 py-3 text-center text-white shadow-[0_18px_30px_-22px_rgba(15,23,42,0.95)] transition-all hover:bg-slate-800 hover:shadow-[0_20px_38px_-22px_rgba(15,23,42,0.85)] active:scale-[0.98]"
+            className="flex min-h-[2.85rem] w-full items-center justify-center gap-2 rounded-b-xl border-t border-white/50 bg-[linear-gradient(135deg,rgba(255,255,255,0.78)_0%,rgba(231,240,255,0.72)_45%,rgba(229,231,255,0.82)_100%)] px-3 py-2 text-center text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.72),0_-12px_24px_-22px_rgba(99,102,241,0.28)] backdrop-blur-xl transition-all duration-200 ease-out hover:border-fuchsia-200/80 hover:bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(244,232,255,0.88)_38%,rgba(224,236,255,0.94)_100%)] hover:text-slate-950 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_-16px_28px_-18px_rgba(217,70,239,0.38),0_0_0_1px_rgba(244,114,182,0.18)] active:scale-[0.99] active:bg-[linear-gradient(135deg,rgba(241,245,255,0.96)_0%,rgba(232,240,255,0.9)_100%)] active:shadow-[inset_0_2px_10px_rgba(99,102,241,0.12),0_-6px_16px_-16px_rgba(79,70,229,0.26)]"
             aria-label="カートに追加"
           >
-            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/12">
-              <Plus className="h-4 w-4" />
+            <span className="flex h-6 w-6 items-center justify-center rounded-full border border-white/65 bg-white/50 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]">
+              <Plus className="h-3.5 w-3.5" />
             </span>
-            <span className="text-sm font-bold tracking-[0.04em]">
+            <span className="text-[0.82rem] font-semibold tracking-[0.04em]">
               追加
             </span>
           </button>

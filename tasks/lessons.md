@@ -159,3 +159,7 @@
 ## 40. Identical repeated actions should reuse the same component, not duplicated styling
 - **Mistake**: Left the My Section login button as a separately styled local button even though the user wanted it to be exactly the same as the Header login button.
 - **Rule**: When the same action must look identical in multiple places, extract and reuse one shared component instead of copying class strings between files.
+
+## 41. CTA color weight should match the page visual language
+- **Mistake**: Kept the integrated `追加` CTA too dark even after the surrounding card/grid had shifted to a softer glassy pastel look, so the button felt bolted on rather than native to the card.
+- **Rule**: When a UI is already using light glass/pastel surfaces, prefer lighter glassy CTAs with stronger hover contrast before defaulting to a heavy dark slab. Make the hover obvious through contrast and glow, not just subtle brightness shifts.
