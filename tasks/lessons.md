@@ -71,3 +71,11 @@
 ## 18. UI language must stay consistent across the whole project
 - **Mistake**: Mixed Cantonese copy into a project flow that had already been standardized to Japanese, causing inconsistent runtime UI.
 - **Rule**: Once the user sets a project-wide UI language, treat every visible runtime string, toast, modal, and error message as part of that contract and keep them all in the same language unless the user explicitly requests mixed-language copy.
+
+## 19. Scope scroll refactors to the exact panel the user cares about
+- **Mistake**: Replaced all nested desktop scrolling with global page scrolling, even though the user still wanted the heavy-content Product Selection panel to keep its own independent scroll.
+- **Rule**: For layout/scroll requests, preserve independent scrolling in explicitly content-dense panels unless the user clearly asks to remove those panel-level scroll regions too.
+
+## 20. Dense saved-item shelves should prefer multi-column grids with capped height
+- **Mistake**: Left `My Product` and `Liked Product` shelves in a one-card-per-row layout, which wasted vertical space and let the section grow indefinitely.
+- **Rule**: For compact product shelves, default to a multi-column grid and cap the visible height to a small number of rows, then use internal scrolling for overflow.

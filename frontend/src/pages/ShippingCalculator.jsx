@@ -57,7 +57,6 @@ export default function ShippingCalculator({ onDrawerToggle, authSession, onOpen
 
   const cartRef = useRef(null);
   const resultRef = useRef(null);
-  const rightPanelRef = useRef(null);
 
   // Custom Hooks
   const {
@@ -308,26 +307,7 @@ export default function ShippingCalculator({ onDrawerToggle, authSession, onOpen
     const behavior = prefersReducedMotion ? 'auto' : 'smooth';
 
     window.requestAnimationFrame(() => {
-      let scrollParent =
-        rightPanelRef.current && rightPanelRef.current.scrollHeight > rightPanelRef.current.clientHeight
-          ? rightPanelRef.current
-          : target.parentElement;
-      while (scrollParent) {
-        const overflowY = window.getComputedStyle(scrollParent).overflowY;
-        const isScrollable = /(auto|scroll|overlay)/.test(overflowY) && scrollParent.scrollHeight > scrollParent.clientHeight;
-        if (isScrollable) break;
-        scrollParent = scrollParent.parentElement;
-      }
-
-      if (!scrollParent) {
-        target.scrollIntoView({ behavior, block: 'start' });
-        return;
-      }
-
-      const parentRect = scrollParent.getBoundingClientRect();
-      const targetRect = target.getBoundingClientRect();
-      const nextTop = scrollParent.scrollTop + (targetRect.top - parentRect.top) - 12;
-      scrollParent.scrollTo({ top: Math.max(0, nextTop), behavior });
+      target.scrollIntoView({ behavior, block: 'start' });
     });
   };
 
@@ -363,7 +343,7 @@ export default function ShippingCalculator({ onDrawerToggle, authSession, onOpen
   };
 
   return (
-    <section id="shipping-calculator" className="flex flex-col gap-4 lg:h-full overflow-x-hidden">
+    <section id="shipping-calculator" className="flex flex-col gap-4 overflow-x-hidden">
       <div>
         <PersonalizedProductsSection
           authenticated={Boolean(authSession?.authenticated)}
@@ -385,11 +365,11 @@ export default function ShippingCalculator({ onDrawerToggle, authSession, onOpen
         ) : null}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-12 lg:h-full lg:overflow-hidden">
+      <div className="grid gap-6 lg:grid-cols-12">
 
         {/* --- Product Library Section (Left Column on Desktop, First on Mobile) --- */}
         <MotionDiv
-          className="order-1 lg:col-span-5 flex flex-col gap-4 lg:h-full lg:overflow-hidden min-w-0"
+          className="order-1 lg:col-span-5 flex flex-col gap-4 min-w-0"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
@@ -408,9 +388,9 @@ export default function ShippingCalculator({ onDrawerToggle, authSession, onOpen
             )}
           </div>
 
-          <div className="relative min-w-0 flex flex-col lg:flex-1 lg:overflow-hidden">
+          <div className="relative min-w-0 flex flex-col">
             <div
-              className="rounded-2xl pb-2 custom-scrollbar lg:flex-1 lg:overflow-y-auto lg:max-h-none"
+              className="rounded-2xl pb-2 lg:max-h-[calc(100svh-13.5rem)] lg:overflow-y-auto custom-scrollbar"
             >
               <AnimatePresence mode="wait">
                 <MotionDiv
@@ -447,9 +427,7 @@ export default function ShippingCalculator({ onDrawerToggle, authSession, onOpen
         </MotionDiv>
 
         <MotionDiv
-          ref={rightPanelRef}
-          data-scroll-container="true"
-          className="order-2 lg:col-span-7 flex flex-col gap-4 lg:h-full lg:overflow-y-auto custom-scrollbar min-w-0"
+          className="order-2 lg:col-span-7 flex flex-col gap-4 min-w-0"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.1 }}

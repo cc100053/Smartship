@@ -14,6 +14,7 @@ const INITIAL_FORM = {
 };
 
 const MotionDiv = motion.div;
+const SHELF_GRID_CLASSNAME = 'grid grid-cols-1 gap-3 sm:grid-cols-2 max-h-[22rem] overflow-y-auto pr-1 custom-scrollbar';
 
 const toPositiveNumber = (value) => {
   if (value === '') return NaN;
@@ -253,7 +254,7 @@ export default function PersonalizedProductsSection({
                       </span>
                     </div>
                     {savedProducts.length ? (
-                      <div className="grid grid-cols-1 gap-3">
+                      <div className={SHELF_GRID_CLASSNAME}>
                         {savedProducts.map((product, index) => (
                           <ProductCard
                             key={`saved:${product.id}`}
@@ -285,7 +286,7 @@ export default function PersonalizedProductsSection({
                       </span>
                     </div>
                     {likedProducts.length ? (
-                      <div className="grid grid-cols-1 gap-3">
+                      <div className={SHELF_GRID_CLASSNAME}>
                         {likedProducts.map((product, index) => (
                           <ProductCard
                             key={`liked:${product.id}`}

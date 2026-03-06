@@ -1,3 +1,51 @@
+# Global Scroll Layout Fix
+
+## Goal
+Replace the desktop dual-panel nested scrolling with a single page-level/global scroll so users can reach the bottom naturally, while keeping mobile interactions and responsive stacking stable.
+
+## Tasks
+- [x] **1. Map current scroll ownership**
+  - Confirm which containers currently own vertical scrolling on desktop and mobile.
+  - Identify all behaviors that depend on those nested scroll containers (`scroll to result`, `back to top`, cart drawer coexistence).
+- [x] **2. Refactor desktop layout to global scroll**
+  - Remove independent left/right desktop scroll regions where they are not necessary.
+  - Preserve responsive stacking and avoid horizontal overflow regressions.
+- [x] **3. Reconcile scroll affordances**
+  - Ensure calculate actions still bring users to the result section sensibly.
+  - Ensure the "back to top" button still appears and targets the correct scroll container(s).
+- [x] **4. Verify and document**
+  - Run frontend production build.
+  - Document the final behavior and any residual responsive risks.
+
+## Review
+- Previous behavior:
+  - `frontend/src/App.jsx` fixed the app to viewport height and hid page overflow, so the browser page itself could not scroll.
+  - `frontend/src/pages/ShippingCalculator.jsx` gave both desktop columns their own scroll behavior, which created the left-session/right-session split the user reported.
+- Implemented change:
+  - Switched the app shell back to page-level height growth and removed the viewport lock so the document handles vertical scrolling again.
+  - Removed the desktop-only nested `overflow`/`h-full` constraints from the calculator grid and both columns so content flows as one page.
+  - Simplified result auto-scroll to native `scrollIntoView`, which now targets the global page scroll model directly.
+- Responsive impact:
+  - Mobile stacking remains unchanged because the `lg:grid-cols-12` breakpoint layout is preserved.
+  - The mobile cart drawer behavior is untouched; it still controls body scroll only while expanded.
+- Verification:
+  - `cd frontend && npm run build` ✅
+- Residual risk:
+  - Desktop users now scroll the whole page instead of isolated panels, so the product list and result area move together by design. This matches the request, but interactive feel should still be spot-checked in-browser.
+
+## Follow-up
+- [x] **5. Restore Product Selection panel scroll only**
+  - Keep global page scrolling as the main layout behavior.
+  - Reintroduce an independent vertical scroll only for the desktop `Product Selection` product list area.
+  - Leave mobile stacking/non-nested scrolling unchanged.
+
+### Follow-up Review
+- Updated `frontend/src/pages/ShippingCalculator.jsx` so the Product Selection product-list container now has desktop-only `max-height` plus `overflow-y-auto`.
+- The page still uses global/document scrolling overall; only the left product list regains internal scrolling on `lg` and above.
+- Mobile remains unchanged because the nested scroll is not enabled below the desktop breakpoint.
+- Verification:
+  - `cd frontend && npm run build` ✅
+
 # Category Filter Auto-Nudge UX
 
 # Login / Saved Products Design Discussion

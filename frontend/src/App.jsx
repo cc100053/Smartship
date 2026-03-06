@@ -111,7 +111,7 @@ export default function App() {
   };
 
   return (
-    <div className="h-[100dvh] min-h-[100svh] bg-neutral-50 text-neutral-900 selection:bg-rose-500/30 overflow-hidden flex flex-col">
+    <div className="min-h-[100svh] bg-neutral-50 text-neutral-900 selection:bg-rose-500/30 flex flex-col">
       <div className="fixed inset-0 z-0 pointer-events-none opacity-40 overflow-hidden">
         <div className="absolute top-[-20%] left-[-10%] h-[70vh] w-[70vw] rounded-full bg-blue-400 mix-blend-multiply blur-[128px] animate-blob" />
         <div className="absolute top-[-20%] right-[-10%] h-[70vh] w-[70vw] rounded-full bg-purple-400 mix-blend-multiply blur-[128px] animate-blob animation-delay-2000" />
@@ -119,7 +119,7 @@ export default function App() {
       </div>
 
       <div
-        className="relative z-10 mx-auto max-w-[1400px] px-3 pb-3 pt-3 sm:px-6 sm:pb-4 sm:pt-4 lg:px-8 h-full flex flex-col w-full"
+        className="relative z-10 mx-auto min-h-[100svh] max-w-[1400px] px-3 pb-3 pt-3 sm:px-6 sm:pb-4 sm:pt-4 lg:px-8 flex flex-col w-full"
         style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top, 0px))' }}
       >
         <MotionHeader
@@ -195,12 +195,12 @@ export default function App() {
         <MotionMain
           ref={mainRef}
           data-scroll-container="true"
-          className="flex-1 min-h-0 overflow-y-auto lg:overflow-visible flex flex-col"
+          className="flex flex-1 flex-col"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.6, delay: 0.2 }}
         >
-          <div className="flex-1 min-h-0">
+          <div className="flex-1">
             <ShippingCalculator
               onDrawerToggle={setCartDrawerOpen}
               authSession={authSession}
