@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ChevronDown, Heart, LogIn, PackagePlus, Star, Trash2 } from 'lucide-react';
+import { ChevronDown, Heart, PackagePlus, Star, Trash2, UserRound } from 'lucide-react';
 import ProductCard from './ProductCard';
 import { getCategoryLabel } from '../utils/labels';
 
@@ -121,11 +121,6 @@ export default function PersonalizedProductsSection({
               </span>
             )}
           </div>
-          {!authenticated ? (
-            <p className="mt-2 truncate text-sm font-medium text-slate-700">
-              ログインすると、よく使う商品とお気に入り商品をここにまとめられます。
-            </p>
-          ) : null}
         </div>
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/80 bg-white/72 shadow-sm">
           <ChevronDown className={`h-5 w-5 text-slate-500 transition ${expanded ? 'rotate-180' : ''}`} />
@@ -153,10 +148,10 @@ export default function PersonalizedProductsSection({
                   <button
                     type="button"
                     onClick={onOpenLogin}
-                    className="inline-flex items-center gap-2 rounded-full bg-[linear-gradient(135deg,#0f172a_0%,#334155_100%)] px-4 py-2 text-sm font-semibold text-white shadow-[0_18px_36px_-20px_rgba(15,23,42,0.85)]"
+                    className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-slate-900/15 transition hover:-translate-y-0.5"
                   >
-                    <LogIn className="h-4 w-4" />
-                    ログインする
+                    <UserRound className="h-3.5 w-3.5" />
+                    ログイン
                   </button>
                 </div>
               </div>

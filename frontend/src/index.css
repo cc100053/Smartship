@@ -161,6 +161,16 @@ body {
   padding: 2px;
   overflow: hidden;
   isolation: isolate;
+  transform-style: preserve-3d;
+  will-change: transform, filter, box-shadow;
+  transition: transform 0.18s ease-out, filter 0.22s ease, box-shadow 0.22s ease;
+}
+
+.vote-badge:hover {
+  filter: saturate(1.22) brightness(1.04);
+  box-shadow:
+    0 0 0 1px rgba(255, 239, 202, 0.45),
+    0 14px 34px rgba(166, 136, 78, 0.22);
 }
 
 .vote-badge::before {
@@ -178,6 +188,7 @@ body {
   );
   animation: vote-ring-spin 12s linear infinite;
   filter: saturate(0.92);
+  transition: filter 0.22s ease, opacity 0.22s ease;
 }
 
 .vote-badge::after {
@@ -207,6 +218,35 @@ body {
   );
   backdrop-filter: blur(8px);
   box-shadow: inset 0 -1px 0 rgba(194, 163, 106, 0.24);
+  transition: box-shadow 0.24s ease, background 0.24s ease;
+}
+
+.vote-badge:hover .vote-badge-core {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 1) 0%,
+    rgba(255, 246, 218, 1) 100%
+  );
+  box-shadow:
+    inset 0 -1px 0 rgba(194, 163, 106, 0.34),
+    0 14px 26px rgba(166, 136, 78, 0.22);
+}
+
+.vote-badge:hover::before {
+  filter: saturate(1.15) brightness(1.12);
+  opacity: 1;
+  animation-duration: 4.5s;
+}
+
+.vote-badge:hover::after {
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.9),
+    0 0 0 1px rgba(199, 162, 92, 0.52),
+    0 10px 28px rgba(199, 162, 92, 0.25);
+}
+
+.vote-badge:hover .text-shimmer {
+  animation-duration: 1.2s;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -218,5 +258,17 @@ body {
 
   .vote-badge::before {
     animation: none;
+  }
+
+  .vote-badge {
+    transition: none;
+  }
+
+  .vote-badge:hover {
+    filter: none;
+  }
+
+  .vote-badge-core {
+    transition: none;
   }
 }

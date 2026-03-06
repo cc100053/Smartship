@@ -12,6 +12,7 @@ const MotionMain = motion.main;
 
 export default function App() {
   const mainRef = useRef(null);
+  const voteBadgeRef = useRef(null);
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
@@ -23,6 +24,7 @@ export default function App() {
     loginId: null,
   });
   const [authToast, setAuthToast] = useState(null);
+  const [voteBadgeTilt, setVoteBadgeTilt] = useState({ rotateX: 0, rotateY: 0, active: false });
 
   useEffect(() => {
     let cancelled = false;
@@ -110,6 +112,26 @@ export default function App() {
     }
   };
 
+  const handleVoteBadgeMove = (event) => {
+    const badge = voteBadgeRef.current;
+    if (!badge || typeof window === 'undefined') return;
+    if (window.matchMedia?.('(hover: none), (pointer: coarse)')?.matches) return;
+
+    const rect = badge.getBoundingClientRect();
+    const x = (event.clientX - rect.left) / rect.width;
+    const y = (event.clientY - rect.top) / rect.height;
+
+    setVoteBadgeTilt({
+      rotateX: (0.5 - y) * 16,
+      rotateY: (x - 0.5) * 18,
+      active: true,
+    });
+  };
+
+  const resetVoteBadgeTilt = () => {
+    setVoteBadgeTilt({ rotateX: 0, rotateY: 0, active: false });
+  };
+
   return (
     <div className="min-h-[100svh] bg-neutral-50 text-neutral-900 selection:bg-rose-500/30 flex flex-col">
       <div className="fixed inset-0 z-0 pointer-events-none opacity-40 overflow-hidden">
@@ -143,7 +165,16 @@ export default function App() {
               </div>
             </a>
 
-            <div className="vote-badge">
+            <div
+              ref={voteBadgeRef}
+              className="vote-badge cursor-default"
+              onMouseMove={handleVoteBadgeMove}
+              onMouseEnter={handleVoteBadgeMove}
+              onMouseLeave={resetVoteBadgeTilt}
+              style={{
+                transform: `perspective(900px) rotateX(${voteBadgeTilt.rotateX}deg) rotateY(${voteBadgeTilt.rotateY}deg) scale(${voteBadgeTilt.active ? 1.1 : 1})`,
+              }}
+            >
               <div className="vote-badge-core text-[0.65rem] sm:text-xs font-semibold">
                 <span className="flex items-center gap-1 drop-shadow-sm">
                   <span className="bg-gradient-to-r from-rose-600 via-fuchsia-600 to-indigo-600 bg-clip-text text-transparent font-black tracking-wider">
@@ -169,22 +200,22 @@ export default function App() {
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
+                  aria-label="ログアウト"
                 >
                   <LogOut className="h-3.5 w-3.5" />
-                  ログアウト
                 </button>
               </div>
             ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  setAuthError('');
-                  setAuthModalOpen(true);
-                }}
-                disabled={authLoading}
-                className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-slate-900/15 transition hover:-translate-y-0.5 disabled:opacity-50"
-              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthError('');
+                    setAuthModalOpen(true);
+                  }}
+                  disabled={authLoading}
+                  className="inline-flex items-center gap-2 rounded-full border border-transparent bg-slate-900 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-slate-900/15 transition-all duration-300 ease-out hover:border-slate-200 hover:bg-white hover:text-slate-900 hover:shadow-xl hover:shadow-slate-900/10 active:scale-[0.98] disabled:opacity-50"
+                >
                 <UserRound className="h-3.5 w-3.5" />
                 ログイン
               </button>

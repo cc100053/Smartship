@@ -111,3 +111,27 @@
 ## 28. Long cart lists should cap the item area before they push primary actions away
 - **Mistake**: Let the cart item list expand indefinitely, which made the cart panel keep growing instead of preserving a stable area for totals and the calculate button.
 - **Rule**: In cart panels, cap the item-list viewport once it exceeds a small number of visible rows and use internal scrolling so summary/actions stay anchored.
+
+## 29. Header utility actions should default to icon-only when the label is redundant
+- **Mistake**: Kept a visible `ログアウト` label even though the surrounding authenticated header already established the account context and the icon conveyed the action.
+- **Rule**: In dense header utility areas, prefer icon-only controls with proper `aria-label`s when the text adds clutter more than clarity.
+
+## 30. Logged-out teaser copy should be removed when the section already explains itself elsewhere
+- **Mistake**: Left the `ログインすると、よく使う商品とお気に入り商品をここにまとめられます。` helper sentence even though the section structure and login prompt already conveyed the same idea.
+- **Rule**: When a UI already includes a dedicated explanation block, remove duplicate teaser copy from the collapsed header to keep the summary row clean.
+
+## 31. Repeated auth actions on the same screen should share one visual language
+- **Mistake**: Left the `My Section` login CTA using a different icon, label, and button treatment from the main header login button.
+- **Rule**: When the same action appears in multiple places on one screen, reuse the same icon, copy, and button styling unless there is a deliberate hierarchy difference.
+
+## 32. Header hover states should feel responsive without shifting the layout
+- **Mistake**: Used a vertical lift hover on the main login button, which made the header feel jumpy when the user only wanted a subtle interactive response.
+- **Rule**: In dense header bars, prefer color, glow, shadow, or slight scale hover feedback over upward translation unless motion is explicitly part of the design language.
+
+## 33. Attention-driving CTAs can use stronger hover contrast if they stay layout-safe
+- **Mistake**: Kept the vote badge hover too polite, so it reacted but still did not feel like a standout call-to-action.
+- **Rule**: For explicit attention CTAs in fixed headers, increase hover contrast through glow, saturation, ring energy, and faster accent motion before resorting to layout-shifting movement.
+
+## 34. Pointer-reactive badges should map motion to cursor position, not fixed hover transforms
+- **Mistake**: Boosted the vote badge hover intensity with a fixed rotation, which looked louder but did not actually respond to the user's pointer location.
+- **Rule**: For interactive badges meant to feel tactile, drive tilt from pointer position and leave fixed hover transforms to secondary polish only.
