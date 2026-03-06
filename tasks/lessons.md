@@ -163,3 +163,6 @@
 ## 41. CTA color weight should match the page visual language
 - **Mistake**: Kept the integrated `追加` CTA too dark even after the surrounding card/grid had shifted to a softer glassy pastel look, so the button felt bolted on rather than native to the card.
 - **Rule**: When a UI is already using light glass/pastel surfaces, prefer lighter glassy CTAs with stronger hover contrast before defaulting to a heavy dark slab. Make the hover obvious through contrast and glow, not just subtle brightness shifts.
+## 42. Responsive UI fixes must target the active frontend path, not a legacy duplicate
+- **Mistake**: Implemented a header/card UI change in the legacy root src/main/webapp JSP path even though the live responsive product/like interactions were in frontend/src.
+- **Rule**: Before editing UI for this repo, confirm the active rendering path by tracing the exact component that owns the reported interaction (App.jsx, page component, or shared card component). Do not assume the first matching header/card file is the one the user is looking at.

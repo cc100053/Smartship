@@ -13,8 +13,9 @@
 ### 正式統計觸發條件
 
 - 只有使用者按下「計算運費」且 `/api/shipping/calculate/cart` 成功回傳時，才記為一筆正式統計。
+- 只有使用者按下「計算運費」且正式計算 API 成功回傳時，才記為一筆正式統計。
+- `cart` 與 `manual` 兩種正式計算都計入統計。
 - `3D preview` 使用的 `/api/shipping/calculate/dimensions` 不計入正式統計。
-- 手動輸入模式只要走正式計算成功，一樣計入統計。
 
 ### 統計頁 MVP 顯示四個數字
 
@@ -92,7 +93,7 @@ estimatedCo2eSavedG = round(sizeGapCm * 12 * weightFactor)
 
 MVP 使用輪詢：
 
-- 預設每 `3` 秒向 backend 讀取 aggregate stats。
+- 預設每 `2` 秒向 backend 讀取 aggregate stats。
 - 頁面載入時立即抓一次。
 - 頁面離開時停止輪詢。
 
@@ -137,6 +138,7 @@ MVP 使用輪詢：
 在 backend 的正式計算流程中寫入事件：
 
 - 入口：`/api/shipping/calculate/cart`
+- 入口：`/api/shipping/calculate/cart` 與 `/api/shipping/calculate/manual`
 - 位置：完成推薦方案與候選方案計算後、成功回傳前
 
 建議流程：

@@ -28,7 +28,6 @@ Rebalance the Product Selection card UI using Option 3:
 - Verification:
   - `cd frontend && npm run build` ✅
   - Existing Vite large-chunk warning remains, but there are no new compile errors from the card refactor.
-
 # Frontend Responsive Correction (Fixed Header + Full-Half Card Actions)
 
 ## Goal
@@ -46,8 +45,7 @@ Correct the previous UI pass by targeting the active React frontend:
 - [x] **3. Refactor product-card actions**
   - Replace mismatched icon buttons with equal-height top/bottom action panels.
   - Make each action panel occupy its full half-area for easier tapping on mobile.
-- [x] **4. Verify**
-  - Run the frontend production build.
+- [x] **4. Verify**  - Run the frontend production build.
   - Review the final DOM/class behavior for responsive regressions.
 
 ## Review
@@ -64,7 +62,6 @@ Correct the previous UI pass by targeting the active React frontend:
 - Verification:
   - `cd frontend && npm run build` ✅
   - Residual note: build still reports the existing large-chunk Vite warning, but there is no new compile/runtime error from this UI pass.
-
 # Global Scroll Layout Fix
 
 ## Goal
@@ -271,6 +268,59 @@ Investigate why invite-code requests fail across all existing rooms (including a
   - Frontend API layer contains shipping-only endpoints (`/api/products`, `/api/shipping/calculate/*`) with no room/invite APIs.
   - Backend controllers expose shipping/product endpoints only, no room/invite controller path.
   - Full-repo keyword search (`room/invite/房間/邀請`) returns no feature code references besides task notes.
+
+---
+
+# Stats Dashboard MVP Implementation (2026-03-06)
+
+## Goal
+Implement the agreed stats dashboard MVP end to end:
+- Record every successful formal `計算運費` action (`cart` and `manual`) as a stats event.
+- Expose aggregate totals for a dedicated `#/stats` page.
+- Show `Total Calculations`, `Estimated Yen Saved`, `Estimated CO2e Saved`, and `Items Packed`.
+
+## Tasks
+- [x] **1. Finalize data model and schema sync**
+  - Add a `calculation_events` table definition to workspace schema docs.
+  - Apply the matching Supabase migration so production schema remains compatible with `ddl-auto=validate`.
+- [x] **2. Implement backend stats recording**
+  - Add event entity/repository/summary DTOs.
+  - Add a stats service that derives savings + CO2e from the recommended and second-best fitting options.
+  - Record events for successful `calculate/cart` and `calculate/manual` responses without breaking the primary calculation flow if stats persistence fails.
+- [x] **3. Implement backend summary API**
+  - Add a controller endpoint returning aggregate totals with zero-safe defaults.
+  - Add targeted tests for stats math and summary behavior.
+- [x] **4. Implement frontend stats dashboard**
+  - Add `fetchStatsSummary()` API helper and a `#/stats` page with polling.
+  - Keep the page visually intentional and exhibition-ready while staying consistent with the active React frontend language.
+- [x] **5. Verify and document**
+  - Run targeted backend tests.
+  - Run frontend production build.
+  - Update review notes with implementation details, verification evidence, and any residual risks.
+
+## Review
+- Backend:
+  - Added `calculation_events` persistence via new `CalculationEvent` entity/repository plus `StatsService`.
+  - `ShippingController` now records successful formal calculations for both `cart` and `manual` modes while swallowing stats-write failures behind a warning log so shipping results stay available.
+  - Added `GET /api/stats/summary` through `StatsController`.
+  - Added targeted tests:
+    - `StatsServiceTest`
+    - `StatsControllerTest`
+  - Updated `AuthServiceTest` to match the existing Japanese auto-register runtime message so the targeted verification suite is green again.
+- Frontend:
+  - Added `fetchStatsSummary()` and a new `#/stats` route in the active React app.
+  - Added `frontend/src/pages/StatsDashboard.jsx` with 2-second polling, large-format KPI cards, loading/error handling, and explanatory copy for the CO2e proxy.
+  - Updated `useShippingCalculator()` so formal cart calculations use the same reference-vs-saved product source mapping as the preview path.
+- Schema / docs:
+  - Updated `src/main/resources/schema.sql` with `calculation_events`.
+  - Updated `docs/stats_dashboard_execution_plan.md` so the formal-counting definition explicitly includes both `cart` and `manual`.
+  - Applied Supabase migration: `add_calculation_events_stats_dashboard` ✅
+- Verification:
+  - `cd backend && ./mvnw test -Dtest=StatsServiceTest,StatsControllerTest,AuthServiceTest,PackingServiceTest` ✅
+  - `cd frontend && npm ci` ✅
+  - `cd frontend && npm run build` ✅
+- Residual risk:
+  - Frontend production build still reports a large-chunk warning (~1.4 MB main bundle). The stats page did not introduce a build failure, but bundle splitting remains an unrelated optimization follow-up.
 - Root cause for current investigation failure:
   - The reported bug cannot be traced in this codebase because the relevant feature is not present here.
 
