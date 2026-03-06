@@ -29,6 +29,9 @@ function AuthModalContent({ onClose, onSubmit, loading, error }) {
 
   const handleSubmit = (event) => {
     event.preventDefault();
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
     onSubmit(form);
   };
 
@@ -96,7 +99,7 @@ function AuthModalContent({ onClose, onSubmit, loading, error }) {
                   type="text"
                   value={form.loginId}
                   onChange={(event) => handleChange('loginId', event.target.value)}
-                  className="w-full rounded-2xl border border-slate-200/80 bg-white/95 px-4 py-3.5 text-sm font-medium text-slate-800 outline-none transition placeholder:text-slate-350 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-100"
+                  className="w-full rounded-2xl border border-slate-200/80 bg-white/95 px-4 py-3.5 text-base font-medium text-slate-800 outline-none transition placeholder:text-slate-350 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-100 sm:text-sm"
                   placeholder="ID を入力"
                   autoComplete="username"
                 />
@@ -111,7 +114,7 @@ function AuthModalContent({ onClose, onSubmit, loading, error }) {
                   type="password"
                   value={form.password}
                   onChange={(event) => handleChange('password', event.target.value)}
-                  className="w-full rounded-2xl border border-slate-200/80 bg-white/95 px-4 py-3.5 text-sm font-medium text-slate-800 outline-none transition placeholder:text-slate-350 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-100"
+                  className="w-full rounded-2xl border border-slate-200/80 bg-white/95 px-4 py-3.5 text-base font-medium text-slate-800 outline-none transition placeholder:text-slate-350 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-100 sm:text-sm"
                   placeholder="パスワードを入力"
                   autoComplete="current-password"
                 />

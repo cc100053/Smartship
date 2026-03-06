@@ -1472,3 +1472,32 @@ Replace heuristic long-number font sizing with true container-width autoscaling 
   - `cd frontend && npm run build` ✅
 - Residual note:
   - Existing Vite large-chunk warning remains unchanged.
+
+---
+
+# iPhone Login Auto-Zoom Investigation (2026-03-07)
+
+## Goal
+Find and fix why the real iPhone flow leaves the app visually zoomed in after a successful login.
+
+## Tasks
+- [x] **1. Trace the login viewport behavior**
+  - Inspect the auth modal input styles and login-success close path for iPhone Safari auto-zoom triggers.
+- [x] **2. Apply the minimal fix**
+  - Remove the auto-zoom trigger from the login inputs and prevent a focused input from surviving the modal close.
+- [x] **3. Verify + review**
+  - Run `cd frontend && npm run build`.
+  - Record the confirmed root cause and the shipped mitigation.
+
+## Review
+- Root cause:
+  - [AuthModal.jsx](/Users/fatboy/smartship/frontend/src/components/AuthModal.jsx) used `text-sm` inputs for the login form, which resolves below `16px` on mobile.
+  - On real iPhone Safari, focusing an input below `16px` triggers automatic viewport zoom.
+  - The login success path in [App.jsx](/Users/fatboy/smartship/frontend/src/App.jsx) only closed the modal; it did not explicitly clear the focused input first, so the user could land back on the calculator while the browser was still zoomed in.
+- Fix shipped:
+  - Mobile login inputs now render at `text-base` and only step down to `text-sm` from `sm` upward, which keeps iPhone from auto-zooming during text entry.
+  - The auth form now blurs the active element before submit, so the focused field is released before the success flow closes the modal.
+- Verification:
+  - `cd frontend && npm run build` ✅
+- Residual note:
+  - Build still reports the existing Vite large-chunk warning only.
