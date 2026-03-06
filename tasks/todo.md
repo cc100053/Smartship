@@ -439,6 +439,38 @@ Extend the active stats dashboard with richer live monitoring controls:
 - Residual risk:
   - The reset endpoint is intentionally open right now for exhibition convenience. If this dashboard will be exposed outside a trusted demo environment, it needs auth/role protection before release.
 
+# Stats Dashboard De-emphasis Pass (2026-03-06)
+
+## Goal
+Reduce dashboard visual noise after the previous polish pass:
+- Remove the volume sparkline.
+- Move the reset control into the bottom section instead of keeping it fixed in the viewport.
+- Keep the KPI grouping improvements while making the reset action easy to find but visually quiet.
+
+## Tasks
+- [x] **1. Remove unused trend flow**
+  - Remove the frontend sparkline rendering and related trend fetch calls.
+  - Remove the now-unused backend trend endpoint and tests.
+- [x] **2. Reposition reset control**
+  - Move reset into the bottom of the page layout.
+  - Tone down its emphasis while preserving confirm/loading/error behavior.
+- [x] **3. Verify and document**
+  - Run targeted backend tests and frontend build.
+  - Record the final behavior in Review.
+
+## Review
+- Backend:
+  - Removed the temporary `/api/stats/volume-trend` endpoint and the related service/repository/test wiring.
+  - Kept `/api/stats/reset` unchanged so reset behavior still works.
+- Frontend:
+  - Removed the `累積節省包裝體積` sparkline and its trend polling.
+  - Kept the KPI group-color cleanup (`Activity / Cost / Carbon / Volume`).
+  - Moved `Reset Data` into the bottom of the dashboard content and reduced its visual weight from a fixed dark CTA to a quieter in-flow utility button.
+  - Preserved confirm, loading, and inline error feedback for reset.
+- Verification:
+  - `cd backend && ./mvnw test -Dtest=StatsServiceTest,StatsControllerTest` ✅
+  - `cd frontend && npm run build` ✅
+
 # Mobile Responsive Stability Audit (Header/Footer/Cart)
 
 ## Goal

@@ -2,8 +2,6 @@ package com.smartship.repository;
 
 import com.smartship.dto.response.StatsSummaryResponse;
 import com.smartship.entity.CalculationEvent;
-import java.util.List;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -20,6 +18,4 @@ public interface CalculationEventRepository extends JpaRepository<CalculationEve
             from CalculationEvent e
             """)
     StatsSummaryResponse getSummary();
-
-    List<CalculationEvent> findAllByOrderByCreatedAtDesc(Pageable pageable);
 }

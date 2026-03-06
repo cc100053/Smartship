@@ -2,7 +2,6 @@ package com.smartship.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentCaptor.forClass;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -10,7 +9,6 @@ import com.smartship.dto.Dimensions;
 import com.smartship.dto.response.CalculationResponse;
 import com.smartship.dto.response.ShippingResultResponse;
 import com.smartship.dto.response.StatsSummaryResponse;
-import com.smartship.dto.response.StatsVolumeTrendResponse;
 import com.smartship.entity.CalculationEvent;
 import com.smartship.repository.CalculationEventRepository;
 import java.time.Instant;
@@ -21,7 +19,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Pageable;
 
 @ExtendWith(MockitoExtension.class)
 class StatsServiceTest {
@@ -96,26 +93,10 @@ class StatsServiceTest {
     }
 
     @Test
-    void getRecentVolumeTrendReturnsChronologicalRunningTotals() {
-        CalculationEvent older = new CalculationEvent();
-        older.setVolumeSavedCm3(1200);
-
-        CalculationEvent newer = new CalculationEvent();
-        newer.setVolumeSavedCm3(800);
-
-        when(calculationEventRepository.findAllByOrderByCreatedAtDesc(org.mockito.ArgumentMatchers.any(Pageable.class)))
-                .thenReturn(List.of(newer, older));
-
-        StatsVolumeTrendResponse result = statsService.getRecentVolumeTrend();
-
-        assertThat(result.points()).containsExactly(1200.0, 2000.0);
-    }
-
-    @Test
     void resetAllStatsDeletesStoredEvents() {
         statsService.resetAllStats();
 
-        verify(calculationEventRepository, times(1)).deleteAllInBatch();
+        verify(calculationEventRepository).deleteAllInBatch();
     }
 
     private ShippingResultResponse option(

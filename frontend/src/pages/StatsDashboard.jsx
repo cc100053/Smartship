@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { BarChart3, Box, Coins, Leaf, RefreshCcw, RotateCcw, Sparkles, TimerReset } from 'lucide-react';
-import { fetchStatsSummary, fetchStatsVolumeTrend, resetStatsData } from '../api/shippingApi';
+import { Box, Coins, Leaf, RefreshCcw, RotateCcw, Sparkles, TimerReset } from 'lucide-react';
+import { fetchStatsSummary, resetStatsData } from '../api/shippingApi';
 import { cn } from '../utils/cn';
 
 const POLL_INTERVAL_MS = 2000;
@@ -75,65 +75,6 @@ const getResetErrorMessage = (error) => {
   return '統計データを初期化できませんでした。';
 };
 
-function VolumeSparkline({ points }) {
-  if (!points?.length) {
-    return (
-      <div className="mt-4 flex h-16 items-center justify-center rounded-2xl border border-white/60 bg-white/55 text-[11px] font-medium text-slate-500">
-        まだ trend data はありません
-      </div>
-    );
-  }
-
-  const max = Math.max(...points, 1);
-  const min = Math.min(...points, 0);
-  const range = Math.max(max - min, 1);
-  const width = 220;
-  const height = 64;
-
-  const path = points.map((point, index) => {
-    const x = (index / Math.max(points.length - 1, 1)) * width;
-    const y = height - ((point - min) / range) * (height - 8) - 4;
-    return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
-  }).join(' ');
-
-  const area = `${path} L ${width} ${height} L 0 ${height} Z`;
-  const latest = points[points.length - 1] || 0;
-
-  return (
-    <div className="mt-4 rounded-2xl border border-white/60 bg-white/55 px-3 py-3">
-      <div className="mb-2 flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-        <span>Recent Volume Trend</span>
-        <span>{formatSavedVolume(latest)}</span>
-      </div>
-      <svg viewBox={`0 0 ${width} ${height}`} className="h-16 w-full overflow-visible">
-        <defs>
-          <linearGradient id="volumeSparklineFill" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="rgba(99,102,241,0.38)" />
-            <stop offset="100%" stopColor="rgba(99,102,241,0.04)" />
-          </linearGradient>
-        </defs>
-        <path d={area} fill="url(#volumeSparklineFill)" />
-        <path
-          d={path}
-          fill="none"
-          stroke="rgb(79,70,229)"
-          strokeWidth="3"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <circle
-          cx={(Math.max(points.length - 1, 0) / Math.max(points.length - 1, 1)) * width}
-          cy={height - ((latest - min) / range) * (height - 8) - 4}
-          r="4"
-          fill="white"
-          stroke="rgb(79,70,229)"
-          strokeWidth="2"
-        />
-      </svg>
-    </div>
-  );
-}
-
 const cards = [
   {
     key: 'totalCalculations',
@@ -187,13 +128,11 @@ const cards = [
     icon: Box,
     formatter: formatSavedVolume,
     helper: '次点配送枠との差分体積を累積',
-    showSparkline: true,
   },
 ];
 
 export default function StatsDashboard() {
   const [summary, setSummary] = useState(defaultSummary);
-  const [volumeTrend, setVolumeTrend] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [resetError, setResetError] = useState('');
@@ -209,16 +148,10 @@ export default function StatsDashboard() {
       activeController = new AbortController();
 
       try {
-        const [nextSummary, nextTrend] = await Promise.all([
-          fetchStatsSummary({
-            signal: activeController.signal,
-            timeoutMs: 8000,
-          }),
-          fetchStatsVolumeTrend({
-            signal: activeController.signal,
-            timeoutMs: 8000,
-          }),
-        ]);
+        const nextSummary = await fetchStatsSummary({
+          signal: activeController.signal,
+          timeoutMs: 8000,
+        });
 
         if (cancelled) return;
 
@@ -229,7 +162,6 @@ export default function StatsDashboard() {
           cumulativeVolumeSavedCm3: nextSummary?.cumulativeVolumeSavedCm3 ?? 0,
           updatedAt: nextSummary?.updatedAt ?? null,
         });
-        setVolumeTrend(Array.isArray(nextTrend?.points) ? nextTrend.points : []);
         setError('');
       } catch (loadError) {
         if (cancelled || activeController.signal.aborted) {
@@ -270,7 +202,6 @@ export default function StatsDashboard() {
     try {
       await resetStatsData();
       setSummary(defaultSummary);
-      setVolumeTrend([]);
       setError('');
     } catch (resetDataError) {
       console.error('[StatsDashboard] Failed to reset stats:', resetDataError);
@@ -405,7 +336,6 @@ export default function StatsDashboard() {
                           {card.footnote}
                         </p>
                       )}
-                      {card.showSparkline ? <VolumeSparkline points={volumeTrend} /> : null}
                     </div>
                   </div>
                 </motion.article>
@@ -464,31 +394,30 @@ export default function StatsDashboard() {
             </div>
           </motion.section>
 
-          {resetError ? (
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mt-4 rounded-[1.5rem] border border-rose-200/80 bg-rose-50/90 px-4 py-3 text-sm font-medium text-rose-700 shadow-[0_12px_35px_rgba(251,113,133,0.12)]"
-            >
-              {resetError}
-            </motion.div>
-          ) : null}
-        </main>
-      </div>
+          <div className="mt-8 flex flex-col items-end gap-3">
+            {resetError ? (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="w-full rounded-[1.5rem] border border-rose-200/80 bg-rose-50/90 px-4 py-3 text-sm font-medium text-rose-700 shadow-[0_12px_35px_rgba(251,113,133,0.12)] lg:max-w-xl"
+              >
+                {resetError}
+              </motion.div>
+            ) : null}
 
-      <div className="pointer-events-none fixed bottom-5 right-5 z-30">
-        <motion.button
-          type="button"
-          whileHover={{ scale: 1.03 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={handleReset}
-          disabled={resetting}
-          className="pointer-events-auto inline-flex min-h-12 items-center gap-3 rounded-full border border-slate-900/85 bg-slate-950/94 px-5 py-3 text-sm font-semibold text-white shadow-[0_18px_45px_rgba(15,23,42,0.28)] transition hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {resetting ? <RefreshCcw className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
-          <span>Reset Data</span>
-          <BarChart3 className="h-4 w-4 text-white/70" />
-        </motion.button>
+            <motion.button
+              type="button"
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.99 }}
+              onClick={handleReset}
+              disabled={resetting}
+              className="inline-flex min-h-11 items-center gap-2 rounded-full border border-slate-300/80 bg-white/78 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-[0_10px_25px_rgba(148,163,184,0.14)] backdrop-blur transition hover:border-slate-400/80 hover:bg-white/88 hover:text-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <RotateCcw className={cn('h-4 w-4', resetting && 'animate-spin')} />
+              <span>{resetting ? 'Resetting...' : 'Reset Data'}</span>
+            </motion.button>
+          </div>
+        </main>
       </div>
     </div>
   );

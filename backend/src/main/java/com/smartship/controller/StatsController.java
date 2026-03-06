@@ -1,7 +1,6 @@
 package com.smartship.controller;
 
 import com.smartship.dto.response.StatsSummaryResponse;
-import com.smartship.dto.response.StatsVolumeTrendResponse;
 import com.smartship.service.StatsService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,11 +22,6 @@ public class StatsController {
     @GetMapping("/summary")
     public StatsSummaryResponse getSummary() {
         return statsService.getSummary();
-    }
-
-    @GetMapping("/volume-trend")
-    public StatsVolumeTrendResponse getVolumeTrend() {
-        return statsService.getRecentVolumeTrend();
     }
 
     @PostMapping("/reset")

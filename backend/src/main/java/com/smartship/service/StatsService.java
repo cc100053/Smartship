@@ -3,13 +3,9 @@ package com.smartship.service;
 import com.smartship.dto.response.CalculationResponse;
 import com.smartship.dto.response.ShippingResultResponse;
 import com.smartship.dto.response.StatsSummaryResponse;
-import com.smartship.dto.response.StatsVolumeTrendResponse;
 import com.smartship.entity.CalculationEvent;
 import com.smartship.repository.CalculationEventRepository;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,7 +14,6 @@ public class StatsService {
     private static final double MIN_WEIGHT_FACTOR = 0.8;
     private static final double MAX_WEIGHT_FACTOR = 2.0;
     private static final double CO2E_GRAMS_PER_CM = 12.0;
-    private static final int DEFAULT_TREND_LIMIT = 16;
 
     private final CalculationEventRepository calculationEventRepository;
 
@@ -66,28 +61,6 @@ public class StatsService {
             return summary;
         }
         return new StatsSummaryResponse(0, 0, 0, 0, null);
-    }
-
-    @Transactional(readOnly = true)
-    public StatsVolumeTrendResponse getRecentVolumeTrend() {
-        List<CalculationEvent> recentEvents = calculationEventRepository.findAllByOrderByCreatedAtDesc(
-                PageRequest.of(0, DEFAULT_TREND_LIMIT));
-
-        if (recentEvents.isEmpty()) {
-            return new StatsVolumeTrendResponse(List.of());
-        }
-
-        List<CalculationEvent> chronological = new ArrayList<>(recentEvents);
-        Collections.reverse(chronological);
-
-        double runningTotal = 0;
-        List<Double> points = new ArrayList<>(chronological.size());
-        for (CalculationEvent event : chronological) {
-            runningTotal += Math.max(0, event.getVolumeSavedCm3());
-            points.add(runningTotal);
-        }
-
-        return new StatsVolumeTrendResponse(points);
     }
 
     @Transactional

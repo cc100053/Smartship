@@ -170,3 +170,7 @@
 ## 43. Dashboard polling errors must distinguish backend connectivity from data/query failures
 - **Mistake**: Left the stats dashboard showing one generic update-failed message even when the more likely failure mode was that the backend or stats API was simply unavailable.
 - **Rule**: For polling dashboards, map network/unreachable failures to an explicit backend-connectivity message and reserve generic update-failed copy for real API/query failures.
+
+## 44. Dashboard controls should stay visually subordinate unless the user explicitly wants them prominent
+- **Mistake**: Made the reset control a fixed high-visibility CTA and added a sparkline that pulled attention even though the user preferred the reset action to stay subtle.
+- **Rule**: For monitoring dashboards, keep destructive or utility controls low-emphasis and in-flow by default. Only add always-visible/focal widgets like fixed CTAs or sparklines when the user clearly wants that prominence.

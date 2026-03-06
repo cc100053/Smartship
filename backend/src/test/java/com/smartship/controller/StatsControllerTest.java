@@ -8,10 +8,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.smartship.dto.response.StatsSummaryResponse;
-import com.smartship.dto.response.StatsVolumeTrendResponse;
 import com.smartship.service.StatsService;
 import java.time.Instant;
-import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -39,16 +37,6 @@ class StatsControllerTest {
                 .andExpect(jsonPath("$.estimatedCo2eSavedG").value(360))
                 .andExpect(jsonPath("$.cumulativeVolumeSavedCm3").value(128500))
                 .andExpect(jsonPath("$.updatedAt").value("2026-03-06T08:30:00Z"));
-    }
-
-    @Test
-    void getVolumeTrendReturnsSparklinePoints() throws Exception {
-        when(statsService.getRecentVolumeTrend()).thenReturn(new StatsVolumeTrendResponse(List.of(1200.0, 2400.0, 3900.0)));
-
-        mockMvc.perform(get("/api/stats/volume-trend"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.points[0]").value(1200.0))
-                .andExpect(jsonPath("$.points[2]").value(3900.0));
     }
 
     @Test
