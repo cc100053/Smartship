@@ -79,10 +79,9 @@ export default function ProductCard({
       label: liked ? 'お気に入り解除' : 'お気に入り',
       icon: Heart,
       className: liked
-        ? 'border-rose-200 bg-rose-50/95 text-rose-600'
-        : 'border-slate-200 bg-white/92 text-slate-600 hover:border-rose-200 hover:text-rose-500',
+        ? 'border-rose-200 bg-rose-50/95 text-rose-600 shadow-[0_10px_24px_-18px_rgba(244,63,94,0.95)]'
+        : 'border-slate-200 bg-white/92 text-slate-500 hover:border-rose-200 hover:text-rose-500 hover:bg-rose-50/70',
       iconClassName: liked ? 'fill-current' : '',
-      iconWrapClassName: liked ? 'bg-rose-100 text-rose-600' : 'bg-slate-100 text-slate-500',
       ariaLabel: liked ? 'お気に入りを解除' : 'お気に入りに追加',
     }
     : onDelete
@@ -92,7 +91,6 @@ export default function ProductCard({
         icon: Trash2,
         className: 'border-amber-200 bg-amber-50/95 text-amber-700 hover:border-amber-300 hover:text-amber-800',
         iconClassName: '',
-        iconWrapClassName: 'bg-amber-100 text-amber-700',
         ariaLabel: deleteLabel,
       }
       : null;
@@ -107,11 +105,11 @@ export default function ProductCard({
       animate={{
         rotateX: supportsHover ? tilt.rotateX : 0,
         rotateY: supportsHover ? tilt.rotateY : 0,
-        scale: supportsHover && isHovering ? 1.04 : 1,
+        scale: supportsHover && isHovering ? 1.02 : 1,
       }}
       transition={{ type: 'spring', stiffness: 300, damping: 20, delay: index * 0.01 }}
       style={{ transformStyle: 'preserve-3d', perspective: 800 }}
-      className="group relative flex min-h-[8.25rem] w-full items-stretch justify-between gap-2 overflow-hidden rounded-xl border border-white/60 bg-white/40 p-1.5 pr-1.5 shadow-sm backdrop-blur-md sm:gap-3 sm:p-3 sm:pr-3"
+      className="group relative flex min-h-[8.75rem] w-full flex-col overflow-hidden rounded-xl border border-white/60 bg-white/40 p-2 shadow-sm backdrop-blur-md sm:min-h-[9.5rem] sm:p-3"
     >
       <div
         className="pointer-events-none absolute inset-0 rounded-xl transition-opacity duration-300"
@@ -121,7 +119,18 @@ export default function ProductCard({
         }}
       />
 
-      <div className="flex min-w-0 flex-1 flex-col justify-between py-0.5">
+      {topAction ? (
+        <button
+          type="button"
+          onClick={topAction.onClick}
+          className={`absolute right-2 top-2 z-10 flex h-11 w-11 items-center justify-center rounded-2xl border transition sm:h-10 sm:w-10 ${topAction.className}`}
+          aria-label={topAction.ariaLabel}
+        >
+          {TopActionIcon ? <TopActionIcon className={`h-4 w-4 ${topAction.iconClassName}`} /> : null}
+        </button>
+      ) : null}
+
+      <div className="flex min-w-0 flex-1 flex-col justify-between pr-14 py-0.5 sm:pr-16">
         <div className="flex items-center gap-1.5 sm:gap-2">
           <span className={`flex h-5 w-5 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-lg ${categoryColor.bg}`}>
             {createElement(getIconForProduct(product), { className: 'h-2.5 w-2.5 sm:h-4 sm:w-4' })}
@@ -145,53 +154,33 @@ export default function ProductCard({
             </h3>
           </div>
         </div>
-        <div className="hidden sm:flex mt-2 flex-wrap gap-2 text-[0.625rem] text-slate-500">
-          <span className="truncate rounded-md bg-white/50 px-1 sm:px-1.5 py-0.5">
+        <div className="mt-2 flex flex-wrap gap-1.5 text-[0.6rem] text-slate-500 sm:gap-2 sm:text-[0.625rem]">
+          <span className="truncate rounded-md bg-white/50 px-1 py-0.5 sm:px-1.5">
             {sizeLabel}
           </span>
-          <span className="truncate rounded-md bg-white/50 px-1 sm:px-1.5 py-0.5">
+          <span className="truncate rounded-md bg-white/50 px-1 py-0.5 sm:px-1.5">
             {weightLabel}
           </span>
         </div>
       </div>
 
-      <div className="relative z-10 grid w-[4.75rem] shrink-0 grid-rows-2 gap-1 self-stretch sm:w-[5.5rem]">
-        {topAction ? (
-          <button
-            type="button"
-            onClick={topAction.onClick}
-            className={`flex h-full min-h-[3.35rem] w-full flex-col items-center justify-center gap-1 rounded-[1rem] border px-2 py-2 text-center transition ${topAction.className}`}
-            aria-label={topAction.ariaLabel}
-          >
-            <span className={`flex h-7 w-7 items-center justify-center rounded-full ${topAction.iconWrapClassName}`}>
-              {TopActionIcon ? <TopActionIcon className={`h-3.5 w-3.5 ${topAction.iconClassName}`} /> : null}
-            </span>
-            <span className="text-[0.55rem] font-bold leading-tight tracking-[0.08em]">
-              {topAction.label}
-            </span>
-          </button>
-        ) : (
-          <div className="h-full rounded-[1rem] border border-dashed border-slate-200/70 bg-white/35" />
-        )}
-
-        {onAdd ? (
+      {onAdd ? (
+        <div className="relative z-10 mt-3">
           <button
             type="button"
             onClick={onAdd}
-            className="flex h-full min-h-[3.35rem] w-full flex-col items-center justify-center gap-1 rounded-[1rem] bg-slate-900 px-2 py-2 text-center text-white shadow-sm transition-all hover:bg-slate-800 active:scale-[0.98]"
+            className="flex min-h-[3.15rem] w-full items-center justify-center gap-2 rounded-[1.15rem] bg-slate-900 px-3 py-3 text-center text-white shadow-[0_18px_30px_-22px_rgba(15,23,42,0.95)] transition-all hover:bg-slate-800 hover:shadow-[0_20px_38px_-22px_rgba(15,23,42,0.85)] active:scale-[0.98]"
             aria-label="カートに追加"
           >
-            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/14">
-              <Plus className="h-3.5 w-3.5" />
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/12">
+              <Plus className="h-4 w-4" />
             </span>
-            <span className="text-[0.55rem] font-bold leading-tight tracking-[0.08em]">
+            <span className="text-sm font-bold tracking-[0.04em]">
               追加
             </span>
           </button>
-        ) : (
-          <div className="h-full rounded-[1rem] border border-dashed border-slate-200/70 bg-white/35" />
-        )}
-      </div>
+        </div>
+      ) : null}
     </MotionArticle>
   );
 }

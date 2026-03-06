@@ -129,7 +129,7 @@ export default function CartPanel({
           type="button"
           onClick={onCalculate}
           disabled={!items.length || loading}
-          className="rounded-full bg-slate-900 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-slate-900/20 transition hover:-translate-y-0.5 disabled:opacity-40"
+          className="rounded-full bg-slate-900 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-slate-900/20 transition hover:bg-slate-800 hover:shadow-xl hover:shadow-slate-900/15 disabled:opacity-40"
         >
           {loading ? '計算中...' : '送料を計算'}
         </button>

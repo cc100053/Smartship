@@ -151,3 +151,11 @@
 ## 38. Stats formulas must follow the product definition the user chooses, not the most rigorous metric by default
 - **Mistake**: Proposed a more defensible volume-reduction baseline before locking the user's preferred product-facing definition for the stat.
 - **Rule**: When discussing showcase metrics, first align on the user's preferred comparison basis and only then optimize the formula for consistency and implementation simplicity.
+
+## 39. Clickable buttons should not use upward hover motion
+- **Mistake**: Left clickable buttons using `hover:-translate-y-*`, including primary actions like `マイ商品に保存`, which made the UI feel jumpy against the user's preferred interaction style.
+- **Rule**: For this project, do not use upward hover motion on clickable buttons. Keep hover feedback to color, glow, ring, brightness, or shadow changes that do not shift the button's vertical position.
+
+## 40. Identical repeated actions should reuse the same component, not duplicated styling
+- **Mistake**: Left the My Section login button as a separately styled local button even though the user wanted it to be exactly the same as the Header login button.
+- **Rule**: When the same action must look identical in multiple places, extract and reuse one shared component instead of copying class strings between files.

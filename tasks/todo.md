@@ -1,3 +1,34 @@
+# Product Card Balance Pass (Option 3)
+
+## Goal
+Rebalance the Product Selection card UI using Option 3:
+- Treat `お気に入り` as a compact corner toggle.
+- Treat `追加` as the main bottom CTA.
+- Return visual priority to the product name and metadata.
+
+## Tasks
+- [x] **1. Refactor ProductCard hierarchy**
+  - Reduce the visual weight of the like/delete control into a small corner action.
+  - Move the add action into a larger bottom CTA row.
+- [x] **2. Preserve tap comfort and shared-card safety**
+  - Keep touch targets accessible on mobile.
+  - Ensure saved-product cards that use delete still render coherently.
+- [x] **3. Verify**
+  - Run the frontend build.
+  - Review the resulting card balance against the current two-column mobile grid.
+
+## Review
+- Implemented Option 3 in `frontend/src/components/ProductCard.jsx`:
+  - `お気に入り` / `削除` is now a compact top-right corner control.
+  - `追加` is now the single primary bottom CTA across the full card width.
+  - Product metadata now keeps more of the visual center by removing the large right-side action rail.
+- Balance adjustments:
+  - Reduced card hover scale from `1.04` to `1.02` so the denser two-column mobile grid feels calmer.
+  - Exposed size and weight chips on mobile as well, so the card carries more product information and less pure control surface.
+- Verification:
+  - `cd frontend && npm run build` ✅
+  - Existing Vite large-chunk warning remains, but there are no new compile errors from the card refactor.
+
 # Frontend Responsive Correction (Fixed Header + Full-Half Card Actions)
 
 ## Goal

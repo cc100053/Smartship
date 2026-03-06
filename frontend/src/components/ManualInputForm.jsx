@@ -85,7 +85,7 @@ export default function ManualInputForm({ value, onChange, onCalculate, loading 
         type="button"
         onClick={handleSubmit}
         disabled={loading}
-        className="mt-3 sm:mt-4 w-full rounded-lg sm:rounded-full bg-slate-900 px-4 py-2 text-xs sm:text-sm font-semibold text-white shadow-lg shadow-slate-900/20 transition hover:-translate-y-0.5 disabled:opacity-40"
+        className="mt-3 sm:mt-4 w-full rounded-lg sm:rounded-full bg-slate-900 px-4 py-2 text-xs sm:text-sm font-semibold text-white shadow-lg shadow-slate-900/20 transition hover:bg-slate-800 hover:shadow-xl hover:shadow-slate-900/15 disabled:opacity-40"
       >
         {loading ? '計算中...' : '送料を計算'}
       </button>

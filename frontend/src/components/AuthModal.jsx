@@ -133,7 +133,7 @@ function AuthModalContent({ onClose, onSubmit, loading, error }) {
           <button
             type="submit"
             disabled={loading}
-            className="relative mt-6 flex w-full items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#0f172a_0%,#312e81_55%,#1d4ed8_100%)] px-4 py-3.5 text-sm font-semibold text-white shadow-[0_24px_50px_-24px_rgba(49,46,129,0.85)] transition hover:-translate-y-0.5 disabled:opacity-50"
+            className="relative mt-6 flex w-full items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#0f172a_0%,#312e81_55%,#1d4ed8_100%)] px-4 py-3.5 text-sm font-semibold text-white shadow-[0_24px_50px_-24px_rgba(49,46,129,0.85)] transition hover:brightness-105 hover:shadow-[0_28px_56px_-24px_rgba(49,46,129,0.72)] disabled:opacity-50"
           >
             {loading ? '処理中...' : 'ログインして続行'}
           </button>

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ChevronDown, Heart, PackagePlus, Star, Trash2, UserRound } from 'lucide-react';
+import { ChevronDown, Heart, PackagePlus, Star, Trash2 } from 'lucide-react';
+import LoginButton from './LoginButton';
 import ProductCard from './ProductCard';
 import { getCategoryLabel } from '../utils/labels';
 
@@ -145,14 +146,7 @@ export default function PersonalizedProductsSection({
                       よく発送する商品を保存したり、既存商品をお気に入りに追加して上部にまとめたりできます。
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={onOpenLogin}
-                    className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-slate-900/15 transition hover:-translate-y-0.5"
-                  >
-                    <UserRound className="h-3.5 w-3.5" />
-                    ログイン
-                  </button>
+                  <LoginButton onClick={onOpenLogin} />
                 </div>
               </div>
             ) : (
@@ -225,7 +219,7 @@ export default function PersonalizedProductsSection({
                     <button
                       type="submit"
                       disabled={loading}
-                      className="rounded-full bg-[linear-gradient(135deg,#0f172a_0%,#312e81_55%,#1d4ed8_100%)] px-4 py-2 text-xs font-semibold text-white shadow-[0_18px_34px_-24px_rgba(49,46,129,0.85)] transition hover:-translate-y-0.5 disabled:opacity-50"
+                      className="rounded-full border border-indigo-300/35 bg-[linear-gradient(135deg,#0f172a_0%,#312e81_55%,#1d4ed8_100%)] px-4 py-2 text-xs font-semibold text-white shadow-[0_18px_34px_-24px_rgba(49,46,129,0.85)] ring-1 ring-white/10 transition duration-200 hover:border-fuchsia-200/70 hover:brightness-125 hover:saturate-150 hover:shadow-[0_24px_48px_-20px_rgba(79,70,229,0.75)] hover:ring-2 hover:ring-fuchsia-200/45 disabled:opacity-50"
                     >
                       マイ商品に保存
                     </button>

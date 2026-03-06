@@ -4,6 +4,7 @@ import { LogOut, Package, UserRound } from 'lucide-react';
 import ShippingCalculator from './pages/ShippingCalculator';
 import ScrollToTopButton from './components/ScrollToTopButton';
 import AuthModal from './components/AuthModal';
+import LoginButton from './components/LoginButton';
 import ToastPrompt from './components/ToastPrompt';
 import { fetchAuthSession, loginOrRegister, logout } from './api/shippingApi';
 
@@ -234,18 +235,13 @@ export default function App() {
                     </button>
                   </div>
                 ) : (
-                  <button
-                    type="button"
+                  <LoginButton
                     onClick={() => {
                       setAuthError('');
                       setAuthModalOpen(true);
                     }}
                     disabled={authLoading}
-                    className="inline-flex items-center gap-2 rounded-full border border-transparent bg-slate-900 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-slate-900/15 transition-all duration-300 ease-out hover:border-slate-200 hover:bg-white hover:text-slate-900 hover:shadow-xl hover:shadow-slate-900/10 active:scale-[0.98] disabled:opacity-50"
-                  >
-                    <UserRound className="h-3.5 w-3.5" />
-                    ログイン
-                  </button>
+                  />
                 )}
               </div>
             </MotionHeader>
