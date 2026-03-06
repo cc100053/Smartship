@@ -186,3 +186,11 @@
 ## 47. Animated digit rows must use the same measurement basis for row height and translate distance
 - **Mistake**: Built odometer digits with row heights sized in `em` but animated their vertical offset in `rem`, so large KPI font sizes caused the translate distance to be too short and digits overlapped.
 - **Rule**: For stacked text/digit animations, keep the cell height and transform offset in the same unit system (`em` with `em`, px with px) or derive both from the same measured value before shipping.
+
+## 48. Rolling numeric viewports should animate digits only; units and symbols need their own baseline-safe layer
+- **Mistake**: Let `¥ / kg / L` live inside the same clipped rolling viewport as the digits and also kept `helper` / `footnote` as two parallel config fields, which created baseline clipping and needless layout branching.
+- **Rule**: For KPI number animations, separate static prefix/unit glyphs from the rolling digit track, and collapse semantically identical config fields into one shared `note` field before polishing layout.
+
+## 49. Decorative display fonts are a bad default for animated KPI numerals
+- **Mistake**: Kept KPI values on a Mincho-style display font even after splitting digits and units, which still left punctuation and unit glyphs with inconsistent metrics and apparent baseline drift.
+- **Rule**: For animated numeric KPIs, use a dedicated numeric-friendly font/style with consistent tabular/lining metrics across digits, punctuation, prefixes, and units. Keep expressive display fonts for headings, not live counters.

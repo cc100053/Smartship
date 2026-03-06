@@ -7,12 +7,28 @@ import { cn } from '../utils/cn';
 const POLL_INTERVAL_MS = 2000;
 
 const formatInteger = (value) => new Intl.NumberFormat('ja-JP').format(value || 0);
-const formatCurrency = (value) => `¥${new Intl.NumberFormat('ja-JP').format(value || 0)}`;
 const formatCompactInteger = (value) => new Intl.NumberFormat('ja-JP', { notation: 'compact' }).format(value || 0);
+
+const formatIntegerParts = (value) => ({
+  digits: formatInteger(value),
+});
+
+const formatCurrencyParts = (value) => ({
+  prefix: '¥',
+  digits: formatInteger(value),
+});
 
 const formatCo2e = (grams) => {
   const safeValue = Number(grams) || 0;
   return `${(safeValue / 1000).toFixed(2)} kg`;
+};
+
+const formatCo2eParts = (grams) => {
+  const safeValue = Number(grams) || 0;
+  return {
+    digits: (safeValue / 1000).toFixed(2),
+    unit: 'kg',
+  };
 };
 
 const formatSavedVolume = (cm3) => {
@@ -28,6 +44,30 @@ const formatSavedVolume = (cm3) => {
   }
 
   return `${new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 1 }).format(liters)} L`;
+};
+
+const formatSavedVolumeParts = (cm3) => {
+  const safeValue = Number(cm3) || 0;
+  const liters = safeValue / 1000;
+
+  if (liters >= 1000) {
+    return {
+      digits: new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 1 }).format(liters / 1000),
+      unit: 'm3',
+    };
+  }
+
+  if (liters >= 100) {
+    return {
+      digits: new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 0 }).format(liters),
+      unit: 'L',
+    };
+  }
+
+  return {
+    digits: new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 1 }).format(liters),
+    unit: 'L',
+  };
 };
 
 const formatTimestamp = (value) => {
@@ -102,7 +142,7 @@ function RollingDigit({ previousChar, nextChar, place, depth }) {
 
   return (
     <span
-      className="relative inline-flex h-[1em] overflow-hidden align-baseline [mask-image:linear-gradient(to_bottom,transparent,black_16%,black_84%,transparent)]"
+      className="relative inline-flex h-[1em] overflow-hidden align-baseline"
       style={{ width: `${place === 0 ? 0.72 : 0.66}em` }}
     >
       <motion.span
@@ -127,14 +167,14 @@ function RollingDigit({ previousChar, nextChar, place, depth }) {
 
 function RollingGlyph({ char }) {
   return (
-    <span className="inline-flex h-[1.1em] items-center leading-none">
+    <span className="inline-flex h-[1em] items-center leading-none align-baseline">
       {char}
     </span>
   );
 }
 
-function RollingValue({ value, formatter, className, loading }) {
-  const formattedValue = loading ? '...' : formatter(value);
+function RollingValue({ text, className, loading }) {
+  const formattedValue = loading ? '...' : text;
   const [currentText, setCurrentText] = useState(formattedValue);
   const previousTextRef = useRef(formattedValue);
 
@@ -153,7 +193,7 @@ function RollingValue({ value, formatter, className, loading }) {
   const maxLength = Math.max(nextChars.length, prevChars.length);
 
   return (
-    <span className={cn('inline-flex flex-wrap items-end overflow-hidden tabular-nums', className)}>
+    <span className={cn('inline-flex flex-nowrap items-baseline overflow-hidden leading-none', className)}>
       {Array.from({ length: maxLength }).map((_, index) => {
         const nextChar = nextChars[maxLength - 1 - index];
         const previousChar = prevChars[maxLength - 1 - index];
@@ -202,9 +242,9 @@ const cards = [
     chipClass: 'bg-amber-100 text-amber-700',
     iconShellClass: 'border-amber-200/80 bg-amber-50/92 text-amber-700',
     icon: Sparkles,
-    formatter: formatInteger,
+    formatParts: formatIntegerParts,
     suffix: '回',
-    footnote: '正式な計算イベントのみ',
+    note: '正式な計算イベントのみ',
   },
   {
     key: 'estimatedYenSaved',
@@ -216,8 +256,8 @@ const cards = [
     chipClass: 'bg-emerald-100 text-emerald-700',
     iconShellClass: 'border-emerald-200/80 bg-emerald-50/92 text-emerald-700',
     icon: Coins,
-    formatter: formatCurrency,
-    footnote: '推奨案と次点案の送料差分',
+    formatParts: formatCurrencyParts,
+    note: '推奨案と次点案の送料差分',
   },
   {
     key: 'estimatedCo2eSavedG',
@@ -229,12 +269,12 @@ const cards = [
     chipClass: 'bg-sky-100 text-sky-700',
     iconShellClass: 'border-sky-200/80 bg-sky-50/92 text-sky-700',
     icon: Leaf,
-    formatter: formatCo2e,
-    helper: '簡易推定値',
+    formatParts: formatCo2eParts,
+    note: '簡易推定値',
   },
   {
     key: 'cumulativeVolumeSavedCm3',
-    label: '累積節省包裝體積',
+    label: '包装容積削減',
     eyebrow: 'Saved Packaging Volume',
     group: 'Volume',
     accent: 'from-violet-200 via-indigo-100 to-white',
@@ -242,8 +282,8 @@ const cards = [
     chipClass: 'bg-violet-100 text-violet-700',
     iconShellClass: 'border-violet-200/80 bg-violet-50/92 text-violet-700',
     icon: Box,
-    formatter: formatSavedVolume,
-    helper: '次点配送枠との差分体積を累積',
+    formatParts: formatSavedVolumeParts,
+    note: '次点配送枠との差分体積を累積',
   },
 ];
 
@@ -370,7 +410,6 @@ export default function StatsDashboard() {
               </h1>
               <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-600 sm:text-base">
                 「送料を計算」の成功ごとに、送料の節約額、推定 CO2e 削減量、そして小さい配送枠を選べたことで減らせた包裝體積をリアルタイム集計します。
-                展示向けの live summary として、いまこの場で生まれた効果を即座に見せます。
               </p>
             </div>
 
@@ -410,6 +449,7 @@ export default function StatsDashboard() {
               const Icon = card.icon;
               const value = summary[card.key];
               const numericValue = Number(value) || 0;
+              const parts = card.formatParts(value);
               return (
                 <motion.article
                   key={card.key}
@@ -435,26 +475,25 @@ export default function StatsDashboard() {
                       </div>
                     </div>
 
-                    <div className="mt-8">
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                        {loading ? 'Updating...' : `${formatCompactInteger(numericValue)} total`}
-                      </p>
-                      <RollingValue
-                        value={value}
-                        formatter={card.formatter}
-                        loading={loading}
-                        className="font-display text-[2.6rem] leading-none tracking-tight text-slate-950 sm:text-[3.2rem]"
-                      />
-                      {card.suffix ? (
-                        <p className="mt-3 text-sm font-semibold text-slate-600">{card.suffix}</p>
-                      ) : null}
-                      {card.helper ? (
-                        <p className="mt-3 text-xs font-medium text-slate-500">{card.helper}</p>
-                      ) : (
-                        <p className="mt-3 text-xs font-medium text-slate-500">
-                          {card.footnote}
-                        </p>
-                      )}
+                    <div className="mt-8 flex flex-col">
+                      <div className="mt-2 inline-flex items-baseline gap-1.5 font-kpi leading-[0.9] text-slate-950">
+                        {!loading && parts.prefix ? (
+                          <span className="text-[2.15rem] font-semibold tracking-[-0.04em] sm:text-[2.6rem]">
+                            {parts.prefix}
+                          </span>
+                        ) : null}
+                        <RollingValue
+                          text={parts.digits}
+                          loading={loading}
+                          className="text-[2.75rem] font-semibold tracking-[-0.06em] sm:text-[3.3rem]"
+                        />
+                        {!loading && (parts.unit || card.suffix) ? (
+                          <span className="text-[2.15rem] font-semibold tracking-[-0.04em] sm:text-[2.6rem]">
+                            {parts.unit || card.suffix}
+                          </span>
+                        ) : null}
+                      </div>
+                      <p className="mt-2 self-end text-right text-xs font-medium text-slate-500">{card.note}</p>
                     </div>
                   </div>
                 </motion.article>

@@ -510,6 +510,68 @@ Improve two weak spots in the active dashboard polish:
 - Verification:
   - `cd frontend && npm run build` ✅
 
+# Stats KPI Value Layout Cleanup (2026-03-06)
+
+## Goal
+Clean up the current stats KPI number layout:
+- Merge `helper` / `footnote` into one shared `note` field.
+- Place the note just under the value block at the right side, without inflating card height unnecessarily.
+- Separate static units/symbols from the rolling viewport so `¥ / kg / L` align cleanly and stop clipping.
+
+## Tasks
+- [x] **1. Simplify card config**
+  - Replace split `helper` / `footnote` handling with one `note`.
+  - Keep `回` inline to the right of the main count.
+- [x] **2. Refactor value rendering**
+  - Separate rolling digits from static prefix/unit glyphs.
+  - Fix symbol baseline and clipping.
+  - Reposition note to the lower-right under the value block without adding empty vertical space.
+- [x] **3. Verify and document**
+  - Run frontend build.
+  - Add review notes with the final layout behavior.
+
+## Review
+- Card config:
+  - Merged `helper` and `footnote` into one shared `note` field across all KPI cards.
+  - Kept `回` as an inline value suffix instead of a separate line.
+- Value layout:
+  - Split KPI rendering into `prefix / rolling digits / unit-or-suffix / note`.
+  - Only the digit string now lives inside the rolling viewport.
+  - `¥ / kg / L / 回` are rendered as static glyphs outside the clipped rolling area, which fixes the baseline drift and bottom clipping.
+  - The note now sits immediately under the value block and aligns to the right, without forcing extra empty card height.
+- Verification:
+  - `cd frontend && npm run build` ✅
+
+# Stats KPI Typography Stabilization (2026-03-06)
+
+## Goal
+Fix the remaining KPI value alignment defects:
+- Stop `¥ / . / kg / L / 回` from drifting off the digit baseline.
+- Remove the apparent size mismatch caused by the current display font metrics.
+- Keep the rolling animation, but move the KPI value row onto a more stable numeric typography system.
+
+## Tasks
+- [x] **1. Introduce KPI-specific numeric typography**
+  - Add a dedicated numeric font class/style for KPI counters.
+  - Keep heading/display typography untouched elsewhere.
+- [x] **2. Refine KPI value-row alignment**
+  - Remove ad-hoc vertical nudges from units/prefixes.
+  - Make digits, decimal point, prefixes, and units share one stable baseline.
+- [x] **3. Verify and document**
+  - Run frontend build.
+  - Record the final typography behavior in Review.
+
+## Review
+- Typography:
+  - Added `.font-kpi` in `frontend/src/index.css` using the existing sans stack with tabular + lining numeral settings.
+  - Left `font-display` for headings only; KPI live counters no longer depend on Mincho metrics.
+- KPI value row:
+  - Removed the manual `top` nudges that were compensating for bad font metrics.
+  - Applied the shared KPI font and sizing rules to prefix, rolling digits, decimal point, units, and suffixes so they sit on one baseline.
+  - Kept the rolling logic intact while making the entire value row typographically stable.
+- Verification:
+  - `cd frontend && npm run build` ✅
+
 # Mobile Responsive Stability Audit (Header/Footer/Cart)
 
 ## Goal

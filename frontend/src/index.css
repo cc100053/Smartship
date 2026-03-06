@@ -31,6 +31,12 @@ body {
   font-family: "Shippori Mincho", "Hiragino Mincho ProN", "Yu Mincho", serif;
 }
 
+.font-kpi {
+  font-family: "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+
 @keyframes fade-up {
   from {
     opacity: 0;
