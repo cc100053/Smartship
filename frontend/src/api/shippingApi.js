@@ -141,6 +141,9 @@ export const fetchProducts = (category, options = {}) => {
 export const fetchCategories = (options = {}) =>
   requestJson('/api/products/categories', { retry: 3, timeoutMs: 10000, ...options });
 
+export const fetchStatsSummary = (options = {}) =>
+  requestJson('/api/stats/summary', { retry: 1, timeoutMs: 8000, ...options });
+
 export const fetchAuthSession = (options = {}) =>
   requestJson('/api/auth/session', { retry: 1, timeoutMs: 8000, ...options });
 

@@ -58,6 +58,21 @@ For exhibition/secondary-display mode, open a second browser window to:
 - Move the `#/viewer` window to the external display/projector and use fullscreen (F11).
 - The viewer updates in real time from the main screen.
 
+### Stats Dashboard (`#/stats`)
+For the live impact / exhibition stats screen, open:
+
+`http://localhost:5173/#/stats`
+
+- Keep `http://localhost:5173` on the main screen and use `#/stats` on a second display if you want a dedicated dashboard.
+- The dashboard shows four cumulative metrics:
+  - `Total Calculations`
+  - `Estimated Yen Saved`
+  - `Estimated CO2e Saved`
+  - `Items Packed`
+- A stats event is recorded only when a formal `計算運費` action succeeds (`cart` and `manual` both count).
+- The dashboard polls `GET /api/stats/summary` every 2 seconds.
+- `Estimated CO2e Saved` is a lightweight showcase estimate, not a logistics-grade emissions model.
+
 *(Only use `docker-compose up --build` when you want to test the final packaged application.)*
 
 ## Deployment

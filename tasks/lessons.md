@@ -151,3 +151,7 @@
 ## 38. Stats formulas must follow the product definition the user chooses, not the most rigorous metric by default
 - **Mistake**: Proposed a more defensible volume-reduction baseline before locking the user's preferred product-facing definition for the stat.
 - **Rule**: When discussing showcase metrics, first align on the user's preferred comparison basis and only then optimize the formula for consistency and implementation simplicity.
+
+## 39. Responsive UI fixes must target the active frontend path, not a legacy duplicate
+- **Mistake**: Implemented a header/card UI change in the legacy root `src/main/webapp` JSP path even though the live responsive product/like interactions were in `frontend/src`.
+- **Rule**: Before editing UI for this repo, confirm the active rendering path by tracing the exact component that owns the reported interaction (`App.jsx`, page component, or shared card component). Do not assume the first matching header/card file is the one the user is looking at.

@@ -49,7 +49,7 @@ class AuthServiceTest {
         assertThat(response.accountId()).isEqualTo(42L);
         assertThat(response.loginId()).isEqualTo("Demo");
         assertThat(response.justRegistered()).isTrue();
-        assertThat(response.message()).isEqualTo("查唔到 ID，已經幫你建立好帳號。");
+        assertThat(response.message()).isEqualTo("IDが見つからなかったため、そのままアカウントを作成しました。");
         assertThat(session.getAttribute(AuthService.SESSION_ACCOUNT_ID)).isEqualTo(42L);
         verify(accountRepository).save(any(Account.class));
     }

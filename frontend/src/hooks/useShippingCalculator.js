@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { calculateFromCart as apiCalculateFromCart, calculateFromManual as apiCalculateFromManual } from '../api/shippingApi';
+import { getProductSource } from '../utils/products';
 
 export function useShippingCalculator() {
     const [calculation, setCalculation] = useState(null);
@@ -13,7 +14,8 @@ export function useShippingCalculator() {
 
     const calculateCart = async (items) => {
         const itemsPayload = items.map((item) => ({
-            productId: item.product.id,
+            productId: getProductSource(item.product) === 'reference' ? Number(item.product.id) : null,
+            savedProductId: getProductSource(item.product) === 'saved' ? Number(item.product.id) : null,
             quantity: item.quantity,
         }));
 

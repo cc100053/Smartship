@@ -15,6 +15,7 @@ import com.smartship.service.DimensionCalculator;
 import com.smartship.service.PackingService;
 import com.smartship.service.ShippingMatcher;
 import com.smartship.service.ShippingMatcher.ShippingMatch;
+import com.smartship.service.StatsService;
 import com.smartship.service.UserProductService;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
@@ -24,6 +25,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -35,11 +38,13 @@ import org.springframework.web.server.ResponseStatusException;
 @RequestMapping("/api/shipping")
 public class ShippingController {
     private static final int MAX_EXPANDED_ITEMS = 120;
+    private static final Logger log = LoggerFactory.getLogger(ShippingController.class);
 
     private final ProductRepository productRepository;
     private final DimensionCalculator dimensionCalculator;
     private final ShippingMatcher shippingMatcher;
     private final PackingService packingService;
+    private final StatsService statsService;
     private final AuthService authService;
     private final UserProductService userProductService;
 
@@ -47,12 +52,14 @@ public class ShippingController {
             DimensionCalculator dimensionCalculator,
             ShippingMatcher shippingMatcher,
             PackingService packingService,
+            StatsService statsService,
             AuthService authService,
             UserProductService userProductService) {
         this.productRepository = productRepository;
         this.dimensionCalculator = dimensionCalculator;
         this.shippingMatcher = shippingMatcher;
         this.packingService = packingService;
+        this.statsService = statsService;
         this.authService = authService;
         this.userProductService = userProductService;
     }
@@ -70,7 +77,9 @@ public class ShippingController {
                 0, "Manual", "Manual Item", "手動入力",
                 request.lengthCm(), request.widthCm(), request.heightCm(), request.weightG(), null);
 
-        return buildResponse(new ArrayList<>(List.of(virtualProduct)), dims);
+        CalculationResponse response = buildResponse(new ArrayList<>(List.of(virtualProduct)), dims);
+        recordStatsEvent("manual", response);
+        return response;
     }
 
     // New endpoint: Returns packed dimensions AND placements (for real-time 3D
@@ -105,7 +114,9 @@ public class ShippingController {
         // Use PackingService to get REAL packed dimensions to show the user
         Dimensions dims = packingService.calculatePackedDimensions(expandedItems);
 
-        return buildResponse(expandedItems, dims);
+        CalculationResponse response = buildResponse(expandedItems, dims);
+        recordStatsEvent("cart", response);
+        return response;
     }
 
     private CalculationResponse buildResponse(List<ProductReference> items, Dimensions dims) {
@@ -210,5 +221,13 @@ public class ShippingController {
                 match.canFit(),
                 match.recommended(),
                 match.reason());
+    }
+
+    private void recordStatsEvent(String calculationMode, CalculationResponse response) {
+        try {
+            statsService.recordSuccessfulCalculation(calculationMode, response);
+        } catch (RuntimeException exception) {
+            log.warn("Failed to record stats event for {} calculation", calculationMode, exception);
+        }
     }
 }
