@@ -1,3 +1,39 @@
+# Frontend Responsive Correction (Fixed Header + Full-Half Card Actions)
+
+## Goal
+Correct the previous UI pass by targeting the active React frontend:
+- Keep the live app header fixed to the viewport so it remains visible while scrolling.
+- Change product-card actions to a balanced two-row rail where the top half and bottom half of the action area are fully clickable, rather than tiny icon buttons.
+
+## Tasks
+- [x] **1. Confirm live component ownership**
+  - Trace the active header and product-card interaction path in `frontend/src`.
+  - Identify why the current header behavior is only container-sticky instead of viewport-fixed.
+- [x] **2. Implement fixed header**
+  - Convert the live header to a viewport-level fixed wrapper.
+  - Preserve the centered max-width layout and add measured spacer offset under the header.
+- [x] **3. Refactor product-card actions**
+  - Replace mismatched icon buttons with equal-height top/bottom action panels.
+  - Make each action panel occupy its full half-area for easier tapping on mobile.
+- [x] **4. Verify**
+  - Run the frontend production build.
+  - Review the final DOM/class behavior for responsive regressions.
+
+## Review
+- Live path confirmation:
+  - The active responsive UI is owned by `frontend/src/App.jsx` and `frontend/src/components/ProductCard.jsx`, not the legacy root JSP path.
+  - The previous header issue came from `sticky` being applied inside the centered app container rather than using a viewport-level fixed wrapper.
+- Fixed header implementation:
+  - Added a full-width fixed header shell in `frontend/src/App.jsx` and kept the visual header aligned to the same `max-w-[1400px]` layout as the page body.
+  - Added measured spacer height via `ResizeObserver` so content starts below the fixed header and does not slide underneath it when auth state changes the header height.
+- Product-card action refactor:
+  - Replaced the tiny icon buttons with a dedicated right-side action rail in `frontend/src/components/ProductCard.jsx`.
+  - The rail is now split into two equal rows, so the upper half handles `like` or `delete` and the lower half handles `add`.
+  - Each row is a full-size button covering its whole half-area, which gives a larger and more balanced tap target on mobile.
+- Verification:
+  - `cd frontend && npm run build` ✅
+  - Residual note: build still reports the existing large-chunk Vite warning, but there is no new compile/runtime error from this UI pass.
+
 # Global Scroll Layout Fix
 
 ## Goal
