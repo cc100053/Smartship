@@ -79,3 +79,35 @@
 ## 20. Dense saved-item shelves should prefer multi-column grids with capped height
 - **Mistake**: Left `My Product` and `Liked Product` shelves in a one-card-per-row layout, which wasted vertical space and let the section grow indefinitely.
 - **Rule**: For compact product shelves, default to a multi-column grid and cap the visible height to a small number of rows, then use internal scrolling for overflow.
+
+## 21. Avoid duplicate authenticated summaries when badges already carry the counts
+- **Mistake**: Kept a second text summary for `My Product` / `Liked Product` counts even though the badge row already exposed the same information.
+- **Rule**: In dense headers, if badges already communicate key counts, remove duplicate summary sentences and reserve supporting copy for states that actually need explanation.
+
+## 22. Inline utility forms inside dashboard shelves should be visually compressed
+- **Mistake**: Left the add-product form styled like a full feature card, so it dominated the `My Section` area and competed with the actual saved/liked shelves.
+- **Rule**: For embedded utility forms inside dense sections, prefer compact spacing, smaller controls, and concise headers so the form supports the page instead of becoming the page.
+
+## 23. Decorative badges in dense utility panels need a clear informational job
+- **Mistake**: Added `QUICK SHELF` and `COMPACT FORM` badges that looked polished but did not communicate anything users actually needed.
+- **Rule**: In compact utility sections, remove decorative badges unless they encode state, count, or an actionable distinction the user benefits from immediately.
+
+## 24. Outer container whitespace should be tuned separately from internal card spacing
+- **Mistake**: Left extra bottom padding on the `My Section` shell after compacting the inner content, so the section still felt taller than necessary.
+- **Rule**: After compressing a dense panel, re-check outer container top/bottom padding independently; excess shell padding can erase the benefit of internal compaction.
+
+## 25. When a user asks to tighten spacing again, bias to the shell before touching content
+- **Mistake**: First spacing pass on `My Section` still left enough outer bottom padding that the user immediately asked for a further reduction.
+- **Rule**: On iterative spacing tweaks, reduce outer shell padding aggressively first and preserve inner content rhythm unless the user points at a specific internal gap.
+
+## 26. Corner actions must reserve space from existing CTA clusters
+- **Mistake**: Moved the like button to the card corner without pushing the existing add/delete action cluster away, so controls overlapped.
+- **Rule**: When promoting one action to a corner position, explicitly reserve layout space for the remaining action group instead of assuming the old alignment will still fit.
+
+## 27. For stacked card actions, prefer a dedicated action column over absolute overlays
+- **Mistake**: Tried to fix the overlap by padding around an absolutely positioned heart button, which still broke once the real card height/action spacing differed from the assumption.
+- **Rule**: If a card needs both a top-right secondary action and a primary CTA, use a dedicated right-side flex column so the top and bottom controls participate in layout instead of fighting it.
+
+## 28. Long cart lists should cap the item area before they push primary actions away
+- **Mistake**: Let the cart item list expand indefinitely, which made the cart panel keep growing instead of preserving a stable area for totals and the calculate button.
+- **Rule**: In cart panels, cap the item-list viewport once it exceeds a small number of visible rows and use internal scrolling so summary/actions stay anchored.

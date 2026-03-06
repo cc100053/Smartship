@@ -87,7 +87,7 @@ export default function ProductCard({
       }}
       transition={{ type: 'spring', stiffness: 300, damping: 20, delay: index * 0.01 }}
       style={{ transformStyle: 'preserve-3d', perspective: 800 }}
-      className="group relative flex w-full items-center justify-between gap-2 sm:gap-3 rounded-xl border border-white/60 bg-white/40 p-1.5 sm:p-3 shadow-sm backdrop-blur-md overflow-hidden"
+      className="group relative flex w-full items-start justify-between gap-2 rounded-xl border border-white/60 bg-white/40 p-1.5 pr-2 sm:gap-3 sm:p-3 sm:pr-3 shadow-sm backdrop-blur-md overflow-hidden"
     >
       <div
         className="pointer-events-none absolute inset-0 rounded-xl transition-opacity duration-300"
@@ -131,43 +131,47 @@ export default function ProductCard({
         </div>
       </div>
 
-      <div className="relative z-10 flex shrink-0 items-center gap-2">
+      <div className="relative z-10 flex min-h-full shrink-0 flex-col items-end justify-between gap-2 self-stretch">
         {onToggleLike ? (
           <button
             type="button"
             onClick={onToggleLike}
-            className={`flex h-11 w-11 sm:h-8 sm:w-8 items-center justify-center rounded-full border transition ${
+            className={`flex h-9 w-9 items-center justify-center rounded-full border transition sm:h-8 sm:w-8 ${
               liked
                 ? 'border-rose-200 bg-rose-50 text-rose-500'
-                : 'border-slate-200 bg-white text-slate-500 hover:border-rose-200 hover:text-rose-500'
+                : 'border-slate-200 bg-white/95 text-slate-500 hover:border-rose-200 hover:text-rose-500'
             }`}
             aria-label={liked ? 'お気に入りを解除' : 'お気に入りに追加'}
           >
             <Heart className={`h-4 w-4 ${liked ? 'fill-current' : ''}`} />
           </button>
-        ) : null}
+        ) : (
+          <div className="h-0" />
+        )}
 
-        {onDelete ? (
-          <button
-            type="button"
-            onClick={onDelete}
-            className="flex h-11 w-11 sm:h-8 sm:w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-rose-200 hover:text-rose-500"
-            aria-label={deleteLabel}
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
-        ) : null}
+        <div className="flex items-center gap-2">
+          {onDelete ? (
+            <button
+              type="button"
+              onClick={onDelete}
+              className="flex h-11 w-11 sm:h-8 sm:w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-rose-200 hover:text-rose-500"
+              aria-label={deleteLabel}
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          ) : null}
 
-        {onAdd ? (
-          <button
-            type="button"
-            onClick={onAdd}
-            className="flex h-11 w-11 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white shadow-sm transition-all hover:bg-slate-800 hover:scale-105 active:scale-95"
-            aria-label="カートに追加"
-          >
-            <Plus className="h-4 w-4" />
-          </button>
-        ) : null}
+          {onAdd ? (
+            <button
+              type="button"
+              onClick={onAdd}
+              className="flex h-11 w-11 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white shadow-sm transition-all hover:bg-slate-800 hover:scale-105 active:scale-95"
+              aria-label="カートに追加"
+            >
+              <Plus className="h-4 w-4" />
+            </button>
+          ) : null}
+        </div>
       </div>
     </MotionArticle>
   );

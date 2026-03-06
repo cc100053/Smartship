@@ -49,10 +49,6 @@ export default function PersonalizedProductsSection({
   const totalItems = savedProducts.length + likedProducts.length;
   const totalSaved = savedProducts.length;
   const totalLiked = likedProducts.length;
-  const summaryText = authenticated
-    ? `マイ商品 ${totalSaved} 件・お気に入り ${totalLiked} 件`
-    : 'ログインすると、よく使う商品とお気に入り商品をここにまとめられます。';
-
   const handleChange = (key, value) => {
     setError('');
     setForm((current) => ({ ...current, [key]: value }));
@@ -95,7 +91,7 @@ export default function PersonalizedProductsSection({
   };
 
   return (
-    <section className="relative mb-4 overflow-hidden rounded-[1.75rem] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.84)_0%,rgba(244,247,251,0.78)_100%)] px-4 py-3 shadow-[0_24px_70px_-42px_rgba(15,23,42,0.45)] backdrop-blur-xl">
+    <section className="relative mb-1 overflow-hidden rounded-[1.75rem] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.84)_0%,rgba(244,247,251,0.78)_100%)] px-4 pb-2 pt-3 shadow-[0_24px_70px_-42px_rgba(15,23,42,0.45)] backdrop-blur-xl">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(90deg,rgba(99,102,241,0.08),rgba(56,189,248,0.08),rgba(251,191,36,0.06))]" />
       <button
         type="button"
@@ -105,9 +101,6 @@ export default function PersonalizedProductsSection({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <p className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">マイセクション</p>
-            <span className="rounded-full border border-white/80 bg-white/75 px-2.5 py-1 text-[10px] font-semibold tracking-[0.2em] text-slate-600 shadow-sm">
-              QUICK SHELF
-            </span>
             <span className="rounded-full bg-[linear-gradient(135deg,#0f172a_0%,#334155_100%)] px-2.5 py-1 text-[11px] font-semibold text-white shadow-[0_12px_28px_-18px_rgba(15,23,42,0.85)]">
               {totalItems}
             </span>
@@ -128,9 +121,11 @@ export default function PersonalizedProductsSection({
               </span>
             )}
           </div>
-          <p className="mt-2 truncate text-sm font-medium text-slate-700">
-            {summaryText}
-          </p>
+          {!authenticated ? (
+            <p className="mt-2 truncate text-sm font-medium text-slate-700">
+              ログインすると、よく使う商品とお気に入り商品をここにまとめられます。
+            </p>
+          ) : null}
         </div>
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/80 bg-white/72 shadow-sm">
           <ChevronDown className={`h-5 w-5 text-slate-500 transition ${expanded ? 'rotate-180' : ''}`} />
@@ -169,33 +164,35 @@ export default function PersonalizedProductsSection({
               <>
                 <form
                   onSubmit={handleSubmit}
-                  className="mt-4 rounded-[1.5rem] border border-white/80 bg-white/82 p-4 shadow-[0_22px_55px_-42px_rgba(15,23,42,0.55)]"
+                  className="mt-3 rounded-[1.25rem] border border-white/80 bg-white/78 px-3 py-3 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.42)]"
                 >
-                  <div className="flex items-center gap-2">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm">
-                      <PackagePlus className="h-4 w-4" />
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-900 text-white shadow-sm">
+                        <PackagePlus className="h-3.5 w-3.5" />
+                      </div>
+                      <p className="text-sm font-semibold text-slate-900">マイ商品を追加</p>
                     </div>
-                    <p className="text-sm font-semibold text-slate-900">よく使う商品を追加</p>
                   </div>
 
-                  <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                    <label className="block xl:col-span-3">
-                      <span className="text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-400">商品名</span>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-6">
+                    <label className="block sm:col-span-2 xl:col-span-2">
+                      <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">商品名</span>
                       <input
                         type="text"
                         value={form.name}
                         onChange={(event) => handleChange('name', event.target.value)}
                         placeholder="例: トレカセット"
-                        className="mt-2 w-full rounded-2xl border border-slate-200/80 bg-white/95 px-4 py-3 text-sm font-medium text-slate-800 outline-none transition focus:border-indigo-300 focus:ring-4 focus:ring-indigo-100"
+                        className="mt-1.5 h-10 w-full rounded-xl border border-slate-200/80 bg-white/95 px-3 text-sm font-medium text-slate-800 outline-none transition focus:border-indigo-300 focus:ring-3 focus:ring-indigo-100"
                       />
                     </label>
 
                     <label className="block">
-                      <span className="text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-400">カテゴリ</span>
+                      <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">カテゴリ</span>
                       <select
                         value={form.category}
                         onChange={(event) => handleChange('category', event.target.value)}
-                        className="mt-2 w-full rounded-2xl border border-slate-200/80 bg-white/95 px-4 py-3 text-sm font-medium text-slate-800 outline-none transition focus:border-indigo-300 focus:ring-4 focus:ring-indigo-100"
+                        className="mt-1.5 h-10 w-full rounded-xl border border-slate-200/80 bg-white/95 px-3 text-sm font-medium text-slate-800 outline-none transition focus:border-indigo-300 focus:ring-3 focus:ring-indigo-100"
                       >
                         {availableCategories.map((category) => (
                           <option key={category} value={category}>{getCategoryLabel(category)}</option>
@@ -210,30 +207,30 @@ export default function PersonalizedProductsSection({
                       ['weightG', '重量 (g)'],
                     ].map(([key, label]) => (
                       <label key={key} className="block">
-                        <span className="text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-400">{label}</span>
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">{label}</span>
                         <input
                           type="number"
                           min="0"
                           step={key === 'weightG' ? '1' : '0.1'}
                           value={form[key]}
                           onChange={(event) => handleChange(key, event.target.value)}
-                          className="mt-2 w-full rounded-2xl border border-slate-200/80 bg-white/95 px-4 py-3 text-sm font-medium text-slate-800 outline-none transition focus:border-indigo-300 focus:ring-4 focus:ring-indigo-100"
+                          className="mt-1.5 h-10 w-full rounded-xl border border-slate-200/80 bg-white/95 px-3 text-sm font-medium text-slate-800 outline-none transition focus:border-indigo-300 focus:ring-3 focus:ring-indigo-100"
                         />
                       </label>
                     ))}
                   </div>
 
                   {error ? (
-                    <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50/90 px-4 py-3 text-sm text-rose-700">
+                    <div className="mt-2 rounded-xl border border-rose-200 bg-rose-50/90 px-3 py-2 text-xs text-rose-700">
                       {error}
                     </div>
                   ) : null}
 
-                  <div className="mt-4 flex justify-end">
+                  <div className="mt-3 flex justify-end">
                     <button
                       type="submit"
                       disabled={loading}
-                      className="rounded-full bg-[linear-gradient(135deg,#0f172a_0%,#312e81_55%,#1d4ed8_100%)] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_20px_40px_-24px_rgba(49,46,129,0.85)] transition hover:-translate-y-0.5 disabled:opacity-50"
+                      className="rounded-full bg-[linear-gradient(135deg,#0f172a_0%,#312e81_55%,#1d4ed8_100%)] px-4 py-2 text-xs font-semibold text-white shadow-[0_18px_34px_-24px_rgba(49,46,129,0.85)] transition hover:-translate-y-0.5 disabled:opacity-50"
                     >
                       マイ商品に保存
                     </button>

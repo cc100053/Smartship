@@ -26,6 +26,9 @@ export default function CartPanel({
     (sum, item) => sum + item.quantity * item.product.weightG,
     0,
   );
+  const itemListClassName = items.length > 3
+    ? 'mt-4 space-y-3 max-h-[18.75rem] overflow-y-auto pr-1 custom-scrollbar'
+    : 'mt-4 space-y-3';
 
   return (
     <div
@@ -59,7 +62,7 @@ export default function CartPanel({
           商品をカートに追加してください。
         </div>
       ) : (
-        <div className="mt-4 space-y-3">
+        <div className={itemListClassName}>
           {items.map((item) => (
             <div
               key={item.productKey}
