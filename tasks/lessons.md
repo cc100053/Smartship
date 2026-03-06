@@ -166,3 +166,7 @@
 ## 42. Responsive UI fixes must target the active frontend path, not a legacy duplicate
 - **Mistake**: Implemented a header/card UI change in the legacy root src/main/webapp JSP path even though the live responsive product/like interactions were in frontend/src.
 - **Rule**: Before editing UI for this repo, confirm the active rendering path by tracing the exact component that owns the reported interaction (App.jsx, page component, or shared card component). Do not assume the first matching header/card file is the one the user is looking at.
+
+## 43. Dashboard polling errors must distinguish backend connectivity from data/query failures
+- **Mistake**: Left the stats dashboard showing one generic update-failed message even when the more likely failure mode was that the backend or stats API was simply unavailable.
+- **Rule**: For polling dashboards, map network/unreachable failures to an explicit backend-connectivity message and reserve generic update-failed copy for real API/query failures.

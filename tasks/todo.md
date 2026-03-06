@@ -324,6 +324,36 @@ Implement the agreed stats dashboard MVP end to end:
 - Root cause for current investigation failure:
   - The reported bug cannot be traced in this codebase because the relevant feature is not present here.
 
+---
+
+# Stats Dashboard Connectivity Messaging Fix (2026-03-06)
+
+## Goal
+Make the stats dashboard error state actionable by distinguishing backend-connectivity failures from actual stats summary update failures.
+
+## Tasks
+- [x] **1. Confirm the failure mode**
+  - Inspect the stats polling path and current error mapping.
+  - Verify whether the page treats network-unreachable and API-response failures as the same state.
+- [x] **2. Refine frontend error handling**
+  - Show a backend-connectivity message when the stats API cannot be reached.
+  - Keep generic update-failed messaging for non-network/API errors.
+- [x] **3. Verify**
+  - Run the frontend build.
+  - Document the revised behavior in review notes.
+
+## Review
+- Root cause:
+  - `StatsDashboard` mapped every polling failure to the same generic message, so a backend-not-running / API-unreachable state looked identical to a real summary/query failure.
+- Implemented change:
+  - Added `getStatsErrorMessage()` in `frontend/src/pages/StatsDashboard.jsx`.
+  - Network / unreachable failures now show: `統計 API に接続できません。バックエンドが起動しているか確認してください。`
+  - Other failures still show a generic update-failed message, now including the returned error message when available.
+- Verification:
+  - `cd frontend && npm run build` ✅
+- Residual note:
+  - The underlying backend still needs to be running for live stats to load; this change makes that state explicit instead of ambiguous.
+
 # Mobile Responsive Stability Audit (Header/Footer/Cart)
 
 ## Goal

@@ -34,6 +34,18 @@ const defaultSummary = {
   updatedAt: null,
 };
 
+const getStatsErrorMessage = (error) => {
+  if (error instanceof TypeError || error?.name === 'TypeError') {
+    return '統計 API に接続できません。バックエンドが起動しているか確認してください。';
+  }
+
+  if (typeof error?.message === 'string' && error.message.trim()) {
+    return `統計データの更新に失敗しました: ${error.message.trim()}`;
+  }
+
+  return '統計データの更新に失敗しました。次回の自動更新を待機しています。';
+};
+
 const cards = [
   {
     key: 'totalCalculations',
@@ -111,7 +123,7 @@ export default function StatsDashboard() {
           return;
         }
         console.error('[StatsDashboard] Failed to fetch summary:', loadError);
-        setError('統計データの更新に失敗しました。次回の自動更新を待機しています。');
+        setError(getStatsErrorMessage(loadError));
       } finally {
         if (!cancelled) {
           setLoading(false);
