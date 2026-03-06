@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { motion, AnimatePresence, useAnimationControls } from 'framer-motion';
 import {
   createSavedProduct,
   deleteSavedProduct,
@@ -11,6 +11,7 @@ import {
 } from '../api/shippingApi';
 import CartPanel from '../components/CartPanel';
 import CategoryTabs from '../components/CategoryTabs';
+import FlyToCartOverlay from '../components/FlyToCartOverlay';
 import ManualInputForm from '../components/ManualInputForm';
 import MobileCartDrawer from '../components/MobileCartDrawer';
 import ParcelVisualizer3D from '../components/ParcelVisualizer3D';
@@ -29,6 +30,12 @@ const parsePositiveNumber = (value) => {
   return Number.isFinite(numberValue) && numberValue > 0 ? numberValue : null;
 };
 const MotionDiv = motion.div;
+const toClientRectSnapshot = (rect) => ({
+  left: rect.left,
+  top: rect.top,
+  width: rect.width,
+  height: rect.height,
+});
 
 export default function ShippingCalculator({ onDrawerToggle, authSession, onOpenLogin }) {
   const [categories, setCategories] = useState([]);
@@ -43,6 +50,9 @@ export default function ShippingCalculator({ onDrawerToggle, authSession, onOpen
   const [personalizedError, setPersonalizedError] = useState('');
   const [mode, setMode] = useState('cart');
   const [cartExpanded, setCartExpanded] = useState(false);
+  const [cartFlights, setCartFlights] = useState([]);
+  const [cartBounceToken, setCartBounceToken] = useState(0);
+  const [pendingFlight, setPendingFlight] = useState(null);
 
   // Notify parent when drawer opens/closes (to hide scroll-to-top button)
   useEffect(() => {
@@ -56,7 +66,11 @@ export default function ShippingCalculator({ onDrawerToggle, authSession, onOpen
   });
 
   const cartRef = useRef(null);
+  const desktopCartTargetRef = useRef(null);
+  const mobileCartTargetRef = useRef(null);
   const resultRef = useRef(null);
+  const flightIdRef = useRef(0);
+  const desktopCartControls = useAnimationControls();
 
   // Custom Hooks
   const {
@@ -232,11 +246,73 @@ export default function ShippingCalculator({ onDrawerToggle, authSession, onOpen
     };
   }, [authSession?.authenticated, authSession?.accountId]);
 
-  const handleAddToCart = (product) => {
+  const triggerCartBounce = useCallback(() => {
+    setCartBounceToken((prev) => prev + 1);
+  }, []);
+
+  const prefersReducedMotion = useCallback(() => (
+    typeof window !== 'undefined'
+    && typeof window.matchMedia === 'function'
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  ), []);
+
+  const getActiveCartTargetRect = useCallback(() => {
+    const refs = [mobileCartTargetRef.current, desktopCartTargetRef.current];
+
+    for (const element of refs) {
+      const rect = element?.getBoundingClientRect?.();
+      if (!rect) continue;
+      if (rect.width <= 0 || rect.height <= 0) continue;
+      return toClientRectSnapshot(rect);
+    }
+
+    return null;
+  }, []);
+
+  const startCartFlight = useCallback((product, sourceRect) => {
+    const targetRect = getActiveCartTargetRect();
+    if (!targetRect) {
+      return false;
+    }
+
+    const nextId = `cart-flight-${flightIdRef.current++}`;
+    setCartFlights((prev) => [...prev, {
+      id: nextId,
+      product,
+      sourceRect,
+      targetRect,
+    }]);
+    return true;
+  }, [getActiveCartTargetRect]);
+
+  const handleFlightComplete = useCallback((flightId) => {
+    setCartFlights((prev) => prev.filter((flight) => flight.id !== flightId));
+    triggerCartBounce();
+  }, [triggerCartBounce]);
+
+  const handleAddToCart = (product, sourceElement) => {
     resetCalculation();
     addToCart(product);
+    const sourceRect = sourceElement?.getBoundingClientRect
+      ? toClientRectSnapshot(sourceElement.getBoundingClientRect())
+      : null;
+    const shouldReduceMotion = prefersReducedMotion();
+
     if (mode === 'manual') {
       setMode('cart');
+    }
+
+    if (shouldReduceMotion || !sourceRect) {
+      triggerCartBounce();
+      return;
+    }
+
+    if (!startCartFlight(product, sourceRect)) {
+      setPendingFlight({
+        product,
+        sourceRect,
+        attempts: 0,
+      });
     }
   };
 
@@ -342,6 +418,39 @@ export default function ShippingCalculator({ onDrawerToggle, authSession, onOpen
     resetCalculation();
   };
 
+  useEffect(() => {
+    if (!cartBounceToken) return;
+    desktopCartControls.start({
+      y: [0, -4, 0],
+      transition: { duration: 0.18, ease: [0.22, 1, 0.36, 1] },
+    });
+  }, [cartBounceToken, desktopCartControls]);
+
+  useEffect(() => {
+    if (!pendingFlight) return undefined;
+
+    const timeoutId = window.setTimeout(() => {
+      if (startCartFlight(pendingFlight.product, pendingFlight.sourceRect)) {
+        setPendingFlight(null);
+        return;
+      }
+
+      if (pendingFlight.attempts >= 5) {
+        setPendingFlight(null);
+        triggerCartBounce();
+        return;
+      }
+
+      setPendingFlight((prev) => (
+        prev
+          ? { ...prev, attempts: prev.attempts + 1 }
+          : prev
+      ));
+    }, 70);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [pendingFlight, startCartFlight, triggerCartBounce]);
+
   return (
     <section id="shipping-calculator" className="flex flex-col gap-4 overflow-x-hidden">
       <div>
@@ -414,7 +523,7 @@ export default function ShippingCalculator({ onDrawerToggle, authSession, onOpen
                         key={product.id}
                         product={product}
                         index={index}
-                        onAdd={() => handleAddToCart(product)}
+                        onAdd={(sourceElement) => handleAddToCart(product, sourceElement)}
                         onToggleLike={() => handleToggleLike(product)}
                         liked={likedProductIdSet.has(Number(product.id))}
                       />
@@ -472,16 +581,22 @@ export default function ShippingCalculator({ onDrawerToggle, authSession, onOpen
                     exit={{ opacity: 0, height: 0 }}
                     transition={{ duration: 0.2 }}
                   >
-                    <CartPanel
-                      items={cartItems}
-                      onIncrement={handleIncrement}
-                      onDecrement={handleDecrement}
-                      onRemove={handleRemove}
-                      onClear={handleClear}
-                      onCalculate={handleCartCalculate}
-                      loading={calcLoading}
-                      containerRef={cartRef}
-                    />
+                    <motion.div
+                      ref={desktopCartTargetRef}
+                      animate={desktopCartControls}
+                      initial={false}
+                    >
+                      <CartPanel
+                        items={cartItems}
+                        onIncrement={handleIncrement}
+                        onDecrement={handleDecrement}
+                        onRemove={handleRemove}
+                        onClear={handleClear}
+                        onCalculate={handleCartCalculate}
+                        loading={calcLoading}
+                        containerRef={cartRef}
+                      />
+                    </motion.div>
                   </MotionDiv>
                 ) : (
                   <MotionDiv
@@ -549,9 +664,16 @@ export default function ShippingCalculator({ onDrawerToggle, authSession, onOpen
             onClear={handleClear}
             onCalculate={handleCartCalculate}
             loading={calcLoading}
+            targetRef={mobileCartTargetRef}
+            bounceToken={cartBounceToken}
           />
         )}
       </AnimatePresence>
+
+      <FlyToCartOverlay
+        flights={cartFlights}
+        onFlightComplete={handleFlightComplete}
+      />
     </section>
   );
 }

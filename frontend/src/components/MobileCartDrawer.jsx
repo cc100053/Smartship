@@ -1,4 +1,4 @@
-import { motion, AnimatePresence, useMotionValue, animate } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, animate, useAnimationControls } from 'framer-motion';
 import { ShoppingBag, Trash2, Truck } from 'lucide-react';
 import CartPanel from './CartPanel';
 import { useEffect, useRef, useCallback } from 'react';
@@ -25,14 +25,25 @@ export default function MobileCartDrawer({
     onClear,
     onCalculate,
     loading,
+    targetRef,
+    bounceToken = 0,
 }) {
     const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
     const scrollRef = useRef(null);
     const touchCleanupRef = useRef(null);
     const y = useMotionValue(typeof window !== 'undefined' ? window.innerHeight : 800);
+    const pillControls = useAnimationControls();
     // Keep onToggle stable across re-renders inside the callback ref closure
     const onToggleRef = useRef(onToggle);
     useEffect(() => { onToggleRef.current = onToggle; }, [onToggle]);
+
+    useEffect(() => {
+        if (!bounceToken) return;
+        pillControls.start({
+            y: [0, -6, 0],
+            transition: { duration: 0.2, ease: [0.22, 1, 0.36, 1] },
+        });
+    }, [bounceToken, pillControls]);
 
     // Lock body scroll when expanded
     useEffect(() => {
@@ -149,56 +160,62 @@ export default function MobileCartDrawer({
                             animate={{ y: 0, opacity: 1 }}
                             exit={{ y: 18, opacity: 0 }}
                             transition={PILL_TRANSITION}
-                            className="mx-4 mb-4 md:mb-6 pointer-events-auto cursor-pointer rounded-2xl bg-gradient-to-r from-slate-800 to-slate-900 shadow-2xl p-3 flex items-center justify-between gap-2 transform-gpu will-change-transform"
-                            style={{ willChange: 'transform, opacity' }}
-                            onClick={() => {
-                                y.set(window.innerHeight); // Start at the bottom
-                                onToggle(true);
-                            }}
                         >
-                            {/* Left: icon + label */}
-                            <div className="flex items-center gap-3 pl-2 min-w-0">
-                                <div className="relative shrink-0">
-                                    <ShoppingBag className="text-white/90 h-5 w-5" />
-                                    {totalItems > 0 && (
-                                        <motion.div
-                                            key={totalItems}
-                                            initial={{ scale: 0 }}
-                                            animate={{ scale: 1 }}
-                                            className="absolute -top-2 -right-2 bg-rose-500 text-white text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center ring-2 ring-slate-800"
-                                        >
-                                            {totalItems}
-                                        </motion.div>
-                                    )}
+                            <motion.div
+                                ref={targetRef}
+                                animate={pillControls}
+                                initial={false}
+                                className="mx-4 mb-4 md:mb-6 pointer-events-auto cursor-pointer rounded-2xl bg-gradient-to-r from-slate-800 to-slate-900 shadow-2xl p-3 flex items-center justify-between gap-2 transform-gpu will-change-transform"
+                                style={{ willChange: 'transform, opacity' }}
+                                onClick={() => {
+                                    y.set(window.innerHeight); // Start at the bottom
+                                    onToggle(true);
+                                }}
+                            >
+                                {/* Left: icon + label */}
+                                <div className="flex items-center gap-3 pl-2 min-w-0">
+                                    <div className="relative shrink-0">
+                                        <ShoppingBag className="text-white/90 h-5 w-5" />
+                                        {totalItems > 0 && (
+                                            <motion.div
+                                                key={totalItems}
+                                                initial={{ scale: 0 }}
+                                                animate={{ scale: 1 }}
+                                                className="absolute -top-2 -right-2 bg-rose-500 text-white text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center ring-2 ring-slate-800"
+                                            >
+                                                {totalItems}
+                                            </motion.div>
+                                        )}
+                                    </div>
+                                    <span className="text-white font-medium text-sm truncate">カート</span>
                                 </div>
-                                <span className="text-white font-medium text-sm truncate">カート</span>
-                            </div>
 
-                            {/* Right: Clear + Calculate buttons */}
-                            <div className="flex items-center gap-2 shrink-0">
-                                <button
-                                    type="button"
-                                    onClick={(e) => { e.stopPropagation(); onClear(); }}
-                                    disabled={!items.length}
-                                    title="カートをクリア"
-                                    className="p-2.5 rounded-xl text-rose-400 hover:text-rose-300 hover:bg-white/10 transition disabled:opacity-30"
-                                >
-                                    <Trash2 className="h-4 w-4" />
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={(e) => { e.stopPropagation(); onCalculate(); }}
-                                    disabled={!items.length || loading}
-                                    className="text-xs font-semibold px-4 py-2.5 bg-white text-slate-900 shadow-sm transition hover:bg-slate-50 active:scale-95 disabled:opacity-50 disabled:bg-white/50 rounded-xl whitespace-nowrap flex items-center gap-1.5"
-                                >
-                                    {loading ? '計算中...' : (
-                                        <>
-                                            <Truck className="h-3.5 w-3.5" />
-                                            <span>送料を計算</span>
-                                        </>
-                                    )}
-                                </button>
-                            </div>
+                                {/* Right: Clear + Calculate buttons */}
+                                <div className="flex items-center gap-2 shrink-0">
+                                    <button
+                                        type="button"
+                                        onClick={(e) => { e.stopPropagation(); onClear(); }}
+                                        disabled={!items.length}
+                                        title="カートをクリア"
+                                        className="p-2.5 rounded-xl text-rose-400 hover:text-rose-300 hover:bg-white/10 transition disabled:opacity-30"
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={(e) => { e.stopPropagation(); onCalculate(); }}
+                                        disabled={!items.length || loading}
+                                        className="text-xs font-semibold px-4 py-2.5 bg-white text-slate-900 shadow-sm transition hover:bg-slate-50 active:scale-95 disabled:opacity-50 disabled:bg-white/50 rounded-xl whitespace-nowrap flex items-center gap-1.5"
+                                    >
+                                        {loading ? '計算中...' : (
+                                            <>
+                                                <Truck className="h-3.5 w-3.5" />
+                                                <span>送料を計算</span>
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                            </motion.div>
                         </motion.div>
                     ) : (
                         /* ── EXPANDED DRAWER ── */

@@ -1,3 +1,39 @@
+# Add-to-Cart Fly Animation
+
+## Goal
+Implement Option 1 for product add interactions:
+- When users tap `追加`, a lightweight product ghost should fly into the cart target.
+- The cart target should acknowledge receipt with a short bounce.
+- Respect `prefers-reduced-motion` and keep the interaction responsive on mobile.
+
+## Tasks
+- [x] **1. Wire animation ownership**
+  - Add a shared fly-to-cart overlay at the calculator/app level so the animation can move across layout regions.
+  - Define source and target rect registration without coupling the card and cart components directly.
+- [x] **2. Connect add-to-cart interactions**
+  - Capture a stable source element from `ProductCard`.
+  - Trigger the fly animation from the existing add-to-cart path and bounce the cart target on completion.
+- [x] **3. Preserve accessibility and mobile behavior**
+  - Respect reduced-motion preferences.
+  - Keep the drawer/cart pill usable without blocking taps or scroll gestures.
+- [x] **4. Verify and document**
+  - Run the frontend build.
+  - Update this file with the final review and any residual risks.
+
+## Review
+- Implemented a shared `FlyToCartOverlay` in `frontend/src/components/FlyToCartOverlay.jsx` so add-to-cart animation is owned at the calculator level instead of being embedded inside each card.
+- `frontend/src/components/ProductCard.jsx` now passes the clicked CTA element back up, which lets the animation start from the real button position without coupling card layout to cart layout.
+- `frontend/src/pages/ShippingCalculator.jsx` now:
+  - snapshots source/target rects,
+  - resolves the active cart target across desktop cart panel and mobile cart pill,
+  - queues a short retry window when the cart target is remounting (for example, switching from manual mode back to cart mode),
+  - falls back to a cart bounce only when reduced motion is enabled or no source rect is available.
+- `frontend/src/components/MobileCartDrawer.jsx` now exposes the collapsed pill as the mobile animation target and plays an explicit bounce only when a new item animation completes.
+- Verification:
+  - `cd frontend && npm run build` ✅
+- Residual risk:
+  - Personalized/saved-product adds that do not currently pass a source DOM element still use the reduced fallback path (cart bounce without a flying ghost). The main product-grid `追加` flow is fully animated.
+
 # Product Card Balance Pass (Option 3)
 
 ## Goal

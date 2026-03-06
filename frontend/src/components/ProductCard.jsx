@@ -168,7 +168,7 @@ export default function ProductCard({
         <div className="relative z-10 mt-3 -mx-2 -mb-2 sm:-mx-3 sm:-mb-3">
           <button
             type="button"
-            onClick={onAdd}
+            onClick={(event) => onAdd(event.currentTarget)}
             className="flex min-h-[2.85rem] w-full items-center justify-center gap-2 rounded-b-xl border-t border-white/50 bg-[linear-gradient(135deg,rgba(255,255,255,0.78)_0%,rgba(231,240,255,0.72)_45%,rgba(229,231,255,0.82)_100%)] px-3 py-2 text-center text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.72),0_-12px_24px_-22px_rgba(99,102,241,0.28)] backdrop-blur-xl transition-all duration-200 ease-out hover:border-fuchsia-200/80 hover:bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(244,232,255,0.88)_38%,rgba(224,236,255,0.94)_100%)] hover:text-slate-950 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_-16px_28px_-18px_rgba(217,70,239,0.38),0_0_0_1px_rgba(244,114,182,0.18)] active:scale-[0.99] active:bg-[linear-gradient(135deg,rgba(241,245,255,0.96)_0%,rgba(232,240,255,0.9)_100%)] active:shadow-[inset_0_2px_10px_rgba(99,102,241,0.12),0_-6px_16px_-16px_rgba(79,70,229,0.26)]"
             aria-label="カートに追加"
           >

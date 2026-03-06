@@ -206,3 +206,15 @@
 ## 52. Large injected numbers are a layout test, not just a data test
 - **Mistake**: Verified the stats pipeline with a huge injected event but did not immediately pressure-test whether the KPI card typography still fit once the formatted value gained multiple extra separators/digits.
 - **Rule**: When injecting outlier data to validate a dashboard, also add or verify a fit strategy for long formatted values (font-size scaling, tighter gaps, or measured fit) before considering the UI safe.
+
+## 53. Cart receipt bounce should use a single overshoot
+- **Mistake**: Implemented add-to-cart receipt feedback with overshoot plus undershoot keyframes, which read visually as two cart bounces instead of one acknowledgment.
+- **Rule**: For cart receipt feedback, default to a single overshoot-and-return motion (`[1, overshoot, 1]`) unless the user explicitly asks for a wobble.
+
+## 54. Long flight animations must start lateral travel immediately
+- **Mistake**: Weighted too much of the cart-flight duration into the initial upward phase, which made desktop add-to-cart motion feel like it paused before traveling.
+- **Rule**: For source-to-target UI flights, keep the initial lift short and start horizontal travel within the first fraction of the animation so long-distance desktop motion still reads as continuous.
+
+## 55. Animation completion callbacks must distinguish enter from exit
+- **Mistake**: Attached `onAnimationComplete` to a motion node that also had an `exit` animation, so the same cart-flight completion path could fire once after enter and again after exit.
+- **Rule**: When a motion node uses both `animate` and `exit`, guard completion side effects so they run only once per logical animation, or scope the callback to the specific phase instead of the shared node.
