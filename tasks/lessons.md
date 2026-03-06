@@ -174,3 +174,15 @@
 ## 44. Dashboard controls should stay visually subordinate unless the user explicitly wants them prominent
 - **Mistake**: Made the reset control a fixed high-visibility CTA and added a sparkline that pulled attention even though the user preferred the reset action to stay subtle.
 - **Rule**: For monitoring dashboards, keep destructive or utility controls low-emphasis and in-flow by default. Only add always-visible/focal widgets like fixed CTAs or sparklines when the user clearly wants that prominence.
+
+## 45. Showcase cards need contrast proof, not just palette intent
+- **Mistake**: Left the `Impact Story` card using low-contrast white-on-light treatments that looked acceptable in styling terms but failed in actual readability.
+- **Rule**: For dashboard/showcase hero cards, verify text contrast against the real rendered background and prefer darker text or stronger surface separation before adding decorative glow layers.
+
+## 46. "Rolling numbers" means sequential digit motion, not just swapping whole strings
+- **Mistake**: Implemented KPI value transitions as an overall text roll, which still skipped the intermediate digit sequence the user expected.
+- **Rule**: When the user asks for rolling/odometer numbers, animate each digit through its intermediate numeric sequence (`...7,8,9,0...`) instead of only sliding the old full string out and the new full string in.
+
+## 47. Animated digit rows must use the same measurement basis for row height and translate distance
+- **Mistake**: Built odometer digits with row heights sized in `em` but animated their vertical offset in `rem`, so large KPI font sizes caused the translate distance to be too short and digits overlapped.
+- **Rule**: For stacked text/digit animations, keep the cell height and transform offset in the same unit system (`em` with `em`, px with px) or derive both from the same measured value before shipping.

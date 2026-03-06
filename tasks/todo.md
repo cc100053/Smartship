@@ -471,6 +471,45 @@ Reduce dashboard visual noise after the previous polish pass:
   - `cd backend && ./mvnw test -Dtest=StatsServiceTest,StatsControllerTest` ✅
   - `cd frontend && npm run build` ✅
 
+# Stats Dashboard Readability + Rolling Numbers (2026-03-06)
+
+## Goal
+Improve two weak spots in the active dashboard polish:
+- Redesign the `Impact Story` card so the content is clearly readable.
+- Replace direct KPI number swaps with a rolling/odometer-style value transition.
+
+## Tasks
+- [x] **1. Redesign the Impact Story card**
+  - Increase text/background contrast.
+  - Keep the card visually intentional without sacrificing readability.
+- [x] **2. Add rolling KPI value animation**
+  - Animate value changes with a scrolling-number feel rather than abrupt text replacement.
+  - Keep formatting support for integer, currency, CO2e, and volume values.
+- [x] **3. Verify and document**
+  - Run the frontend production build.
+  - Record the final UI behavior in Review.
+
+## Review
+- Impact Story card:
+  - Reworked the card from dark low-contrast white text into a warm light surface with dark text, colored metric blocks, and a separate `Why It Matters` inset panel.
+  - Kept the card expressive with amber highlights and soft gradients, but shifted readability ahead of atmosphere.
+- KPI number animation:
+  - Added a reusable `RollingValue` component in `frontend/src/pages/StatsDashboard.jsx`.
+  - KPI values now transition with an odometer-like vertical slide: old value rolls up, new value rolls in from below.
+  - Initial loading still shows `...` instead of animating from `0`.
+- Verification:
+  - `cd frontend && npm run build` ✅
+
+### Follow-up Review
+- Root cause of the broken rolling state:
+  - `RollingDigit` used digit-row heights in `em` but animated the translate offset in `rem`, so the effective movement distance was far too short once the KPI font size scaled up.
+  - That mismatch caused digits to pile on top of each other instead of leaving the viewport cleanly.
+- Implemented fix:
+  - Switched digit travel to `em` so offset and row height scale together.
+  - Added subtle right-to-left stagger plus a digit-window mask so the roll reads with more depth instead of all columns moving flatly at once.
+- Verification:
+  - `cd frontend && npm run build` ✅
+
 # Mobile Responsive Stability Audit (Header/Footer/Cart)
 
 ## Goal

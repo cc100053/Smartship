@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { motion } from 'framer-motion';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Box, Coins, Leaf, RefreshCcw, RotateCcw, Sparkles, TimerReset } from 'lucide-react';
 import { fetchStatsSummary, resetStatsData } from '../api/shippingApi';
 import { cn } from '../utils/cn';
@@ -74,6 +74,122 @@ const getResetErrorMessage = (error) => {
 
   return '統計データを初期化できませんでした。';
 };
+
+const DIGIT_CELL_EM = 1;
+
+const buildDigitFrames = (previousDigit, nextDigit) => {
+  if (!Number.isInteger(previousDigit) || !Number.isInteger(nextDigit)) {
+    return [String(nextDigit ?? 0)];
+  }
+
+  const frames = [String(previousDigit)];
+  let cursor = previousDigit;
+
+  while (cursor !== nextDigit) {
+    cursor = (cursor + 1) % 10;
+    frames.push(String(cursor));
+  }
+
+  return frames;
+};
+
+function RollingDigit({ previousChar, nextChar, place, depth }) {
+  const previousDigit = previousChar != null && /\d/.test(previousChar) ? Number(previousChar) : 0;
+  const nextDigit = nextChar != null && /\d/.test(nextChar) ? Number(nextChar) : 0;
+  const frames = buildDigitFrames(previousDigit, nextDigit);
+  const offset = -((frames.length - 1) * DIGIT_CELL_EM);
+  const duration = Math.min(2.66, Math.max(0.9, frames.length * 0.27));
+
+  return (
+    <span
+      className="relative inline-flex h-[1em] overflow-hidden align-baseline [mask-image:linear-gradient(to_bottom,transparent,black_16%,black_84%,transparent)]"
+      style={{ width: `${place === 0 ? 0.72 : 0.66}em` }}
+    >
+      <motion.span
+        key={`${place}-${previousChar ?? 'x'}-${nextChar ?? 'x'}`}
+        initial={{ y: 0 }}
+        animate={{ y: `${offset}em` }}
+        transition={{ duration, delay: depth * 0.09, ease: [0.16, 1, 0.3, 1] }}
+        className="absolute left-0 top-0 flex flex-col"
+      >
+        {frames.map((digit, index) => (
+          <span
+            key={`${place}-${digit}-${index}`}
+            className="flex h-[1em] items-center justify-center leading-none"
+          >
+            {digit}
+          </span>
+        ))}
+      </motion.span>
+    </span>
+  );
+}
+
+function RollingGlyph({ char }) {
+  return (
+    <span className="inline-flex h-[1.1em] items-center leading-none">
+      {char}
+    </span>
+  );
+}
+
+function RollingValue({ value, formatter, className, loading }) {
+  const formattedValue = loading ? '...' : formatter(value);
+  const [currentText, setCurrentText] = useState(formattedValue);
+  const previousTextRef = useRef(formattedValue);
+
+  useEffect(() => {
+    if (formattedValue === currentText) {
+      return undefined;
+    }
+
+    previousTextRef.current = currentText;
+    setCurrentText(formattedValue);
+  }, [formattedValue, currentText]);
+
+  const previousText = previousTextRef.current;
+  const nextChars = Array.from(currentText);
+  const prevChars = Array.from(previousText);
+  const maxLength = Math.max(nextChars.length, prevChars.length);
+
+  return (
+    <span className={cn('inline-flex flex-wrap items-end overflow-hidden tabular-nums', className)}>
+      {Array.from({ length: maxLength }).map((_, index) => {
+        const nextChar = nextChars[maxLength - 1 - index];
+        const previousChar = prevChars[maxLength - 1 - index];
+        const place = maxLength - 1 - index;
+        const depth = index;
+
+        if (nextChar == null && previousChar == null) {
+          return null;
+        }
+
+        const isDigitPair = /\d/.test(nextChar ?? '') || /\d/.test(previousChar ?? '');
+
+        return (
+          <span key={`${place}-${nextChar ?? 'empty'}-${previousChar ?? 'empty'}`} className="inline-flex">
+            {isDigitPair && /\d/.test(nextChar ?? '') ? (
+              <RollingDigit previousChar={previousChar} nextChar={nextChar} place={place} depth={depth} />
+            ) : (
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.span
+                  key={`${place}-${nextChar ?? 'space'}`}
+                  initial={{ y: previousChar && previousChar !== nextChar ? '45%' : 0, opacity: previousChar && previousChar !== nextChar ? 0 : 1 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={{ y: '-45%', opacity: 0 }}
+                  transition={{ duration: 0.72, delay: depth * 0.045 }}
+                  className="inline-flex"
+                >
+                  <RollingGlyph char={nextChar ?? ''} />
+                </motion.span>
+              </AnimatePresence>
+            )}
+          </span>
+        );
+      }).reverse()}
+    </span>
+  );
+}
 
 const cards = [
   {
@@ -323,9 +439,12 @@ export default function StatsDashboard() {
                       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                         {loading ? 'Updating...' : `${formatCompactInteger(numericValue)} total`}
                       </p>
-                      <p className="font-display text-[2.6rem] leading-none tracking-tight text-slate-950 sm:text-[3.2rem]">
-                        {loading ? '...' : card.formatter(value)}
-                      </p>
+                      <RollingValue
+                        value={value}
+                        formatter={card.formatter}
+                        loading={loading}
+                        className="font-display text-[2.6rem] leading-none tracking-tight text-slate-950 sm:text-[3.2rem]"
+                      />
                       {card.suffix ? (
                         <p className="mt-3 text-sm font-semibold text-slate-600">{card.suffix}</p>
                       ) : null}
@@ -349,30 +468,49 @@ export default function StatsDashboard() {
             transition={{ duration: 0.45, delay: 0.2 }}
             className="mt-6 grid gap-4 lg:grid-cols-[1.1fr_0.9fr]"
           >
-            <div className="rounded-[2rem] border border-slate-900/80 bg-slate-950/94 px-6 py-6 text-white shadow-[0_30px_90px_rgba(15,23,42,0.24)]">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-white/55">Impact Story</p>
-              <p className="mt-4 text-2xl font-display leading-tight sm:text-3xl">
-                SmartShip は、
-                <span className="text-amber-300">より小さい配送枠を選べた価値</span>
-                を 3 つの指標で見せます。
-              </p>
-              <div className="mt-5 grid gap-3 md:grid-cols-3">
-                <div className="rounded-2xl border border-white/10 bg-white/6 px-4 py-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-white/45">Cost</p>
-                  <p className="mt-2 text-sm leading-6 text-white/80">次点配送方法との差額から、送料インパクトを累積表示。</p>
+            <div className="relative overflow-hidden rounded-[2rem] border border-amber-200/80 bg-[linear-gradient(145deg,rgba(255,251,235,0.98),rgba(255,255,255,0.96))] px-6 py-6 text-slate-900 shadow-[0_30px_90px_rgba(180,83,9,0.12)]">
+              <div className="pointer-events-none absolute inset-0">
+                <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-amber-200/55 blur-3xl" />
+                <div className="absolute bottom-0 left-0 h-24 w-full bg-[linear-gradient(90deg,rgba(251,191,36,0.08),rgba(249,115,22,0.04),transparent)]" />
+              </div>
+              <div className="relative">
+                <p className="inline-flex rounded-full border border-amber-200 bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-amber-700">
+                  Impact Story
+                </p>
+                <div className="mt-4 grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
+                  <div>
+                    <p className="text-2xl font-display leading-tight text-slate-950 sm:text-3xl">
+                      SmartShip は、
+                      <span className="text-amber-700">より小さい配送枠を選べた価値</span>
+                      を読み取りやすい 3 指標で見せます。
+                    </p>
+                    <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-700 sm:text-base">
+                      送料、CO2e proxy、包裝體積を並べることで、「どれだけ無駄な大箱を避けられたか」をその場で理解できる showcase card にしています。
+                    </p>
+                  </div>
+                  <div className="rounded-[1.6rem] border border-amber-200/80 bg-white/72 px-4 py-4 shadow-[0_18px_45px_rgba(180,83,9,0.08)]">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Why It Matters</p>
+                    <p className="mt-3 text-sm leading-6 text-slate-700">
+                      体積は配送候補サイズの直方体体積です。厳密な物流容積ではなく、
+                      SmartShip が「大きすぎる箱をどれだけ避けたか」を直感的に伝える showcase metric として扱います。
+                    </p>
+                  </div>
                 </div>
-                <div className="rounded-2xl border border-white/10 bg-white/6 px-4 py-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-white/45">Carbon</p>
-                  <p className="mt-2 text-sm leading-6 text-white/80">最大寸法差と重量から、展示向けの CO2e proxy を算出。</p>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-white/6 px-4 py-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-white/45">Volume</p>
-                  <p className="mt-2 text-sm leading-6 text-white/80">推奨配送枠と次点配送枠の体積差を積み上げ、包裝體積の節約を見せます。</p>
+                <div className="mt-5 grid gap-3 md:grid-cols-3">
+                  <div className="rounded-2xl border border-amber-200/70 bg-white/78 px-4 py-4 shadow-sm">
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-amber-700">Cost</p>
+                    <p className="mt-2 text-sm leading-6 text-slate-700">次点配送方法との差額から、送料インパクトを累積表示。</p>
+                  </div>
+                  <div className="rounded-2xl border border-sky-200/80 bg-sky-50/80 px-4 py-4 shadow-sm">
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-sky-700">Carbon</p>
+                    <p className="mt-2 text-sm leading-6 text-slate-700">最大寸法差と重量から、展示向けの CO2e proxy を算出。</p>
+                  </div>
+                  <div className="rounded-2xl border border-violet-200/80 bg-violet-50/80 px-4 py-4 shadow-sm">
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-violet-700">Volume</p>
+                    <p className="mt-2 text-sm leading-6 text-slate-700">推奨配送枠と次点配送枠の体積差を積み上げ、包裝體積の節約を見せます。</p>
+                  </div>
                 </div>
               </div>
-              <p className="mt-5 max-w-3xl text-sm leading-7 text-white/68 sm:text-base">
-                ここでの体積は配送候補サイズの直方体体積です。物流現場の厳密な容積計算ではなく、SmartShip が「どれだけ大きい箱を避けられたか」を直感的に伝えるための showcase metric として扱います。
-              </p>
             </div>
 
             <div className="rounded-[2rem] border border-white/70 bg-white/82 px-6 py-6 shadow-[0_24px_75px_rgba(148,163,184,0.18)] backdrop-blur-xl">
