@@ -119,38 +119,8 @@ const DIGIT_CELL_HEIGHT = 1.25; // Increase height to prevent clipping of descen
 const KPI_PREFIX_OFFSET_EM = -0.3;
 const KPI_SUFFIX_OFFSET_EM = -0.22;
 const ROLLING_PUNCTUATION_OFFSETS = {
-  ',': -0.1,
-  '.': -0.1,
-};
-
-const getKpiSizing = (parts, hasAffix) => {
-  const digitLength = Array.from(parts?.digits ?? '').length;
-  const totalLength = digitLength + (hasAffix ? 1 : 0);
-
-  if (totalLength >= 12) {
-    return {
-      rowClassName: 'gap-1',
-      digitsClassName: 'text-[2.02rem] sm:text-[2.45rem]',
-      prefixClassName: 'text-[1.45rem] sm:text-[1.72rem]',
-      suffixClassName: 'text-[1.3rem] sm:text-[1.56rem]',
-    };
-  }
-
-  if (totalLength >= 10) {
-    return {
-      rowClassName: 'gap-1',
-      digitsClassName: 'text-[2.28rem] sm:text-[2.78rem]',
-      prefixClassName: 'text-[1.65rem] sm:text-[1.95rem]',
-      suffixClassName: 'text-[1.45rem] sm:text-[1.75rem]',
-    };
-  }
-
-  return {
-    rowClassName: 'gap-1.5',
-    digitsClassName: 'text-[2.75rem] sm:text-[3.3rem]',
-    prefixClassName: 'text-[2rem] sm:text-[2.4rem]',
-    suffixClassName: 'text-[1.8rem] sm:text-[2.2rem]',
-  };
+  ',': { x: -0.1, y: -0.1 },
+  '.': { x: -0.06, y: -0.1 },
 };
 
 const buildDigitFrames = (previousDigit, nextDigit) => {
@@ -202,15 +172,98 @@ function RollingDigit({ previousChar, nextChar, place, depth }) {
 }
 
 function RollingGlyph({ char }) {
-  const punctuationOffset = ROLLING_PUNCTUATION_OFFSETS[char] ?? 0;
+  const punctuationOffset = ROLLING_PUNCTUATION_OFFSETS[char];
+  const translateX = punctuationOffset?.x ?? 0;
+  const translateY = punctuationOffset?.y ?? 0;
+  const hasOffset = translateX !== 0 || translateY !== 0;
 
   return (
     <span
       className="inline-flex h-[1.25em] items-end leading-none align-bottom"
-      style={punctuationOffset ? { transform: `translateY(${punctuationOffset}em)` } : undefined}
+      style={hasOffset ? { transform: `translate(${translateX}em, ${translateY}em)` } : undefined}
     >
       {char}
     </span>
+  );
+}
+
+function AutoFitKpiRow({ children, className, minScale = 0.58 }) {
+  const frameRef = useRef(null);
+  const contentRef = useRef(null);
+  const [metrics, setMetrics] = useState({ scale: 1, heightPx: null });
+
+  useEffect(() => {
+    const frameNode = frameRef.current;
+    const contentNode = contentRef.current;
+
+    if (!frameNode || !contentNode || typeof ResizeObserver === 'undefined') {
+      return undefined;
+    }
+
+    let frameId = 0;
+
+    const updateMetrics = () => {
+      frameId = 0;
+
+      const availableWidth = frameNode.clientWidth;
+      const contentWidth = contentNode.scrollWidth;
+      const contentHeight = contentNode.offsetHeight;
+
+      if (!availableWidth || !contentWidth || !contentHeight) {
+        setMetrics((current) => (current.scale === 1 && current.heightPx === null
+          ? current
+          : { scale: 1, heightPx: null }));
+        return;
+      }
+
+      const nextScale = Math.min(1, Math.max(minScale, availableWidth / contentWidth));
+      const nextHeightPx = Math.ceil(contentHeight * nextScale);
+
+      setMetrics((current) => {
+        if (Math.abs(current.scale - nextScale) < 0.01 && current.heightPx === nextHeightPx) {
+          return current;
+        }
+
+        return { scale: nextScale, heightPx: nextHeightPx };
+      });
+    };
+
+    const scheduleUpdate = () => {
+      if (frameId) {
+        window.cancelAnimationFrame(frameId);
+      }
+
+      frameId = window.requestAnimationFrame(updateMetrics);
+    };
+
+    scheduleUpdate();
+
+    const resizeObserver = new ResizeObserver(scheduleUpdate);
+    resizeObserver.observe(frameNode);
+    resizeObserver.observe(contentNode);
+
+    return () => {
+      if (frameId) {
+        window.cancelAnimationFrame(frameId);
+      }
+      resizeObserver.disconnect();
+    };
+  }, [children, minScale]);
+
+  return (
+    <div
+      ref={frameRef}
+      className="min-w-0 overflow-visible"
+      style={metrics.heightPx ? { minHeight: `${metrics.heightPx}px` } : undefined}
+    >
+      <div
+        ref={contentRef}
+        className={cn('inline-flex w-max origin-bottom-left', className)}
+        style={{ transform: `scale(${metrics.scale})` }}
+      >
+        {children}
+      </div>
+    </div>
   );
 }
 
@@ -489,10 +542,7 @@ export default function StatsDashboard() {
             {cards.map((card, index) => {
               const Icon = card.icon;
               const value = summary[card.key];
-              const numericValue = Number(value) || 0;
               const parts = card.formatParts(value);
-              const hasAffix = Boolean(parts.prefix || parts.unit || card.suffix);
-              const kpiSizing = getKpiSizing(parts, hasAffix);
               return (
                 <motion.article
                   key={card.key}
@@ -519,10 +569,10 @@ export default function StatsDashboard() {
                     </div>
 
                     <div className="mt-8 flex min-w-0 flex-col">
-                      <div className={cn('mt-2 flex min-w-0 items-end font-kpi leading-none text-slate-950', kpiSizing.rowClassName)}>
+                      <AutoFitKpiRow className="mt-2 flex min-w-0 items-end gap-1.5 font-kpi leading-none text-slate-950">
                         {!loading && parts.prefix ? (
                           <span
-                            className={cn('inline-flex shrink-0 items-end font-semibold tracking-[-0.04em] opacity-80', kpiSizing.prefixClassName)}
+                            className="inline-flex shrink-0 items-end text-[2rem] font-semibold tracking-[-0.04em] opacity-80 sm:text-[2.4rem]"
                             style={{ transform: `translateY(${KPI_PREFIX_OFFSET_EM}em)` }}
                           >
                             {parts.prefix}
@@ -531,17 +581,17 @@ export default function StatsDashboard() {
                         <RollingValue
                           text={parts.digits}
                           loading={loading}
-                          className={cn('min-w-0 font-semibold tracking-[-0.06em]', kpiSizing.digitsClassName)}
+                          className="min-w-0 font-semibold tracking-[-0.06em] text-[2.75rem] sm:text-[3.3rem]"
                         />
                         {!loading && (parts.unit || card.suffix) ? (
                           <span
-                            className={cn('inline-flex shrink-0 items-end font-semibold tracking-[-0.02em] opacity-80', kpiSizing.suffixClassName)}
+                            className="inline-flex shrink-0 items-end text-[1.8rem] font-semibold tracking-[-0.02em] opacity-80 sm:text-[2.2rem]"
                             style={{ transform: `translateY(${KPI_SUFFIX_OFFSET_EM}em)` }}
                           >
                             {parts.unit || card.suffix}
                           </span>
                         ) : null}
-                      </div>
+                      </AutoFitKpiRow>
                       <p className="mt-2 self-end text-right text-xs font-medium text-slate-500">{card.note}</p>
                     </div>
                   </div>

@@ -1394,3 +1394,34 @@ Prevent oversized KPI values from being visually truncated inside the stats card
   - `cd frontend && npm run build` ✅
 - Residual note:
   - The build still shows the existing Vite large-chunk warning only.
+
+---
+
+# Stats Dashboard Measured KPI Autoscale (2026-03-06)
+
+## Goal
+Replace heuristic long-number font sizing with true container-width autoscaling for KPI values, and expand rolling punctuation offsets so commas/decimal points can be adjusted on both the X and Y axes.
+
+## Tasks
+- [x] **1. Scope the renderer change**
+  - Confirm where the KPI row can be measured and scaled without breaking the rolling digit animation.
+- [x] **2. Implement measured autoscale**
+  - Measure rendered KPI width against the card container and apply a bottom-left anchored scale transform when the content would overflow.
+- [x] **3. Upgrade punctuation offsets**
+  - Change rolling punctuation config from Y-only values to independent X/Y offsets.
+- [x] **4. Verify + review**
+  - Run `cd frontend && npm run build`.
+  - Record the final behavior and any residual limitations.
+
+## Review
+- Replaced the heuristic digit-length sizing in [StatsDashboard.jsx](/Users/fatboy/smartship/frontend/src/pages/StatsDashboard.jsx) with a measured `AutoFitKpiRow`.
+- The KPI row now:
+  - measures rendered content width with `ResizeObserver`,
+  - compares it to the available card width,
+  - applies a bottom-left anchored `scale(...)` transform only when needed,
+  - preserves the original large typography when the value already fits.
+- Upgraded `ROLLING_PUNCTUATION_OFFSETS` from scalar Y offsets to `{ x, y }` objects, so commas and decimal points can be optically nudged on both axes.
+- Verification:
+  - `cd frontend && npm run build` ✅
+- Residual note:
+  - Existing Vite large-chunk warning remains unchanged.
