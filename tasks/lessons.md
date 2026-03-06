@@ -135,3 +135,19 @@
 ## 34. Pointer-reactive badges should map motion to cursor position, not fixed hover transforms
 - **Mistake**: Boosted the vote badge hover intensity with a fixed rotation, which looked louder but did not actually respond to the user's pointer location.
 - **Rule**: For interactive badges meant to feel tactile, drive tilt from pointer position and leave fixed hover transforms to secondary polish only.
+
+## 35. "Always on top" header requests require fixed positioning, not normal-flow styling
+- **Mistake**: Left the header in normal document flow, so it scrolled away even after the user explicitly asked for it to stay pinned at the top.
+- **Rule**: When the user says a header should remain on top regardless of scroll position, implement viewport-level `fixed` positioning and add a spacer so content does not slide underneath it.
+
+## 36. Fixed wrappers must inherit the same width system as the content column
+- **Mistake**: Froze the header with viewport padding math that did not match the main content container, which made the header slightly wider than the sections below and created a visible right-edge mismatch.
+- **Rule**: When pinning a centered layout element, keep the fixed wrapper full-width and apply the exact same `max-width + horizontal padding` structure inside it as the main page container; tune the spacer separately for gap size.
+
+## 37. If a pinned element must exactly match sibling section width, keep it in the same layout flow
+- **Mistake**: Kept trying to simulate exact column alignment with viewport-level fixed wrappers even after the user still saw a small rightward mismatch.
+- **Rule**: When a pinned header must visually match sibling sections exactly, prefer an in-flow `sticky` element inside the shared centered container before reaching for independent fixed wrappers and spacer hacks.
+
+## 38. Stats formulas must follow the product definition the user chooses, not the most rigorous metric by default
+- **Mistake**: Proposed a more defensible volume-reduction baseline before locking the user's preferred product-facing definition for the stat.
+- **Rule**: When discussing showcase metrics, first align on the user's preferred comparison basis and only then optimize the formula for consistency and implementation simplicity.

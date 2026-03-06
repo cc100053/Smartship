@@ -148,7 +148,7 @@ export default function App() {
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.6 }}
-          className="flex-none mb-3 sm:mb-4 flex items-center justify-between rounded-xl sm:rounded-2xl border border-white/40 bg-white/60 px-3 py-2 sm:px-4 sm:py-3 shadow-md backdrop-blur-md"
+          className="sticky top-[calc(0.75rem+env(safe-area-inset-top,0px))] z-40 mb-2 flex items-center justify-between rounded-xl border border-white/50 bg-white/82 px-3 py-2 shadow-md backdrop-blur-xl sm:mb-3 sm:rounded-2xl sm:px-4 sm:py-3"
         >
           <div className="flex items-center gap-3 sm:gap-6">
             <a href="/" className="flex items-center gap-2 transition-transform hover:scale-[1.02]">

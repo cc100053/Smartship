@@ -46,6 +46,33 @@ Replace the desktop dual-panel nested scrolling with a single page-level/global 
 - Verification:
   - `cd frontend && npm run build` ✅
 
+## Header Freeze Regression Fix
+
+### Goal
+Keep the header frozen at the top without introducing horizontal drift relative to the main centered content column.
+
+### Tasks
+- [x] **1. Confirm the offset source**
+  - Inspect the current fixed-header width/centering math against the main page container padding and max width.
+- [x] **2. Refactor header pinning**
+  - Pin a viewport-level wrapper to the top.
+  - Keep the header itself centered using the same horizontal padding/max-width system as the main content.
+  - Preserve content offset spacing under the frozen header.
+- [x] **3. Verify**
+  - Run frontend production build.
+  - Document the regression cause and fix.
+
+### Review
+- Root cause:
+  - The previous freeze implementation fixed the header itself with viewport-based width math (`left-1/2`, `translate-x-1/2`, `w-[calc(...)]`) while the page body was centered by a different `max-width + padding` container.
+  - That made the header align to the viewport, not to the actual content column, so it appeared shifted to the right.
+- Fix:
+  - Replaced the viewport-fixed wrapper approach with an in-flow sticky header that lives directly inside the same centered content column as the sections below.
+  - Removed the separate spacer hack and let the sticky header spacing be controlled by its own bottom margin.
+  - Reduced the bottom gap (`mb-2` / `sm:mb-3`) so the first section sits closer to the pinned header.
+- Verification:
+  - `cd frontend && npm run build` ✅
+
 # Category Filter Auto-Nudge UX
 
 # Login / Saved Products Design Discussion
@@ -846,3 +873,35 @@ Make viewer framing closer so product appears larger, while preserving existing 
 - Preserved existing size-based zoom behavior by leaving `Scene` and `maxDim` scaling path unchanged.
 - Verification:
   - `cd frontend && npm run build` ✅
+
+---
+
+# Stats Dashboard Execution Plan (2026-03-06)
+
+## Goal
+Write a detailed implementation plan for a new stats dashboard that records each successful `計算運費` action as an official event and displays cumulative showcase metrics on a dedicated screen.
+
+## Tasks
+- [x] **1. Confirm product definitions**
+  - Treat successful `計算運費` requests as the only official stats trigger.
+  - Keep MVP aggregate fetching simple with normal polling instead of WebSocket/SSE.
+  - Use the agreed savings definition and a lightweight estimated-carbon formula.
+- [x] **2. Draft the architecture plan**
+  - Define backend write path, database event schema, aggregate API, and frontend route/page structure.
+  - Spell out the carbon-estimation proxy using recommended vs second-best fitting option size gap.
+- [x] **3. Publish the doc**
+  - Add a dedicated plan document under `docs/`.
+  - Capture implementation phases, verification, and rollout notes.
+
+## Review
+- Added a dedicated execution plan document:
+  - `docs/stats_dashboard_execution_plan.md`
+- The plan locks in these product choices:
+  - Only successful `計算運費` actions count toward stats.
+  - MVP stats screen reads aggregate totals with simple polling.
+  - Dashboard headline metrics are:
+    - Total Calculations
+    - Estimated Yen Saved
+    - Estimated CO2e Saved
+    - Items Packed
+- The plan also defines the requested lightweight carbon proxy based on the max-dimension gap between the recommended option and the second-best fitting option, scaled by shipment weight.
