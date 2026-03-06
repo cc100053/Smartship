@@ -6,7 +6,7 @@ import ScrollToTopButton from './components/ScrollToTopButton';
 import AuthModal from './components/AuthModal';
 import LoginButton from './components/LoginButton';
 import ToastPrompt from './components/ToastPrompt';
-import { fetchAuthSession, loginOrRegister, logout } from './api/shippingApi';
+import { loginOrRegister, logout, refreshAuthSession } from './api/shippingApi';
 
 const MotionHeader = motion.header;
 const MotionMain = motion.main;
@@ -34,7 +34,7 @@ export default function App() {
 
     const loadSession = async () => {
       try {
-        const session = await fetchAuthSession();
+        const session = await refreshAuthSession();
         if (!cancelled) {
           setAuthSession({
             authenticated: Boolean(session?.authenticated),
@@ -88,23 +88,17 @@ export default function App() {
     setAuthError('');
 
     try {
-      const loginResult = await loginOrRegister(form);
-      const session = await fetchAuthSession({ retry: 0, timeoutMs: 8000 });
-
-      if (!session?.authenticated) {
-        throw new Error('ログイン状態を保持できませんでした。ブラウザがセッションクッキーを保存できていない可能性があります。');
-      }
-
+      const session = await loginOrRegister(form);
       setAuthSession({
         authenticated: Boolean(session?.authenticated),
         accountId: session?.accountId ?? null,
         loginId: session?.loginId ?? null,
       });
       setAuthToast(
-        loginResult?.justRegistered
+        session?.justRegistered
           ? {
             title: null,
-            message: loginResult?.message || 'ID が見つからなかったため、そのままアカウントを作成しました。',
+            message: session?.message || 'ID が見つからなかったため、そのままアカウントを作成しました。',
           }
           : {
             title: null,

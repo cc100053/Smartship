@@ -5,6 +5,7 @@
 DROP TABLE IF EXISTS shipping_carrier CASCADE;
 DROP TABLE IF EXISTS product_reference CASCADE;
 DROP TABLE IF EXISTS calculation_events CASCADE;
+DROP TABLE IF EXISTS account_refresh_tokens CASCADE;
 DROP TABLE IF EXISTS user_liked_products CASCADE;
 DROP TABLE IF EXISTS user_saved_products CASCADE;
 DROP TABLE IF EXISTS accounts CASCADE;
@@ -12,6 +13,8 @@ DROP INDEX IF EXISTS idx_calculation_events_created_at;
 DROP INDEX IF EXISTS idx_product_category;
 DROP INDEX IF EXISTS idx_carrier_price;
 DROP INDEX IF EXISTS idx_accounts_normalized_login_id;
+DROP INDEX IF EXISTS idx_account_refresh_tokens_account_id;
+DROP INDEX IF EXISTS idx_account_refresh_tokens_token_id;
 DROP INDEX IF EXISTS idx_user_saved_products_account_id;
 DROP INDEX IF EXISTS idx_user_liked_products_account_id;
 
@@ -57,6 +60,17 @@ CREATE TABLE accounts (
 );
 
 -- Table 4: user_saved_products (user-created reusable products)
+CREATE TABLE account_refresh_tokens (
+    id BIGSERIAL PRIMARY KEY,
+    account_id BIGINT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    token_id VARCHAR(120) NOT NULL UNIQUE,
+    token_hash VARCHAR(128) NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    last_used_at TIMESTAMPTZ
+);
+
+-- Table 5: user_saved_products (user-created reusable products)
 CREATE TABLE user_saved_products (
     id BIGSERIAL PRIMARY KEY,
     account_id BIGINT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
@@ -70,7 +84,7 @@ CREATE TABLE user_saved_products (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Table 5: user_liked_products (existing library products liked by user)
+-- Table 6: user_liked_products (existing library products liked by user)
 CREATE TABLE user_liked_products (
     id BIGSERIAL PRIMARY KEY,
     account_id BIGINT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
@@ -79,7 +93,7 @@ CREATE TABLE user_liked_products (
     CONSTRAINT uk_user_liked_products_account_product UNIQUE (account_id, product_reference_id)
 );
 
--- Table 6: calculation_events (official stats events for successful calculations)
+-- Table 7: calculation_events (official stats events for successful calculations)
 CREATE TABLE calculation_events (
     id BIGSERIAL PRIMARY KEY,
     calculation_mode VARCHAR(20) NOT NULL,
@@ -105,5 +119,7 @@ CREATE INDEX idx_calculation_events_created_at ON calculation_events(created_at)
 CREATE INDEX idx_product_category ON product_reference(category);
 CREATE INDEX idx_carrier_price ON shipping_carrier(price_yen);
 CREATE INDEX idx_accounts_normalized_login_id ON accounts(normalized_login_id);
+CREATE INDEX idx_account_refresh_tokens_account_id ON account_refresh_tokens(account_id);
+CREATE INDEX idx_account_refresh_tokens_token_id ON account_refresh_tokens(token_id);
 CREATE INDEX idx_user_saved_products_account_id ON user_saved_products(account_id);
 CREATE INDEX idx_user_liked_products_account_id ON user_liked_products(account_id);

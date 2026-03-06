@@ -81,6 +81,7 @@ Detailed step-by-step runbook: `docs/deployment_runbook.md`
 ### Frontend (Vercel)
 The frontend is hosted on Vercel and connected to GitHub.
 *   **Auto-Deploy**: Just push to the `master` branch. Vercel automatically deploys changes from the `frontend/` directory.
+*   **API Path**: Production frontend now expects same-origin `/api/*` requests via Vercel rewrite, not a browser-visible cross-site backend base URL.
 
 ### Backend (Azure Container Apps)
 The backend is hosted on Azure. You must manually build and update the image.
@@ -117,6 +118,12 @@ $env:DB_PASSWORD="your_actual_password"
 ```bash
 VITE_API_URL=http://localhost:8080 npm run dev
 ```
+
+### Auth
+- The app now uses:
+  - short-lived access token in frontend memory
+  - refresh token in an HTTP-only cookie
+- Local development defaults to same-origin `/api` proxying through Vite, so you usually do not need `VITE_API_URL` for auth flows.
 
 ## Health endpoint
 - Readiness: `GET /actuator/health/readiness`

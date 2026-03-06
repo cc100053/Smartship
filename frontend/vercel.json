@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "https://smartship-backend.agreeablemeadow-deb59e6e.japaneast.azurecontainerapps.io/api/$1"
+    }
+  ]
+}

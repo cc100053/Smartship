@@ -1,4 +1,6 @@
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+const API_BASE = import.meta.env.VITE_API_URL || '';
+let accessToken = null;
+let refreshPromise = null;
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -81,21 +83,38 @@ const requestJson = async (path, options = {}) => {
     retryDelayMs = 350,
     timeoutMs = 10000,
     signal: externalSignal,
+    authRequired = false,
+    skipAuthRefresh = false,
+    skipAuthHeader = false,
     ...fetchOptions
   } = options;
 
   let attempt = 0;
+  let attemptedAuthRefresh = false;
   while (true) {
     const { signal, cleanup } = withTimeoutSignal(externalSignal, timeoutMs);
     try {
+      const headers = { 'Content-Type': 'application/json', ...(fetchOptions.headers || {}) };
+      if (!skipAuthHeader && accessToken) {
+        headers.Authorization = `Bearer ${accessToken}`;
+      }
+
       const res = await fetch(`${API_BASE}${path}`, {
-        headers: { 'Content-Type': 'application/json', ...(fetchOptions.headers || {}) },
+        headers,
         credentials: 'include',
         ...fetchOptions,
         signal,
       });
 
       if (!res.ok) {
+        if (res.status === 401 && authRequired && !skipAuthRefresh && !attemptedAuthRefresh) {
+          attemptedAuthRefresh = true;
+          const refreshed = await refreshAuthSession({ signal: externalSignal });
+          if (refreshed?.authenticated && accessToken) {
+            continue;
+          }
+        }
+
         const text = await res.text();
         const error = new Error(extractErrorMessage(text, res.status));
         error.status = res.status;
@@ -115,7 +134,11 @@ const requestJson = async (path, options = {}) => {
       }
 
       const text = await res.text();
-      return text ? JSON.parse(text) : null;
+      const parsed = text ? JSON.parse(text) : null;
+      if (typeof parsed?.accessToken === 'string' && parsed.accessToken) {
+        accessToken = parsed.accessToken;
+      }
+      return parsed;
     } catch (error) {
       const callerAborted = externalSignal?.aborted;
       const isNetworkError = error instanceof TypeError;
@@ -131,6 +154,41 @@ const requestJson = async (path, options = {}) => {
       cleanup();
     }
   }
+};
+
+export const clearAccessToken = () => {
+  accessToken = null;
+};
+
+const runRefreshRequest = (options = {}) =>
+  requestJson('/api/auth/refresh', {
+    method: 'POST',
+    retry: 0,
+    timeoutMs: 8000,
+    skipAuthRefresh: true,
+    skipAuthHeader: true,
+    ...options,
+  });
+
+export const refreshAuthSession = async (options = {}) => {
+  if (!refreshPromise) {
+    refreshPromise = runRefreshRequest(options)
+      .then((session) => {
+        if (!session?.authenticated) {
+          clearAccessToken();
+        }
+        return session;
+      })
+      .catch((error) => {
+        clearAccessToken();
+        throw error;
+      })
+      .finally(() => {
+        refreshPromise = null;
+      });
+  }
+
+  return refreshPromise;
 };
 
 export const fetchProducts = (category, options = {}) => {
@@ -153,7 +211,7 @@ export const resetStatsData = (options = {}) =>
   });
 
 export const fetchAuthSession = (options = {}) =>
-  requestJson('/api/auth/session', { retry: 1, timeoutMs: 8000, ...options });
+  requestJson('/api/auth/session', { retry: 1, timeoutMs: 8000, authRequired: true, ...options });
 
 export const loginOrRegister = (payload, options = {}) =>
   requestJson('/api/auth/login-or-register', {
@@ -161,6 +219,8 @@ export const loginOrRegister = (payload, options = {}) =>
     body: JSON.stringify(payload),
     retry: 0,
     timeoutMs: 10000,
+    skipAuthRefresh: true,
+    skipAuthHeader: true,
     ...options,
   });
 
@@ -169,11 +229,13 @@ export const logout = (options = {}) =>
     method: 'POST',
     retry: 0,
     timeoutMs: 8000,
+    skipAuthRefresh: true,
+    skipAuthHeader: true,
     ...options,
   });
 
 export const fetchPersonalizedProducts = (options = {}) =>
-  requestJson('/api/me/products', { retry: 1, timeoutMs: 10000, ...options });
+  requestJson('/api/me/products', { retry: 1, timeoutMs: 10000, authRequired: true, ...options });
 
 export const createSavedProduct = (payload, options = {}) =>
   requestJson('/api/me/saved-products', {
@@ -181,6 +243,7 @@ export const createSavedProduct = (payload, options = {}) =>
     body: JSON.stringify(payload),
     retry: 0,
     timeoutMs: 10000,
+    authRequired: true,
     ...options,
   });
 
@@ -189,6 +252,7 @@ export const deleteSavedProduct = (savedProductId, options = {}) =>
     method: 'DELETE',
     retry: 0,
     timeoutMs: 8000,
+    authRequired: true,
     ...options,
   });
 
@@ -197,6 +261,7 @@ export const likeProduct = (productId, options = {}) =>
     method: 'POST',
     retry: 0,
     timeoutMs: 8000,
+    authRequired: true,
     ...options,
   });
 
@@ -205,6 +270,7 @@ export const unlikeProduct = (productId, options = {}) =>
     method: 'DELETE',
     retry: 0,
     timeoutMs: 8000,
+    authRequired: true,
     ...options,
   });
 
@@ -214,6 +280,7 @@ export const calculateFromCart = (items, options = {}) =>
     body: JSON.stringify({ items }),
     retry: 1,
     timeoutMs: 12000,
+    authRequired: true,
     ...options,
   });
 
@@ -232,5 +299,6 @@ export const calculateDimensions = (items, options = {}) =>
     body: JSON.stringify({ items }),
     retry: 2,
     timeoutMs: 12000,
+    authRequired: true,
     ...options,
   });

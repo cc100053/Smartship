@@ -141,6 +141,53 @@ Keep the header frozen at the top without introducing horizontal drift relative 
 
 # Login / Saved Products Design Discussion
 
+# Token Auth Migration
+
+## Goal
+Replace the current cross-site session-cookie auth with a more robust hybrid token flow:
+- short-lived access token for API authorization
+- refresh token stored in an HTTP-only cookie
+- preserve the existing login/register UX and all personalized product features
+
+## Tasks
+- [x] **1. Map the migration surface**
+  - Confirm the current auth/session touchpoints in backend controllers/services and frontend API/auth state.
+  - Identify the minimum schema/config additions needed for refresh-token persistence.
+- [x] **2. Implement backend token auth**
+  - Replace `HttpSession`-based auth with signed access tokens plus persisted refresh tokens.
+  - Add login/register, refresh, current-user, and logout flows for the new model.
+  - Protect `/api/me/*` using bearer-token account resolution instead of `HttpSession`.
+- [x] **3. Implement frontend token lifecycle**
+  - Store the access token client-side and attach it to authenticated API requests.
+  - Use the refresh-cookie endpoint to restore/renew auth without relying on third-party cookies.
+  - Preserve the current modal login UX and personalized section behavior.
+- [x] **4. Verify**
+  - Run backend tests.
+  - Run frontend build.
+  - Document the migration result, deployment implications, and any residual limitations.
+
+## Review
+- Backend auth migration:
+  - Replaced `HttpSession` auth with signed short-lived access tokens plus persisted refresh tokens.
+  - Added `account_refresh_tokens` persistence and refresh-token rotation so multiple devices can keep independent refresh sessions.
+  - Converted `/api/me/*` and saved-product cart expansion auth checks to bearer-token resolution from the `Authorization` header.
+  - Added `/api/auth/refresh` and updated login/logout/session behavior around the new token model.
+- Frontend auth migration:
+  - `frontend/src/api/shippingApi.js` now keeps the access token client-side, attaches bearer headers automatically, and performs a single refresh retry for authenticated requests.
+  - App bootstrap now restores auth through the refresh endpoint instead of assuming a browser-managed session cookie.
+  - Existing login modal, logout UX, personalized products, likes, and saved-product cart behavior are preserved.
+- Same-origin delivery:
+  - Production API calls now default to relative `/api` instead of a cross-site backend URL.
+  - Added Vite dev proxy and Vercel rewrite config so the refresh cookie can behave as a same-site/first-party cookie.
+- Verification:
+  - `cd backend && ./mvnw test` ✅
+  - `cd frontend && npm run build` ✅
+  - Applied Supabase migration `add_account_refresh_tokens` ✅
+- Residual limitations:
+  - Logout revokes the refresh token for the current device, but an already-issued access token remains usable until its short expiry window ends.
+  - The refresh-cookie model assumes the frontend is actually served through the same-origin `/api` proxy path in production; direct browser calls to the Azure backend domain are no longer the intended auth path.
+  - Supabase security advisors still flag public-schema tables without RLS, including the new `account_refresh_tokens` table. That is a pre-existing broader data-exposure concern outside this auth refactor and should be addressed separately if the project will expose Supabase APIs directly.
+
 # Azure Session Cookie Debug
 
 ## Goal

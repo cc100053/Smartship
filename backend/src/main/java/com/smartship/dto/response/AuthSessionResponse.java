@@ -5,5 +5,7 @@ public record AuthSessionResponse(
         Long accountId,
         String loginId,
         boolean justRegistered,
-        String message) {
+        String message,
+        String accessToken,
+        Long accessTokenExpiresAt) {
 }

@@ -17,7 +17,7 @@ import com.smartship.service.ShippingMatcher;
 import com.smartship.service.ShippingMatcher.ShippingMatch;
 import com.smartship.service.StatsService;
 import com.smartship.service.UserProductService;
-import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -85,8 +85,8 @@ public class ShippingController {
     // New endpoint: Returns packed dimensions AND placements (for real-time 3D
     // preview)
     @PostMapping("/calculate/dimensions")
-    public PackingResult calculateDimensions(@Valid @RequestBody CartCalculationRequest request, HttpSession session) {
-        List<ProductReference> expandedItems = validateAndExpandCartItems(request, session);
+    public PackingResult calculateDimensions(@Valid @RequestBody CartCalculationRequest request, HttpServletRequest httpRequest) {
+        List<ProductReference> expandedItems = validateAndExpandCartItems(request, httpRequest);
         PackingResult result = packingService.calculatePackedResult(expandedItems);
 
         if (result == null || result.dimensions() == null) {
@@ -109,8 +109,8 @@ public class ShippingController {
     }
 
     @PostMapping("/calculate/cart")
-    public CalculationResponse calculateCart(@Valid @RequestBody CartCalculationRequest request, HttpSession session) {
-        List<ProductReference> expandedItems = validateAndExpandCartItems(request, session);
+    public CalculationResponse calculateCart(@Valid @RequestBody CartCalculationRequest request, HttpServletRequest httpRequest) {
+        List<ProductReference> expandedItems = validateAndExpandCartItems(request, httpRequest);
         // Use PackingService to get REAL packed dimensions to show the user
         Dimensions dims = packingService.calculatePackedDimensions(expandedItems);
 
@@ -128,7 +128,7 @@ public class ShippingController {
         return new CalculationResponse(dims, recommended, options);
     }
 
-    private List<ProductReference> validateAndExpandCartItems(CartCalculationRequest request, HttpSession session) {
+    private List<ProductReference> validateAndExpandCartItems(CartCalculationRequest request, HttpServletRequest httpRequest) {
         if (request == null || request.items() == null || request.items().isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cart items are required.");
         }
@@ -160,7 +160,7 @@ public class ShippingController {
 
         Account account = null;
         if (!savedProductIds.isEmpty()) {
-            account = authService.requireCurrentAccount(session);
+            account = authService.requireCurrentAccount(httpRequest);
         }
 
         List<ProductReference> expandedItems = new ArrayList<>();

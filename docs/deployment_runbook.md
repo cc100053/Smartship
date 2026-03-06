@@ -5,6 +5,7 @@ Last updated: 2026-03-05
 ## Scope
 - Frontend production domain: `https://smartship.vercel.app`
 - Backend: Azure Container Apps (`smartship-backend`)
+- Auth model: short-lived bearer access token + refresh token in HTTP-only cookie via same-origin `/api` proxy
 
 ## One-time assumptions
 - GitHub remote: `origin`
@@ -15,6 +16,9 @@ Last updated: 2026-03-05
   - `BACKEND_APP=smartship-backend`
 
 ## A. Frontend deploy (production)
+0. Production assumption:
+- The frontend should call relative `/api/*` paths.
+- Vercel must deploy the `frontend/vercel.json` rewrite so browser auth traffic stays same-origin on `smartship.vercel.app`.
 1. Make sure feature branch is ready:
 ```bash
 git checkout animation-feature
@@ -66,7 +70,13 @@ az containerapp show \
 ```
 
 ## C. Post-deploy smoke checks
-1. CORS preflight:
+1. Vercel rewrite / frontend-origin API path:
+```bash
+curl -i "https://smartship.vercel.app/api/products"
+```
+- Expect a successful proxied response from the backend through the frontend origin.
+
+2. CORS preflight (backend direct):
 ```bash
 curl -i -X OPTIONS "https://smartship-backend.agreeablemeadow-deb59e6e.japaneast.azurecontainerapps.io/api/products" \
   -H "Origin: https://smartship.vercel.app" \
@@ -75,14 +85,24 @@ curl -i -X OPTIONS "https://smartship-backend.agreeablemeadow-deb59e6e.japaneast
 ```
 - Expect `HTTP/2 200` and `access-control-allow-origin: https://smartship.vercel.app`.
 
-2. Products API:
+3. Products API:
 ```bash
 curl -i "https://smartship-backend.agreeablemeadow-deb59e6e.japaneast.azurecontainerapps.io/api/products" \
   -H "Origin: https://smartship.vercel.app"
 ```
 - Expect `HTTP/2 200` with JSON body.
 
-3. Auth cookie attributes:
+4. Auth refresh cookie attributes through frontend origin:
+```bash
+curl -i "https://smartship.vercel.app/api/auth/login-or-register" \
+  -X POST \
+  -H "Content-Type: application/json" \
+  --data '{"loginId":"cookie-check","password":"cookie-check"}'
+```
+- Expect `set-cookie` for the refresh token from the frontend origin.
+- With the same-origin proxy model, `SameSite=Lax` is expected and preferred.
+
+5. Direct backend auth response (diagnostic only):
 ```bash
 curl -i "https://smartship-backend.agreeablemeadow-deb59e6e.japaneast.azurecontainerapps.io/api/auth/login-or-register" \
   -X POST \
@@ -90,7 +110,8 @@ curl -i "https://smartship-backend.agreeablemeadow-deb59e6e.japaneast.azureconta
   -H "Content-Type: application/json" \
   --data '{"loginId":"cookie-check","password":"cookie-check"}'
 ```
-- Expect `set-cookie` to include both `SameSite=None` and `Secure`.
+- This direct response is no longer the browser-facing auth path.
+- `SameSite=Lax` is acceptable here because production browser auth should flow through `https://smartship.vercel.app/api/...`.
 
 ## D. Known pitfalls and fixes
 1. Frontend works locally but not in deployed site:
@@ -98,9 +119,9 @@ curl -i "https://smartship-backend.agreeablemeadow-deb59e6e.japaneast.azureconta
 - Preview deployments and production deployments can point to different backend URLs.
 
 1.5. Login succeeds but `/api/me/products` returns `401` immediately after:
-- Root cause is usually a session cookie mismatch for cross-site deployment.
-- Production backend must **not** run with `SPRING_PROFILES_ACTIVE=local`.
-- Confirm the login response `Set-Cookie` includes `SameSite=None; Secure`.
+- First confirm the frontend is actually calling `https://smartship.vercel.app/api/...` and not the Azure backend hostname directly.
+- If the browser is still talking directly to `azurecontainerapps.io`, refresh-cookie auth can still fail on strict browsers because that path is cross-site again.
+- Confirm the Vercel rewrite is live and the frontend build is not overriding `API_BASE` back to the raw backend URL.
 
 2. CORS blocked on production:
 - Ensure backend env contains:
