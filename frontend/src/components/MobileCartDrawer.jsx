@@ -40,8 +40,9 @@ export default function MobileCartDrawer({
     useEffect(() => {
         if (!bounceToken) return;
         pillControls.start({
-            y: [0, -6, 0],
-            transition: { duration: 0.2, ease: [0.22, 1, 0.36, 1] },
+            y: [0, -3, 0],
+            scale: [1, 1.012, 1],
+            transition: { duration: 0.24, ease: [0.16, 1, 0.3, 1] },
         });
     }, [bounceToken, pillControls]);
 

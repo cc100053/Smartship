@@ -421,8 +421,9 @@ export default function ShippingCalculator({ onDrawerToggle, authSession, onOpen
   useEffect(() => {
     if (!cartBounceToken) return;
     desktopCartControls.start({
-      y: [0, -4, 0],
-      transition: { duration: 0.18, ease: [0.22, 1, 0.36, 1] },
+      y: [0, -2, 0],
+      scale: [1, 1.008, 1],
+      transition: { duration: 0.22, ease: [0.16, 1, 0.3, 1] },
     });
   }, [cartBounceToken, desktopCartControls]);
 

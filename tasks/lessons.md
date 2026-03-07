@@ -218,3 +218,15 @@
 ## 55. Animation completion callbacks must distinguish enter from exit
 - **Mistake**: Attached `onAnimationComplete` to a motion node that also had an `exit` animation, so the same cart-flight completion path could fire once after enter and again after exit.
 - **Rule**: When a motion node uses both `animate` and `exit`, guard completion side effects so they run only once per logical animation, or scope the callback to the specific phase instead of the shared node.
+
+## 56. Arrival fade should be owned by the flight, not left to exit cleanup
+- **Mistake**: Let the cart-flight remain visibly present until the component removal phase, which made the ghost linger at the target instead of disappearing on arrival.
+- **Rule**: For fly-to-target interactions, fade the ghost to zero inside the main flight timeline so it disappears exactly at arrival; `exit` should be cleanup, not the visible arrival effect.
+
+## 57. Do not mix unrelated keyframe tracks on one motion node when timing precision matters
+- **Mistake**: Drove transform and opacity together on the same motion node with different keyframe shapes, which made the visible fade feel detached from the actual travel path.
+- **Rule**: For precision animation polish, keep transport motion and visibility fades on separate layers so arrival timing can be tuned independently without corrupting the path readability.
+
+## 58. Arrival fade must remain perceptible after structural cleanup
+- **Mistake**: After separating flight motion from opacity, the ghost still disappeared too abruptly at the target because the fade window was too short relative to the total duration.
+- **Rule**: When users want a visible arrival fade, reserve a small but perceptible final slice of the timeline for opacity drop instead of collapsing straight from fully visible to removed.
