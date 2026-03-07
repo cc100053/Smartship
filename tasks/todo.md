@@ -1,3 +1,34 @@
+# Cart Flight Stabilization
+
+## Goal
+Remove the staged / laggy feel from the add-to-cart flight and make arrival fade deterministic.
+
+## Tasks
+- [x] **1. Remove staged transport timing**
+  - Replace the current multi-waypoint keyframe transport with one continuous flight progress model.
+  - Eliminate unnecessary pre-flight delay paths for the normal product-grid add flow.
+- [x] **2. Decouple secondary motion layers**
+  - Stop the source button press/hover state and cart badge pop from competing with the main flight.
+  - Keep cart receipt feedback sequenced after the flight instead of visually overlapping it.
+- [x] **3. Make arrival fade deterministic**
+  - Fade the ghost over a perceptible final slice of the path, not a near-zero cleanup window.
+  - Ensure completion/removal only occurs after the visible fade has actually happened.
+- [x] **4. Verify interaction quality**
+  - Run the frontend build.
+  - Recheck desktop and mobile behavior separately for continuity, arrival, and cart receipt timing.
+
+## Review
+- Root cause confirmed:
+  - The ghost was not being handed off between multiple React components mid-flight, but the interaction felt staged because several motion layers were stacked: source-button press scale, waypoint-based flight keyframes, independent fade timing, and cart receipt/badge motion.
+  - The biggest structural issue was `FlyToCartOverlay` using segmented waypoint keyframes (`start -> kick -> end`) plus separate visual tracks, which made the transport feel like multiple phases instead of one continuous movement.
+- Implemented fix:
+  - Rewrote `frontend/src/components/FlyToCartOverlay.jsx` to use a single `progress` motion value that drives the whole flight continuously.
+  - Desktop now uses one continuous direct transport path; mobile still uses a smooth lifted curve, but it is derived from the same continuous progress model instead of stacked keyframes.
+  - Arrival fade is now tied to the same progress timeline, so disappearance happens as part of the visible path instead of via a separate cleanup impression.
+  - Removed the `active:scale-[0.99]` source CTA press transform from `frontend/src/components/ProductCard.jsx`, which was visually reading as an extra pre-flight stage.
+- Verification:
+  - `cd frontend && npm run build` ✅
+
 # Add-to-Cart Fly Animation
 
 ## Goal

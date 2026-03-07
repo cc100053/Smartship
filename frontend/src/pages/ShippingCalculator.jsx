@@ -285,10 +285,13 @@ export default function ShippingCalculator({ onDrawerToggle, authSession, onOpen
     return true;
   }, [getActiveCartTargetRect]);
 
-  const handleFlightComplete = useCallback((flightId) => {
-    setCartFlights((prev) => prev.filter((flight) => flight.id !== flightId));
+  const handleFlightArrive = useCallback(() => {
     triggerCartBounce();
   }, [triggerCartBounce]);
+
+  const handleFlightComplete = useCallback((flightId) => {
+    setCartFlights((prev) => prev.filter((flight) => flight.id !== flightId));
+  }, []);
 
   const handleAddToCart = (product, sourceElement) => {
     resetCalculation();
@@ -420,11 +423,32 @@ export default function ShippingCalculator({ onDrawerToggle, authSession, onOpen
 
   useEffect(() => {
     if (!cartBounceToken) return;
-    desktopCartControls.start({
-      y: [0, -2, 0],
-      scale: [1, 1.008, 1],
-      transition: { duration: 0.22, ease: [0.16, 1, 0.3, 1] },
-    });
+    let cancelled = false;
+
+    const playReceipt = async () => {
+      desktopCartControls.stop();
+      desktopCartControls.set({ y: 0, scale: 1 });
+
+      await desktopCartControls.start({
+        y: -3,
+        scale: 1.01,
+        transition: { duration: 0.1, ease: [0.22, 1, 0.36, 1] },
+      });
+
+      if (cancelled) return;
+
+      await desktopCartControls.start({
+        y: 0,
+        scale: 1,
+        transition: { type: 'spring', stiffness: 360, damping: 24, mass: 0.68 },
+      });
+    };
+
+    playReceipt();
+    return () => {
+      cancelled = true;
+      desktopCartControls.stop();
+    };
   }, [cartBounceToken, desktopCartControls]);
 
   useEffect(() => {
@@ -673,6 +697,7 @@ export default function ShippingCalculator({ onDrawerToggle, authSession, onOpen
 
       <FlyToCartOverlay
         flights={cartFlights}
+        onFlightArrive={handleFlightArrive}
         onFlightComplete={handleFlightComplete}
       />
     </section>

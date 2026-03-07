@@ -39,11 +39,32 @@ export default function MobileCartDrawer({
 
     useEffect(() => {
         if (!bounceToken) return;
-        pillControls.start({
-            y: [0, -3, 0],
-            scale: [1, 1.012, 1],
-            transition: { duration: 0.24, ease: [0.16, 1, 0.3, 1] },
-        });
+        let cancelled = false;
+
+        const playReceipt = async () => {
+            pillControls.stop();
+            pillControls.set({ y: 0, scale: 1 });
+
+            await pillControls.start({
+                y: -5,
+                scale: 1.018,
+                transition: { type: 'spring', stiffness: 360, damping: 18, mass: 0.65 },
+            });
+
+            if (cancelled) return;
+
+            await pillControls.start({
+                y: 0,
+                scale: 1,
+                transition: { type: 'spring', stiffness: 300, damping: 20, mass: 0.72 },
+            });
+        };
+
+        playReceipt();
+        return () => {
+            cancelled = true;
+            pillControls.stop();
+        };
     }, [bounceToken, pillControls]);
 
     // Lock body scroll when expanded

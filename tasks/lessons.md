@@ -230,3 +230,23 @@
 ## 58. Arrival fade must remain perceptible after structural cleanup
 - **Mistake**: After separating flight motion from opacity, the ghost still disappeared too abruptly at the target because the fade window was too short relative to the total duration.
 - **Rule**: When users want a visible arrival fade, reserve a small but perceptible final slice of the timeline for opacity drop instead of collapsing straight from fully visible to removed.
+
+## 59. Diagnose all competing motion layers before retuning a laggy interaction
+- **Mistake**: Kept adjusting the cart-flight timing in isolation without first tracing every other motion layer touching the interaction, including source button press states, fallback start delays, and receipt/badge animations.
+- **Rule**: When a user reports an interaction feels staged or laggy, inspect the full motion stack end-to-end before retuning curves. A "single animation" complaint is often several small animations stacking, not one bad easing value.
+
+## 60. Continuous transport should use one progress model, not stitched keyframes
+- **Mistake**: Modeled the cart flight as waypoint keyframes with separate transform tracks, which made the motion read as several stitched stages instead of one continuous trip.
+- **Rule**: For object-to-target flights, drive the whole path from a single progress value and derive path, scale, rotation, and fade from that shared progress unless a clearly staged effect is explicitly desired.
+
+## 61. Receipt feedback needs spring character, not just positional correctness
+- **Mistake**: Tuned the cart receipt bounce as short tween keyframes that were technically correct but still felt mechanical and lifeless.
+- **Rule**: For acknowledgment motions that should feel organic, prefer a short two-phase spring settle over linear/tween keyframes so the movement has weight and recovery instead of looking robotic.
+
+## 62. Peak-hold in receipt motion usually comes from springing into the peak
+- **Mistake**: Used a spring for the lift phase of the desktop cart receipt, which caused the motion to settle briefly at the inflated peak before returning.
+- **Rule**: If a receipt animation should rebound immediately, drive the lift with a quick ease-out and reserve the spring for the return-to-rest phase.
+
+## 63. Receipt timing should key off arrival, not final cleanup
+- **Mistake**: Triggered the cart receipt only after the whole flight animation completed, which made the feedback feel late even though the ghost had already visually arrived.
+- **Rule**: For object-to-target interactions, trigger target acknowledgment at arrival progress and leave component removal for the final cleanup phase.
